@@ -16,4 +16,4 @@ run_test () {
 run_test gethugepagesize
 run_test test_root_hugetlbfs
 run_test find_path
-run_test tempfile
+run_test unlinked_fd

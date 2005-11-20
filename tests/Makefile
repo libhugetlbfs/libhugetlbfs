@@ -1,4 +1,4 @@
-TESTS = gethugepagesize test_root_hugetlbfs find_path tempfile
+TESTS = gethugepagesize test_root_hugetlbfs find_path unlinked_fd
 
 CPPFLAGS = -I..
 LDFLAGS = -L..

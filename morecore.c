@@ -65,6 +65,9 @@ void __attribute__ ((constructor)) setup_morecore(void)
 	orig_morecore = __morecore;
 
 	env = getenv("HUGETLB_MORECORE");
-	if (env)
+	if (env) {
 		__morecore = &hugetlbfs_morecore;
+		/* we always want to use our morecore, not mmap() */
+		mallopt(M_MMAP_MAX, 0);
+	}
 }

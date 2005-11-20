@@ -26,14 +26,14 @@ void cleanup();
 #define	PASS()						\
 	do {						\
 		cleanup();				\
-		printf("PASS\n", test_name);	\
+		printf("PASS\n");			\
 		exit(RC_PASS);				\
 	} while (0)
 
 #define FAIL(s)						\
 	do {						\
 		cleanup();				\
-		printf("FAIL\t%s\n", test_name, s);	\
+		printf("FAIL\t%s\n", s);		\
 		exit(RC_FAIL);				\
 	} while (0)
 

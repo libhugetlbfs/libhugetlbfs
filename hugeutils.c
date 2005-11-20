@@ -29,17 +29,17 @@ static int read_meminfo(const char *format)
 	int val;
 	FILE *f;
 	int retcode;
-	char buff[BUF_SZ];
+	char buf[BUF_SZ];
 
 	f = fopen("/proc/meminfo", "r");
 	if (!f) {
-		ERROR("Failed to open /proc/meminfo for reading\n");
+		ERROR("Failed to open /proc/meminfo\n");
 		return -1;
 	}
 
 	while (!feof(f)) {
-		fgets(buff, BUF_SZ, f);
-		retcode = sscanf(buff, format, &val);
+		fgets(buf, BUF_SZ, f);
+		retcode = sscanf(buf, format, &val);
 		if (retcode == 1) {
 			fclose(f);
 			return val;
@@ -48,6 +48,44 @@ static int read_meminfo(const char *format)
 	fclose(f);
 	ERROR("Could not find \"%s\" in /proc/meminfo\n", format);
 	return -1;
+}
+
+#define MAPS_BUF_SZ 4096
+
+static int read_maps(unsigned long addr, char *buf)
+{
+	FILE *f;
+	char line[MAPS_BUF_SZ];
+	char *tmp;
+
+	f = fopen("/proc/self/maps", "r");
+	if (!f) {
+		ERROR("Failed to open /proc/self/maps\n");
+		return -1;
+	}
+
+	while (1) {
+		unsigned long start, end, off, ino;
+		int ret;
+		
+		tmp = fgets(line, MAPS_BUF_SZ, f);
+		if (!tmp)
+			break;
+		
+		ret = sscanf(line, "%lx-%lx %*s %lx %*s %ld %"
+			     stringify(PATH_MAX) "s", &start, &end, &off, &ino,
+			     buf);
+		if ((ret < 4) || (ret > 5)) {
+			ERROR("Couldn't parse /proc/self/maps line: %s\n",
+			      line);
+			return -1;
+		}
+
+		if ((start <= addr) && (addr < end))
+			return 1;
+	}
+
+	return 0;
 }
 
 /********************************************************************/
@@ -147,22 +185,44 @@ const char *hugetlbfs_find_path(void)
 	return NULL;
 }
 
-int hugetlbfs_tempfile(int unlink_after_open)
+int hugetlbfs_unlinked_fd(void)
 {
 	char name[PATH_MAX+1];
 	int fd;
 
 	name[sizeof(name)-1] = '\0';
 	strcpy(name, hugetlbfs_find_path());
-	strncat(name, "/XXXXXX", sizeof(name)-1);
+	strncat(name, "/libhugetlbfs.tmp.XXXXXX", sizeof(name)-1);
 	/* FIXME: deal with overflows */
 
 	fd = mkstemp(name);
 
-	if (unlink_after_open)
+	if (fd >= 0)
 		unlink(name);
 
 	return fd;
+}
+
+int hugetlbfs_test_addr(void *p)
+{
+	char name[PATH_MAX+1];
+	char *dirend;
+	int ret;
+
+	ret = read_maps((unsigned long)p, name);
+	if (ret < 0)
+		return ret;
+	if (ret == 0) {
+		ERROR("Couldn't find addres %p in /proc/self/maps\n", p);
+		return -1;
+	}
+
+	/* Truncate the filename portion */
+	dirend = strrchr(name, '/');
+	if (dirend && dirend > name) {
+		*dirend = '\0';
+	}
+	return hugetlbfs_test_path(name);
 }
 
 #if 0
@@ -170,16 +230,16 @@ int hugetlbfs_tempfile(int unlink_after_open)
 int get_sysctl(char *file)
 {
 	FILE* f;
-	char buff[BUF_SZ];
+	char buf[BUF_SZ];
 
 	f = fopen(file, "r");
 	if (!f) {
 		printf("Failed to open %s for reading\n", file);
 		return(-1);
 	}
-	fgets(buff, BUF_SZ, f);
+	fgets(buf, BUF_SZ, f);
 	fclose(f);
-	return atoi(buff);
+	return atoi(buf);
 }
 
 int set_sysctl_str(char *file, char *str)
@@ -198,10 +258,10 @@ int set_sysctl_str(char *file, char *str)
 
 int set_sysctl(char *file, int val)
 {
-	char buff[BUF_SZ];
+	char buf[BUF_SZ];
 
-	snprintf(buff, BUF_SZ*sizeof(char), "%i", val);
-	return set_sysctl_str(file, buff);	
+	snprintf(buf, BUF_SZ*sizeof(char), "%i", val);
+	return set_sysctl_str(file, buf);	
 }
 
 int mount_hugetlbfs(char *mountpoint, size_t strsz)
@@ -277,16 +337,16 @@ error:
 int shmem_setup(int nr_hugepages)
 {
 	int ret = 0;
-	char buff[BUF_SZ];
+	char buf[BUF_SZ];
 	int hpage_size = get_hugepage_size();
 	unsigned long bytes = nr_hugepages * hpage_size * 1024;
 	
-	snprintf(buff, sizeof(char)*BUF_SZ, "%lu", bytes);
+	snprintf(buf, sizeof(char)*BUF_SZ, "%lu", bytes);
 
 	if (get_sysctl("/proc/sys/kernel/shmall") < bytes)
-		ret = set_sysctl_str("/proc/sys/kernel/shmall", buff);
+		ret = set_sysctl_str("/proc/sys/kernel/shmall", buf);
 	if (get_sysctl("/proc/sys/kernel/shmmax") < bytes)
-		ret += set_sysctl_str("/proc/sys/kernel/shmmax", buff);
+		ret += set_sysctl_str("/proc/sys/kernel/shmmax", buf);
 	if (ret)
 		return -1;
 	else
