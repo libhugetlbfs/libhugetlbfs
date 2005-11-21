@@ -1,14 +1,20 @@
-TESTS = gethugepagesize test_root_hugetlbfs find_path unlinked_fd
+LIB_TESTS = gethugepagesize test_root find_path unlinked_fd \
+	readback truncate shared private
+PRELOAD_TESTS = malloc malloc_manysmall
+TESTS = $(LIB_TESTS) $(PRELOAD_TESTS)
 
 CPPFLAGS = -I..
 LDFLAGS = -L..
-LDLIBS = -lhugetlbfs
 
 DEPFILES = $(TESTS:%=%.d) testutils.d
 
 all:	$(TESTS)
 
-$(TESTS): %: %.o testutils.o
+$(LIB_TESTS): %: %.o testutils.o
+	$(LINK.c) $(LDFLAGS) -o $@ $^ -lhugetlbfs
+
+$(PRELOAD_TESTS): %: %.o testutils.o
+	$(LINK.c) $(LDFLAGS) -o $@ $^
 
 clean:
 	rm -f *~ *.o *.so *.a *.d core a.out

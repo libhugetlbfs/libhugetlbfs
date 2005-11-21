@@ -1,5 +1,6 @@
-LIBOBJS = hugeutils.o morecore.o
+LIBOBJS = hugeutils.o morecore.o debug.o
 
+CPPFLAGS = -D__LIBHUGETLBFS__
 CFLAGS = -Wall -fPIC
 
 DEPFILES = $(LIBOBJS:%.o=%.d)
@@ -8,6 +9,9 @@ all:	libhugetlbfs.so libhugetlbfs.a alltests
 
 test:	all
 	./run_tests.sh
+
+testv:	all
+	./run_tests.sh -v -V
 
 alltests:
 	$(MAKE) -C tests all
@@ -23,6 +27,6 @@ clean:
 	$(MAKE) -C tests clean
 
 %.d: %.c
-	$(CC) -MM -MG -MT "$*.o $@" $< > $@
+	$(CC) $(CPPFLAGS) -MM -MG -MT "$*.o $@" $< > $@
 
 -include $(DEPFILES)

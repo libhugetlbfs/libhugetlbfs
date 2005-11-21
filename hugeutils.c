@@ -13,14 +13,11 @@
 
 #include "hugetlbfs.h"
 
+#include "libhugetlbfs_internal.h"
+
 /********************************************************************/
 /* Internal functions                                               */
 /********************************************************************/
-
-#define ERROR(...) fprintf(stderr, __VA_ARGS__)
-
-#define stringify_1(x)	#x
-#define stringify(x)	stringify_1(x)
 
 #define BUF_SZ 256
 
@@ -92,7 +89,7 @@ static int read_maps(unsigned long addr, char *buf)
 /* Library user visible functions                                   */
 /********************************************************************/
 
-int gethugepagesize(void)
+long gethugepagesize(void)
 {
 	static int hpage_size = 0;
 	int hpage_kb;
@@ -108,6 +105,17 @@ int gethugepagesize(void)
 		hpage_size = 1024 * hpage_kb;
 
 	return hpage_size;
+}
+
+long hugetlbfs_vaddr_granularity(void)
+{
+#if defined(__powerpc64__)
+	return (1L << 40);
+#elif defined(__powerpc__)
+	return (1L << 28);
+#else
+	return gethugepagesize();
+#endif
 }
 
 int hugetlbfs_test_path(const char *mount)

@@ -1,22 +1,20 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
+#include <unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
 
 #include "hugetlbfs.h"
 
-#if 0
-#ifdef SMALL
-#define BASE ((void *)(0x09000000000UL))
-#else 
-#define BASE ((void *)(0x11000000000UL))
-#endif
-#define BLOCK (16384*1024 * 4)
+#include "libhugetlbfs_internal.h"
 
-static void *current = 0;
-static void *highest = 0;
+static int heap_fd;
+static long blocksize = (16 * 1024 * 1024);
 
-#endif
+static void *heapbase;
+static void *heaptop;
+static long mapsize;
 
 /*
  * Our plan is to ask for pages 'roughly' at the BASE.  We expect nee require
@@ -33,41 +31,76 @@ static void *(*orig_morecore)(ptrdiff_t);
 
 static void *hugetlbfs_morecore(ptrdiff_t increment)
 {
-	return (*orig_morecore)(increment);
-#if 0
-	void *b;
-	if ((current + increment) >= highest) {
-		b = mmap(BASE, BLOCK, PROT_READ|PROT_WRITE,
-			MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
-		if (b == MAP_FAILED)
-			return(0);
-		if (highest != 0) {
-			 if (b != highest) { 
-/* printf("APW: it failed ... b<%p>\n", b); */
-				munmap(b, BLOCK);
-				return(0);
-			}
-		} else
-			current = b;
-		highest = b + BLOCK;
-	}
-	b = current;
-	current += increment;
+	void *p;
+	long newsize = 0;
 
-	return b;
-#endif
+	DEBUG("hugetlbfs_morecore(%d) = ...\n", increment);
+
+	newsize = (heaptop-heapbase) + increment - mapsize;
+
+	DEBUG("heapbase = %p, heaptop = %p, mapsize = %lx, newsize=%ld\n",
+	      heapbase, heaptop, mapsize, newsize);
+
+	if (newsize > 0) {
+		newsize = ALIGN(newsize, blocksize);
+
+		DEBUG("Attempting to map %ld bytes\n", newsize);
+
+		p = mmap(heapbase + mapsize, newsize, PROT_READ|PROT_WRITE,
+			 MAP_PRIVATE, heap_fd, mapsize);
+		if (p == MAP_FAILED) {
+			ERROR("Mapping failed in hugetlbfs_morecore()\n");
+			return NULL;
+		}
+
+		if (! heapbase) {
+			heapbase = heaptop = p;
+		} else if (p != (heapbase + mapsize)) {
+			/* Couldn't get the mapping where we wanted */
+			munmap(p, newsize);
+			ERROR("Mapped at %p instead of %p in hugetlbfs_morecore()\n",
+			      p, heapbase + mapsize);
+			return NULL;
+		}
+
+		mapsize += newsize;
+	}
+
+	p = heaptop;
+	heaptop = heaptop + increment;
+
+	DEBUG("... = %p\n", p);
+	return p;
 }
 
-void __attribute__ ((constructor)) setup_morecore(void)
+static void __attribute__ ((constructor)) setup_morecore(void)
 {
-	char *env;
+	char *env, *ep;
+	unsigned long heapaddr;
 
 	orig_morecore = __morecore;
 
 	env = getenv("HUGETLB_MORECORE");
-	if (env) {
-		__morecore = &hugetlbfs_morecore;
-		/* we always want to use our morecore, not mmap() */
-		mallopt(M_MMAP_MAX, 0);
+	if (! env)
+		return;
+
+	heap_fd = hugetlbfs_unlinked_fd();
+	if (heap_fd < 0) {
+		ERROR("Couldn't open hugetlbfs file for morecore\n");
+		return;
 	}
+
+	heapaddr = strtol(env, &ep, 16);
+	if (*ep != '\0') {
+		heapaddr = (unsigned long)sbrk(0);
+		heapaddr = ALIGN(heapaddr, hugetlbfs_vaddr_granularity());
+	}
+
+	DEBUG("Placing hugepage morecore heap at 0x%lx\n", heapaddr);
+		
+	heaptop = heapbase = (void *)heapaddr;
+
+	__morecore = &hugetlbfs_morecore;
+	/* we always want to use our morecore, not mmap() */
+	mallopt(M_MMAP_MAX, 0);
 }
