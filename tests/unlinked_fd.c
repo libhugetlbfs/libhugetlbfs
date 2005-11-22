@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)
-		FAIL("hugetlbfs_tempfile()");
+		FAIL("hugetlbfs_unlinked_fd()");
 
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED,
 		 fd, 0);

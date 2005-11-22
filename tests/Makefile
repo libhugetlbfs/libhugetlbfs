@@ -1,10 +1,11 @@
 LIB_TESTS = gethugepagesize test_root find_path unlinked_fd \
-	readback truncate shared private
+	readback truncate shared private empty_mounts
 PRELOAD_TESTS = malloc malloc_manysmall
 TESTS = $(LIB_TESTS) $(PRELOAD_TESTS)
 
 CPPFLAGS = -I..
 LDFLAGS = -L..
+LDLIBS = -ldl
 
 DEPFILES = $(TESTS:%=%.d) testutils.d
 
@@ -21,6 +22,6 @@ clean:
 	rm -f $(TESTS)
 
 %.d: %.c
-	$(CC) -MM -MG -MT "$*.o $@" $< > $@
+	$(CC) $(CPPFLAGS) -MM -MT "$*.o $@" $< > $@
 
 -include $(DEPFILES)

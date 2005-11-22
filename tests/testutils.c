@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <string.h>
+#include <signal.h>
 #include <sys/vfs.h>
 
 #include "hugetests.h"
@@ -17,9 +18,25 @@ void  __attribute__((weak)) cleanup(void)
 {
 }
 
+static void segv_handler(int signum, siginfo_t *si, void *uc)
+{
+	FAIL("Segmentation fault");
+}
+
+
 void test_init(int argc, char *argv[])
 {
+	int err;
+	struct sigaction sa = {
+		.sa_sigaction = segv_handler,
+		.sa_flags = SA_SIGINFO,
+	};
+
 	test_name = argv[0];
+
+	err = sigaction(SIGSEGV, &sa, NULL);
+	if (err)
+		FAIL("Can't install SEGV handler");
 
 	if (getenv("QUIET_TEST"))
 		verbose_test = 0;

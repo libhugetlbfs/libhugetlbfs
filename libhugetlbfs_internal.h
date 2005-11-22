@@ -12,11 +12,17 @@
 
 extern int __hugetlbfs_verbose;
 
-#define ERROR(...)	if (__hugetlbfs_verbose >= 1) \
-				fprintf(stderr, "libhugetlbfs: ERROR: " __VA_ARGS__)
+#define ERROR(...) \
+	if (__hugetlbfs_verbose >= 1) \
+		fprintf(stderr, "libhugetlbfs: ERROR: " __VA_ARGS__)
 
-#define DEBUG(...)	if (__hugetlbfs_verbose >= 2) \
-				fprintf(stderr, "libhugetlbfs: " __VA_ARGS__)
+#define WARNING(...) \
+	if (__hugetlbfs_verbose >= 2) \
+		fprintf(stderr, "libhugetlbfs: WARNING: " __VA_ARGS__)
+
+#define DEBUG(...) \
+	if (__hugetlbfs_verbose >= 3) \
+		fprintf(stderr, "libhugetlbfs: " __VA_ARGS__)
 
 extern void __hugetlbfs_init_debug(void);
 

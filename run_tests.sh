@@ -3,8 +3,9 @@
 cd tests
 
 export LD_LIBRARY_PATH=..
-
 export QUIET_TEST=1
+export HUGETLB_VERBOSE=2
+
 ENV=/usr/bin/env
 
 while [ $# -gt 0 ]; do
@@ -15,7 +16,7 @@ while [ $# -gt 0 ]; do
 	    ;;
 	'-V')
 	    shift
-	    export HUGETLB_VERBOSE=2
+	    export HUGETLB_VERBOSE=99
 	    ;;
     esac
 done
@@ -33,6 +34,7 @@ run_test gethugepagesize
 run_test test_root
 run_test find_path
 run_test unlinked_fd
+run_test empty_mounts
 run_test readback
 run_test truncate
 run_test shared

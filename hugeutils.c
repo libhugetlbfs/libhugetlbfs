@@ -218,10 +218,15 @@ const char *hugetlbfs_find_path(void)
 
 int hugetlbfs_unlinked_fd(void)
 {
+	const char *path;
 	char name[PATH_MAX+1];
 	int fd;
 
 	name[sizeof(name)-1] = '\0';
+	path  = hugetlbfs_find_path();
+	if (! path)
+		return -1;
+
 	strcpy(name, hugetlbfs_find_path());
 	strncat(name, "/libhugetlbfs.tmp.XXXXXX", sizeof(name)-1);
 	/* FIXME: deal with overflows */
