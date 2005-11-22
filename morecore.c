@@ -1,9 +1,12 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
+#include <dlfcn.h>
 
 #include "hugetlbfs.h"
 
@@ -16,6 +19,7 @@ static void *heapbase;
 static void *heaptop;
 static long mapsize;
 
+
 /*
  * Our plan is to ask for pages 'roughly' at the BASE.  We expect nee require
  * the kernel to offer us sequential pages from wherever it first gave us a
@@ -26,8 +30,6 @@ static long mapsize;
  * and we error out malloc will happily go back to small pages and use mmap
  * to get them.  Hurrah.
  */
-
-static void *(*orig_morecore)(ptrdiff_t);
 
 static void *hugetlbfs_morecore(ptrdiff_t increment)
 {
@@ -47,7 +49,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 		DEBUG("Attempting to map %ld bytes\n", newsize);
 
 		p = mmap(heapbase + mapsize, newsize, PROT_READ|PROT_WRITE,
-			 MAP_PRIVATE, heap_fd, mapsize);
+			 MAP_PRIVATE | MAP_FIXED, heap_fd, mapsize);
 		if (p == MAP_FAILED) {
 			ERROR("Mapping failed in hugetlbfs_morecore()\n");
 			return NULL;
@@ -73,12 +75,12 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	return p;
 }
 
-static void __attribute__ ((constructor)) setup_morecore(void)
+static void __attribute__((constructor)) setup_morecore(void)
 {
 	char *env, *ep;
-	unsigned long heapaddr;
+	unsigned long heapaddr = 0;
 
-	orig_morecore = __morecore;
+	DEBUG("setup_morecore()\n");
 
 	env = getenv("HUGETLB_MORECORE");
 	if (! env)
@@ -90,8 +92,17 @@ static void __attribute__ ((constructor)) setup_morecore(void)
 		return;
 	}
 
-	heapaddr = strtol(env, &ep, 16);
-	if (*ep != '\0') {
+	env = getenv("HUGETLB_MORECORE_HEAPBASE");
+	if (env) {
+		heapaddr = strtol(env, &ep, 16);
+		if (*ep != '\0') {
+			ERROR("Can't parse HUGETLB_MORECORE_HEAPBASE: %s\n",
+			      env);
+			return;
+		}
+	}
+
+	if (! heapaddr) {
 		heapaddr = (unsigned long)sbrk(0);
 		heapaddr = ALIGN(heapaddr, hugetlbfs_vaddr_granularity());
 	}
@@ -99,8 +110,8 @@ static void __attribute__ ((constructor)) setup_morecore(void)
 	DEBUG("Placing hugepage morecore heap at 0x%lx\n", heapaddr);
 		
 	heaptop = heapbase = (void *)heapaddr;
-
 	__morecore = &hugetlbfs_morecore;
-	/* we always want to use our morecore, not mmap() */
+
+	/* we always want to use our morecore, not ordinary mmap() */
 	mallopt(M_MMAP_MAX, 0);
 }

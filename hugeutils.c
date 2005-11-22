@@ -7,7 +7,10 @@
 #include <errno.h>
 #include <limits.h>
 #include <string.h>
+#include <ctype.h>
+
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/vfs.h>
 #include <sys/statfs.h>
 
@@ -15,74 +18,83 @@
 
 #include "libhugetlbfs_internal.h"
 
+static int hpage_size; /* = 0 */
+static char htlb_mount[PATH_MAX+1]; /* = 0 */
+
 /********************************************************************/
 /* Internal functions                                               */
 /********************************************************************/
 
 #define BUF_SZ 256
+#if 0
 
-static int read_meminfo(const char *format)
+struct linebuf {
+	char buf[LINE_SZ];
+};
+
+static char *get_line(int fd, struct linebuf *buf)
 {
-	int val;
-	FILE *f;
-	int retcode;
-	char buf[BUF_SZ];
-
-	f = fopen("/proc/meminfo", "r");
-	if (!f) {
-		ERROR("Failed to open /proc/meminfo\n");
-		return -1;
-	}
-
-	while (!feof(f)) {
-		fgets(buf, BUF_SZ, f);
-		retcode = sscanf(buf, format, &val);
-		if (retcode == 1) {
-			fclose(f);
-			return val;
-		}
-	}
-	fclose(f);
-	ERROR("Could not find \"%s\" in /proc/meminfo\n", format);
-	return -1;
 }
 
-#define MAPS_BUF_SZ 4096
-
-static int read_maps(unsigned long addr, char *buf)
+static int get_line(int fd, char *buf, int bufsize, int tailoffset)
 {
-	FILE *f;
-	char line[MAPS_BUF_SZ];
-	char *tmp;
+	int tailsize = bufsize - tailoffset;
+	int datalen;
+	int rc;
 
-	f = fopen("/proc/self/maps", "r");
-	if (!f) {
-		ERROR("Failed to open /proc/self/maps\n");
+	if (tailsize < 0) {
+		/* Chew remainders */
+	}
+
+	if (tailoffset)
+		memmove(buf, buf + lastline, bufsize - lastline);
+
+	rc = read(fd, buf + tailsize, bufsize - tailsize);
+
+	if (tail) {
+		
+	}
+}
+
+#endif
+
+#define MEMINFO_SIZE	2048
+
+static long read_meminfo(const char *tag)
+{
+	int fd;
+	char buf[MEMINFO_SIZE];
+	int len, readerr;
+	char *p, *q;
+	long val;
+
+	fd = open("/proc/meminfo", O_RDONLY);
+	if (fd < 0) {
+		ERROR("Couldn't open /proc/meminfo (%s)\n", strerror(errno));
 		return -1;
 	}
 
-	while (1) {
-		unsigned long start, end, off, ino;
-		int ret;
-		
-		tmp = fgets(line, MAPS_BUF_SZ, f);
-		if (!tmp)
-			break;
-		
-		ret = sscanf(line, "%lx-%lx %*s %lx %*s %ld %"
-			     stringify(PATH_MAX) "s", &start, &end, &off, &ino,
-			     buf);
-		if ((ret < 4) || (ret > 5)) {
-			ERROR("Couldn't parse /proc/self/maps line: %s\n",
-			      line);
-			return -1;
-		}
+	len = read(fd, buf, sizeof(buf));
+	readerr = errno;
+	close(fd);
+	if (len < 0) {
+		ERROR("Error reading /proc/meminfo (%s)\n", strerror(readerr));
+		return -1;
+	}
+	if (len == sizeof(buf)) {
+		ERROR("/proc/meminfo is too large\n");
+		return -1;
+	}
+	buf[len] = '\0';
 
-		if ((start <= addr) && (addr < end))
-			return 1;
+	p = strstr(buf, tag) + strlen(tag);
+	val = strtol(p, &q, 0);
+	if (! isspace(*q)) {
+		ERROR("Couldn't parse /proc/meminfo value\n");
+		return -1;
 	}
 
-	return 0;
+	return val;
 }
 
 /********************************************************************/
@@ -91,13 +103,12 @@ static int read_maps(unsigned long addr, char *buf)
 
 long gethugepagesize(void)
 {
-	static int hpage_size = 0;
 	int hpage_kb;
 
 	if (hpage_size)
 		return hpage_size;
 
-	hpage_kb = read_meminfo("Hugepagesize: %d ");
+	hpage_kb = read_meminfo("Hugepagesize:");
 	if (hpage_kb < 0)
 		hpage_size = -1;
 	else
@@ -133,12 +144,14 @@ int hugetlbfs_test_path(const char *mount)
 	return (sb.f_type == HUGETLBFS_MAGIC);
 }
 
+#define MOUNTS_SZ	4096
+
 const char *hugetlbfs_find_path(void)
 {
-	static char htlb_mount[PATH_MAX+1];
-	int err;
+	int err, readerr;
 	char *tmp;
-	FILE *f;
+	int fd, len;
+	char buf[MOUNTS_SZ];
 
 	/* Have we already located a mount? */
 	if (*htlb_mount)
@@ -161,35 +174,45 @@ const char *hugetlbfs_find_path(void)
 	}
 
 	/* Oh well, let's go searching for a mountpoint */
-	f = fopen("/proc/mounts", "r");
-	if (!f) {
-		f = fopen("/etc/mtab", "r");
-		if (!f) {
-			ERROR("Couldn't open either /proc/mounts or /etc/mtab\n");
+	fd = open("/proc/mounts", O_RDONLY);
+	if (fd < 0) {
+		fd = open("/etc/mtab", O_RDONLY);
+		if (fd < 0) {
+			ERROR("Couldn't open /proc/mounts or /etc/mtab (%s)\n",
+			      strerror(errno));
 			return NULL;
 		}
 	}
 
-	while (1) {
-		char buf[sizeof(htlb_mount) + BUF_SZ];
+	len = read(fd, buf, sizeof(buf));
+	readerr = errno;
+	close(fd);
+	if (len < 0) {
+		ERROR("Error reading mounts (%s)\n", strerror(errno));
+		return NULL;
+	}
+	if (len >= sizeof(buf)) {
+		ERROR("/proc/mounts is too long\n");
+		return NULL;
+	}
+	buf[sizeof(buf)-1] = '\0';
 
-		tmp = fgets(buf, BUF_SZ, f);
-		if (! tmp)
-			break;
-
-		err = sscanf(buf,
-			     "%*s %" stringify(sizeof(htlb_mount))
+	tmp = buf;
+	while (tmp) {
+		err = sscanf(tmp,
+			     "%*s %" stringify(PATH_MAX)
 			     "s hugetlbfs ",
 			     htlb_mount);
-		if ((err == 1) && (hugetlbfs_test_path(htlb_mount) == 1)) {
-			fclose(f);
+		if ((err == 1) && (hugetlbfs_test_path(htlb_mount) == 1))
 			return htlb_mount;
-		}
 
 		memset(htlb_mount, 0, sizeof(htlb_mount));
+
+		tmp = strchr(tmp, '\n');
+		if (tmp)
+			tmp++;
 	}
 
-	fclose(f);
 	return NULL;
 }
 
@@ -209,28 +232,6 @@ int hugetlbfs_unlinked_fd(void)
 		unlink(name);
 
 	return fd;
-}
-
-int hugetlbfs_test_addr(void *p)
-{
-	char name[PATH_MAX+1];
-	char *dirend;
-	int ret;
-
-	ret = read_maps((unsigned long)p, name);
-	if (ret < 0)
-		return ret;
-	if (ret == 0) {
-		ERROR("Couldn't find addres %p in /proc/self/maps\n", p);
-		return -1;
-	}
-
-	/* Truncate the filename portion */
-	dirend = strrchr(name, '/');
-	if (dirend && dirend > name) {
-		*dirend = '\0';
-	}
-	return hugetlbfs_test_path(name);
 }
 
 #if 0
@@ -309,12 +310,12 @@ int find_mount_hugetlbfs(char *mountpoint, size_t strsz)
 
 int get_nr_free_huge_pages()
 {
-	return read_meminfo("HugePages_Free: %d ");
+	return read_meminfo("HugePages_Free:");
 }
 
 int get_nr_total_huge_pages()
 {
-	return read_meminfo("HugePages_Total: %d ");
+	return read_meminfo("HugePages_Total:");
 }
 
 int set_nr_hugepages(int num)

@@ -10,11 +10,22 @@
 
 int __hugetlbfs_verbose = 1;
 
-static void __attribute__ ((constructor)) setup_debug(void)
+static int initialized;
+
+void __hugetlbfs_init_debug(void)
 {
 	char *env;
+
+	if (initialized)
+		return;
 
 	env = getenv("HUGETLB_VERBOSE");
 	if (env)
 		__hugetlbfs_verbose = atoi(env);
 }
+
+static void __attribute__ ((constructor)) setup_debug(void)
+{
+	__hugetlbfs_init_debug();
+}
+

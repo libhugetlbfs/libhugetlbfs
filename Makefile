@@ -20,10 +20,13 @@ libhugetlbfs.a: $(LIBOBJS)
 	$(AR) $(ARFLAGS) $@ $^
 
 libhugetlbfs.so: $(LIBOBJS)
-	$(LINK.c) -shared -fPIC -o $@ $^
+	$(LINK.c) -shared -fPIC -o $@ $^ -ldl
+
+%.i:	%.c
+	$(CC) $(CPPFLAGS) -E $< > $@
 
 clean:
-	rm -f *~ *.o *.so *.a *.d core a.out
+	rm -f *~ *.o *.so *.a *.d *.i core a.out
 	$(MAKE) -C tests clean
 
 %.d: %.c

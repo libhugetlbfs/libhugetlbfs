@@ -11,10 +11,10 @@ DEPFILES = $(TESTS:%=%.d) testutils.d
 all:	$(TESTS)
 
 $(LIB_TESTS): %: %.o testutils.o
-	$(LINK.c) $(LDFLAGS) -o $@ $^ -lhugetlbfs
+	$(LINK.c) -o $@ $^ -lhugetlbfs
 
 $(PRELOAD_TESTS): %: %.o testutils.o
-	$(LINK.c) $(LDFLAGS) -o $@ $^
+	$(LINK.c) -o $@ $^
 
 clean:
 	rm -f *~ *.o *.so *.a *.d core a.out

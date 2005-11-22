@@ -11,9 +11,10 @@
 extern int verbose_test;
 extern char *test_name;
 void test_init(int argc, char *argv[]);
+int test_addr_huge(void *p);
 
 /* Each test case must define this function */
-void cleanup();
+void cleanup(void);
 
 #define verbose_printf(...) \
 	if (verbose_test) \

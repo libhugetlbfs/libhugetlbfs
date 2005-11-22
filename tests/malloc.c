@@ -7,6 +7,7 @@
 
 int block_sizes[] = {
 	sizeof(int), 1024, 128*1024, 1024*1024, 16*1024*1024,
+	32*1024*1024,
 };
 #define NUM_SIZES	(sizeof(block_sizes) / sizeof(block_sizes[0]))
 
@@ -33,14 +34,13 @@ int main(int argc, char *argv[])
 
 		verbose_printf("malloc(%d) = %p\n", size, p);
 
-		for (j = 0; j < size; j++)
-			p[j] = j % 256;
+		memset(p, 0, size);
 
-
-		for (j = 0; j < size; j++)
-			if (p[j] != (j % 256))
-				FAIL("Mismatch");
-
+		if (expect_hugepage && (test_addr_huge(p) != 1))
+			FAIL("Address is not hugepage");
+		if (!expect_hugepage && (test_addr_huge(p) == 1))
+			FAIL("Address is unexpectedly huge");
+		
 		free(p);
 	}
 

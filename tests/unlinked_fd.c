@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 	if (p == MAP_FAILED)
 		FAIL("mmap()");
 
-	err = hugetlbfs_test_addr(p);
+	err = test_addr_huge(p);
 	if (err != 1)
 		FAIL("Mapped address is not hugepage");
 

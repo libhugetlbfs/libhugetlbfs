@@ -38,6 +38,6 @@ run_test truncate
 run_test shared
 run_test private
 run_test malloc
-preload_test HUGETLB_MORECORE=0 malloc
-#run_test malloc_manysmall
-#preload_test HUGETLB_MORECORE=auto malloc_manysmall
+preload_test HUGETLB_MORECORE=yes malloc
+run_test malloc_manysmall
+preload_test HUGETLB_MORECORE=yes malloc_manysmall

@@ -18,4 +18,6 @@ extern int __hugetlbfs_verbose;
 #define DEBUG(...)	if (__hugetlbfs_verbose >= 2) \
 				fprintf(stderr, "libhugetlbfs: " __VA_ARGS__)
 
+extern void __hugetlbfs_init_debug(void);
+
 #endif /* _LIBHUGETLBFS_INTERNAL_H */
