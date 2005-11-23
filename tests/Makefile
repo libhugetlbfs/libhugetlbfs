@@ -4,21 +4,38 @@ PRELOAD_TESTS = malloc malloc_manysmall
 TESTS = $(LIB_TESTS) $(PRELOAD_TESTS)
 
 CPPFLAGS = -I..
-LDFLAGS = -L..
 LDLIBS = -ldl
+LDFLAGS32 = -L../obj32
+LDFLAGS64 = -L../obj64
 
 DEPFILES = $(TESTS:%=%.d) testutils.d
 
-all:	$(TESTS)
+all:	$(foreach DIR,$(OBJDIRS),$(TESTS:%=$(DIR)/%))
 
-$(LIB_TESTS): %: %.o testutils.o
-	$(LINK.c) -o $@ $^ -lhugetlbfs
+$(OBJDIRS): %:
+	mkdir $@
 
-$(PRELOAD_TESTS): %: %.o testutils.o
-	$(LINK.c) -o $@ $^
+obj32/%.o: %.c obj32
+	$(CC32) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+
+obj64/%.o: %.c obj64
+	$(CC64) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+
+$(LIB_TESTS:%=obj32/%): %: %.o obj32/testutils.o
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ -lhugetlbfs $(LDLIBS)
+
+$(LIB_TESTS:%=obj64/%): %: %.o obj64/testutils.o
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ -lhugetlbfs $(LDLIBS)
+
+$(PRELOAD_TESTS:%=obj32/%): %: %.o obj32/testutils.o
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS)
+
+$(PRELOAD_TESTS:%=obj64/%): %: %.o obj64/testutils.o
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS)
 
 clean:
 	rm -f *~ *.o *.so *.a *.d core a.out
+	rm -rf obj*
 	rm -f $(TESTS)
 
 %.d: %.c

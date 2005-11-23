@@ -35,7 +35,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	void *p;
 	long newsize = 0;
 
-	DEBUG("hugetlbfs_morecore(%d) = ...\n", increment);
+	DEBUG("hugetlbfs_morecore(%ld) = ...\n", (long)increment);
 
 	newsize = (heaptop-heapbase) + increment - mapsize;
 

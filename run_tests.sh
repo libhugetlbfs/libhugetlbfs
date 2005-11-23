@@ -2,7 +2,6 @@
 
 cd tests
 
-export LD_LIBRARY_PATH=..
 export QUIET_TEST=1
 export HUGETLB_VERBOSE=2
 
@@ -22,8 +21,12 @@ while [ $# -gt 0 ]; do
 done
 
 run_test () {
-    echo -n "$@:	"
-    PATH="." $ENV "$@"
+    for bits in 32 64; do
+	if [ -d obj$bits ]; then
+	    echo -n "$@ ($bits):	"
+	    PATH="obj$bits" LD_LIBRARY_PATH="../obj$bits" $ENV "$@"
+	fi
+    done
 }
 
 preload_test () {
