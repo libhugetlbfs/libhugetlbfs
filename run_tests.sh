@@ -46,3 +46,6 @@ run_test malloc
 preload_test HUGETLB_MORECORE=yes malloc
 run_test malloc_manysmall
 preload_test HUGETLB_MORECORE=yes malloc_manysmall
+run_test straddle_4GB
+run_test huge_at_4GB_normal_below
+run_test huge_below_4GB_normal_above

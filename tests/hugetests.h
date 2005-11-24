@@ -13,6 +13,8 @@ extern char *test_name;
 void test_init(int argc, char *argv[]);
 int test_addr_huge(void *p);
 
+#define ALIGN(x, a)	(((x) + (a) - 1) & ~((a) - 1))
+
 /* Each test case must define this function */
 void cleanup(void);
 
@@ -28,6 +30,13 @@ void cleanup(void);
 	do {						\
 		cleanup();				\
 		printf("PASS\n");			\
+		exit(RC_PASS);				\
+	} while (0)
+
+#define IRRELEVANT()					\
+	do {						\
+		cleanup();				\
+		printf("PASS (irrelevant)\n");		\
 		exit(RC_PASS);				\
 	} while (0)
 

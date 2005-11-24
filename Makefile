@@ -38,16 +38,19 @@ check:	all
 checkv:	all
 	./run_tests.sh -v -V
 
+# Don't want to remake objects just 'cos the directory timestamp changes
 $(OBJDIRS): %:
-	mkdir $@
+	@mkdir -p $@
 
 
 .SECONDARY:
 
-obj32/%.o: %.c obj32
+obj32/%.o: %.c
+	@mkdir -p obj32
 	$(CC32) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
 
-obj64/%.o: %.c obj64
+obj64/%.o: %.c
+	@mkdir -p obj64
 	$(CC64) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
 
 %/libhugetlbfs.a: $(foreach OBJ,$(LIBOBJS),%/$(OBJ))
