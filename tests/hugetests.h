@@ -40,17 +40,12 @@ void cleanup(void);
 		exit(RC_PASS);				\
 	} while (0)
 
-#define FAIL(s)						\
+/* Look out, gcc extension below... */
+#define FAIL(fmt, ...)					\
 	do {						\
 		cleanup();				\
-		printf("FAIL\t%s\n", s);		\
+		printf("FAIL\t" fmt "\n", ##__VA_ARGS__);	\
 		exit(RC_FAIL);				\
-	} while (0)
-
-#define _FAIL()					\
-	do {					\
-		printf("FAIL\n");		\
-		exit(RC_FAIL);			\
 	} while (0)
 
 #define CONFIG()					\

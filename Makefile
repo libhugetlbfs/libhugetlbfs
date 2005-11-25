@@ -1,7 +1,7 @@
 LIBOBJS = hugeutils.o morecore.o debug.o
 
 CPPFLAGS = -D__LIBHUGETLBFS__
-CFLAGS = -Wall -fPIC
+CFLAGS = -O2 -Wall -fPIC
 LDLIBS = -ldl
 
 ARCH = $(shell uname -m)
@@ -68,6 +68,7 @@ obj64/libhugetlbfs.so: $(LIBOBJS:%=obj64/%)
 clean:
 	rm -f *~ *.o *.so *.a *.d *.i core a.out
 	rm -rf obj*
+	rm -f ldscripts/*~
 	$(MAKE) -C tests clean
 
 %.d: %.c

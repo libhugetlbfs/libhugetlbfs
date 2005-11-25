@@ -33,6 +33,12 @@ preload_test () {
     run_test LD_PRELOAD=libhugetlbfs.so "$@"
 }
 
+elflink_test () {
+    run_test "$@"
+    run_test "xH.$@"
+    preload_test HUGETLB_ELF=yes "xH.$@"
+}
+
 run_test gethugepagesize
 run_test test_root
 run_test find_path
@@ -49,3 +55,4 @@ preload_test HUGETLB_MORECORE=yes malloc_manysmall
 run_test straddle_4GB
 run_test huge_at_4GB_normal_below
 run_test huge_below_4GB_normal_above
+elflink_test linkhuge
