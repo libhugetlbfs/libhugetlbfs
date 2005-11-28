@@ -11,7 +11,8 @@ LDLIBS = -ldl
 LDFLAGS32 = -L../obj32
 LDFLAGS64 = -L../obj64
 
-TESTS = $(LIB_TESTS) $(PRELOAD_TESTS) $(ELFLINK_TESTS) $(ELFLINK_TESTS:%=xH.%)
+TESTS = $(LIB_TESTS) $(PRELOAD_TESTS) $(ELFLINK_TESTS) \
+	$(ELFLINK_TESTS:%=xH.%) $(ELFLINK_TESTS:%=xHB.%)
 TESTS_64 = $(LIB_TESTS_64)
 
 ARCH = $(shell uname -m | sed -e s/i.86/i386/)
@@ -86,6 +87,16 @@ obj32/xH.%: $(SCRIPTS32).xH obj32/%.o obj32/testutils.o
 
 obj64/xH.%: $(SCRIPTS64).xH obj64/%.o obj64/testutils.o
 	@$(VECHO) LD64 "(xH test)" $@
+	@mkdir -p obj64
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ -Wl,-T $^ $(LDLIBS)
+
+obj32/xHB.%: $(SCRIPTS32).xHB obj32/%.o obj32/testutils.o
+	@$(VECHO) LD32 "(xHB test)" $@
+	@mkdir -p obj32
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ -Wl,-T $^ $(LDLIBS)
+
+obj64/xHB.%: $(SCRIPTS64).xHB obj64/%.o obj64/testutils.o
+	@$(VECHO) LD64 "(xHB test)" $@
 	@mkdir -p obj64
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ -Wl,-T $^ $(LDLIBS)
 

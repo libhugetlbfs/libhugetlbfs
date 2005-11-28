@@ -174,39 +174,32 @@ SECTIONS
     *(.sdata .sdata.* .gnu.linkonce.s.*)
   }
   _edata = .; PROVIDE (edata = .);
+  .plt            : SPECIAL { *(.plt) }
+  . = ALIGN(32 / 8);
+  . = ALIGN(32 / 8);
+  . = DATA_SEGMENT_END (.);
+  /* Hugepage area */
+  . = ALIGN(0x10000000);	/* Align to next 256MB segment */
+  /* Saving hugepages is more important than saving executable size, so
+   * we don't attempt to maintain congruence here */
   __bss_start = .;
-  .sbss           :
+  .hugetlb.sbss           :
   {
     PROVIDE (__sbss_start = .); PROVIDE (___sbss_start = .);
     *(.dynsbss)
     *(.sbss .sbss.* .gnu.linkonce.sb.*)
     *(.scommon)
     PROVIDE (__sbss_end = .); PROVIDE (___sbss_end = .);
-  }
-  .plt            : SPECIAL { *(.plt) }
-  .bss            :
+  } :htlb
+  .hugetlb.bss        :
   {
    *(.dynbss)
    *(.bss .bss.* .gnu.linkonce.b.*)
+   *(.hugetlb.bss)
    *(COMMON)
-   /* Align here to ensure that the .bss section occupies space up to
-      _end.  Align after .bss to ensure correct alignment even if the
-      .bss section disappears because there are no input sections.
-      FIXME: Why do we need it? When there is no .bss section, we don't
-      pad the .data section.  */
-   . = ALIGN(. != 0 ? 32 / 8 : 1);
   }
-  . = ALIGN(32 / 8);
-  . = ALIGN(32 / 8);
   _end = .;
   PROVIDE (end = .);
-  . = DATA_SEGMENT_END (.);
-  /* Hugepage area */
-  . = ALIGN(0x10000000);	/* Align to next 256MB segment */
-  .hugetlb.bss        :
-  {
-   *(.hugetlb.bss)
-  } :htlb
   /* Stabs debugging sections.  */
   .stab          0 : { *(.stab) }
   .stabstr       0 : { *(.stabstr) }

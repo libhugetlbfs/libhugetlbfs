@@ -45,9 +45,9 @@ preload_test () {
 elflink_test () {
     run_test "$@"
     # Test we don't blow up if not linked for hugepage
-    preload_test HUGETLB_ELF=yes "$@" 
+    preload_test "$@" 
     run_test "xH.$@"
-    run_test HUGETLB_ELF=yes "xH.$@"
+    run_test "xHB.$@"
 }
 
 run_test gethugepagesize

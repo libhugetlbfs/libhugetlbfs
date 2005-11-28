@@ -34,12 +34,8 @@ static int htlb_num_segs;
 
 static void parse_phdrs(Elf_Ehdr *ehdr)
 {
-	Elf_Phdr *phdr;
+	Elf_Phdr *phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
 	int i;
-
-	DEBUG("parse_phdrs: ELF header at %p\n", ehdr);
-	phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
-	DEBUG("parse_phdrs: ELF program headers at %p\n", phdr);
 
 	for (i = 0; i < ehdr->e_phnum; i++) {
 		unsigned long vaddr, filesz, memsz;
@@ -132,13 +128,8 @@ static void remap_segments(struct seg_info *seg, int num)
 
 static void __attribute__ ((constructor)) setup_elflink(void)
 {
-	char *env;
 	extern Elf_Ehdr __executable_start __attribute__((weak));
 	Elf_Ehdr *ehdr = &__executable_start;
-
-	env = getenv("HUGETLB_ELF");
-	if (! env)
-		return;
 
 	if (! ehdr) {
 		DEBUG("Couldn't locate __executable_start, "
@@ -149,4 +140,6 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 	parse_phdrs(ehdr);
 	if (htlb_num_segs)
 		remap_segments(htlb_seg_table, htlb_num_segs);
+	else
+		DEBUG("Executable is not linked for hugepage segments\n");
 }

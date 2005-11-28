@@ -1,9 +1,9 @@
 /* Default linker script, for normal executables */
-OUTPUT_FORMAT("elf32-powerpc", "elf32-powerpc",
-	      "elf32-powerpc")
-OUTPUT_ARCH(powerpc:common)
+OUTPUT_FORMAT("elf64-powerpc", "elf64-powerpc",
+	      "elf64-powerpc")
+OUTPUT_ARCH(powerpc:common64)
 ENTRY(_start)
-SEARCH_DIR("/usr/powerpc-linux-gnu/lib"); SEARCH_DIR("/usr/local/lib"); SEARCH_DIR("/lib"); SEARCH_DIR("/usr/lib");
+SEARCH_DIR("/usr/powerpc64-linux-gnu/lib64"); SEARCH_DIR("/usr/local/lib64"); SEARCH_DIR("/lib64"); SEARCH_DIR("/usr/lib64"); SEARCH_DIR("/usr/powerpc64-linux-gnu/lib"); SEARCH_DIR("/usr/local/lib"); SEARCH_DIR("/lib"); SEARCH_DIR("/usr/lib");
 INPUT(-lhugetlbfs);
 PHDRS
 {
@@ -14,7 +14,6 @@ PHDRS
   htlb PT_LOAD FLAGS (0x00100007);
   dynamic PT_DYNAMIC ;
   note PT_NOTE ;
-  gnu_stack PT_GNU_STACK ;
 }
 SECTIONS
 {
@@ -49,8 +48,7 @@ SECTIONS
   .rela.dtors     : { *(.rela.dtors) }
   .rel.got        : { *(.rel.got) }
   .rela.got       : { *(.rela.got) }
-  .rela.got1           : { *(.rela.got1) }
-  .rela.got2           : { *(.rela.got2) }
+  .rela.toc	  : { *(.rela.toc) }
   .rel.sdata      : { *(.rel.sdata .rel.sdata.* .rel.gnu.linkonce.s.*) }
   .rela.sdata     : { *(.rela.sdata .rela.sdata.* .rela.gnu.linkonce.s.*) }
   .rel.sbss       : { *(.rel.sbss .rel.sbss.* .rel.gnu.linkonce.sb.*) }
@@ -63,22 +61,23 @@ SECTIONS
   .rela.bss       : { *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*) }
   .rel.plt        : { *(.rel.plt) }
   .rela.plt       : { *(.rela.plt) }
+  .rela.tocbss	  : { *(.rela.tocbss) }
   .init           :
   {
     KEEP (*(.init))
-  } =0
+  } =0x60000000
   .text           :
   {
     *(.text .stub .text.* .gnu.linkonce.t.*)
     KEEP (*(.text.*personality*))
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
-    *(.glink)
-  } =0
+    *(.sfpr .glink)
+  } =0x60000000
   .fini           :
   {
     KEEP (*(.fini))
-  } =0
+  } =0x60000000
   PROVIDE (__etext = .);
   PROVIDE (_etext = .);
   PROVIDE (etext = .);
@@ -86,7 +85,6 @@ SECTIONS
   .rodata1        : { *(.rodata1) }
   .sdata2         :
   {
-    PROVIDE (_SDA2_BASE_ = 32768);
     *(.sdata2 .sdata2.* .gnu.linkonce.s2.*)
   }
   .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) }
@@ -151,12 +149,8 @@ SECTIONS
   }
   .jcr            : { KEEP (*(.jcr)) }
   .data.rel.ro : { *(.data.rel.ro.local) *(.data.rel.ro*) }
-  .got1           : { *(.got1) }
-  .got2           : { *(.got2) }
   .dynamic        : { *(.dynamic) } :dynamic :data
-  .got            : SPECIAL { *(.got) }
   . = DATA_SEGMENT_RELRO_END (0, .);
-  .plt            : SPECIAL { *(.plt) }
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
@@ -164,49 +158,42 @@ SECTIONS
     SORT(CONSTRUCTORS)
   }
   .data1          : { *(.data1) }
-  .got            : SPECIAL { *(.got) }
+  .toc1		 ALIGN(8) : { *(.toc1) }
+  .opd		 ALIGN(8) : { KEEP (*(.opd)) }
+  .got		ALIGN(8) : { *(.got .toc) }
   /* We want the small data sections together, so single-instruction offsets
      can access them all, and initialized data all before uninitialized, so
      we can shorten the on-disk segment size.  */
   .sdata          :
   {
-    PROVIDE (_SDA_BASE_ = 32768);
     *(.sdata .sdata.* .gnu.linkonce.s.*)
   }
   _edata = .; PROVIDE (edata = .);
+  .plt            : { *(.plt) }
+  . = ALIGN(64 / 8);
+  . = ALIGN(64 / 8);
+  . = DATA_SEGMENT_END (.);
+  /* Hugepage area */
+  . = ALIGN(0x10000000000);	/* Align to next 1TB area */
+  /* Saving hugepages is more important than saving executable size, so
+   * we don't attempt to maintain congruence here */
   __bss_start = .;
-  .sbss           :
+  .tocbss	 ALIGN(8) : { *(.tocbss)}
+  .hugetlb.sbss           :
   {
-    PROVIDE (__sbss_start = .); PROVIDE (___sbss_start = .);
     *(.dynsbss)
     *(.sbss .sbss.* .gnu.linkonce.sb.*)
     *(.scommon)
-    PROVIDE (__sbss_end = .); PROVIDE (___sbss_end = .);
-  }
-  .plt            : SPECIAL { *(.plt) }
-  .bss            :
+  } :htlb
+  .hugetlb.bss        :
   {
    *(.dynbss)
    *(.bss .bss.* .gnu.linkonce.b.*)
+   *(.hugetlb.bss)
    *(COMMON)
-   /* Align here to ensure that the .bss section occupies space up to
-      _end.  Align after .bss to ensure correct alignment even if the
-      .bss section disappears because there are no input sections.
-      FIXME: Why do we need it? When there is no .bss section, we don't
-      pad the .data section.  */
-   . = ALIGN(. != 0 ? 32 / 8 : 1);
   }
-  . = ALIGN(32 / 8);
-  . = ALIGN(32 / 8);
   _end = .;
   PROVIDE (end = .);
-  . = DATA_SEGMENT_END (.);
-  /* Hugepage area */
-  . = ALIGN(0x10000000);	/* Align to next 256MB segment */
-  .hugetlb.bss        :
-  {
-   *(.hugetlb.bss)
-  } :htlb
   /* Stabs debugging sections.  */
   .stab          0 : { *(.stab) }
   .stabstr       0 : { *(.stabstr) }
@@ -240,6 +227,5 @@ SECTIONS
   .debug_funcnames 0 : { *(.debug_funcnames) }
   .debug_typenames 0 : { *(.debug_typenames) }
   .debug_varnames  0 : { *(.debug_varnames) }
-  /DISCARD/	: { *(.fixup) }
   /DISCARD/ : { *(.note.GNU-stack) }
 }

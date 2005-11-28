@@ -28,7 +28,7 @@ struct test_entry {
 	int small_huge, big_huge;
 } testtab[] = {
 	{ "DATA", &small_data, big_data, },
-	{ "BSS", &small_bss, big_bss, },
+	{ "BSS", &small_bss, big_bss, 'B' },
 	{ ".hugetlb.bss", &small_htlb, big_htlb, 'H', },
 
 };
@@ -82,7 +82,6 @@ static void do_test(struct test_entry *te)
 
 int main(int argc, char *argv[])
 {
-	const char *env;
 	int i;
 
 	test_init(argc, argv);
@@ -106,11 +105,6 @@ int main(int argc, char *argv[])
 		if (testtab[i].big_huge)
 			verbose_printf(" %s", testtab[i].name);
 	verbose_printf("\n");
-
-	env = getenv("HUGETLB_ELF");
-	verbose_printf("HUGETLB_ELF = \"%s\"\n", env);
-	if (! env)
-		PASS();
 
 	for (i = 0; i < NUM_TESTS; i++) {
 		char linkchar = testtab[i].linkchar;
