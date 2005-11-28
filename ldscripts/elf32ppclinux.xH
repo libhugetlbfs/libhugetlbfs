@@ -4,6 +4,7 @@ OUTPUT_FORMAT("elf32-powerpc", "elf32-powerpc",
 OUTPUT_ARCH(powerpc:common)
 ENTRY(_start)
 SEARCH_DIR("/usr/powerpc-linux-gnu/lib"); SEARCH_DIR("/usr/local/lib"); SEARCH_DIR("/lib"); SEARCH_DIR("/usr/lib");
+INPUT(-lhugetlbfs);
 PHDRS
 {
   headers PT_PHDR PHDRS ;
@@ -13,6 +14,7 @@ PHDRS
   htlb PT_LOAD FLAGS (0x00100007);
   dynamic PT_DYNAMIC ;
   note PT_NOTE ;
+  gnu_stack PT_GNU_STACK ;
 }
 SECTIONS
 {
@@ -201,10 +203,12 @@ SECTIONS
   . = DATA_SEGMENT_END (.);
   /* Hugepage area */
   . = ALIGN(0x10000000);	/* Align to next 256MB segment */
+  __hugetlb_start = .;
   .hugetlb.bss        :
   {
    *(.hugetlb.bss)
   } :htlb
+  __hugetlb_end = .;
   /* Stabs debugging sections.  */
   .stab          0 : { *(.stab) }
   .stabstr       0 : { *(.stabstr) }

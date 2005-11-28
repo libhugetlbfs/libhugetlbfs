@@ -11,7 +11,7 @@
 
 int main(int argc, char *argv[])
 {
-	int i, j;
+	int i;
 	char *env;
 	char *p;
 	int expect_hugepage = 0;

@@ -4,6 +4,8 @@ cd tests
 
 export QUIET_TEST=1
 export HUGETLB_VERBOSE=2
+unset HUGETLB_ELF
+unset HUGETLB_MORECORE
 
 ENV=/usr/bin/env
 
@@ -20,12 +22,19 @@ while [ $# -gt 0 ]; do
     esac
 done
 
+run_test_bits () {
+    BITS=$1
+    shift
+
+    if [ -d obj$BITS ]; then
+	echo -n "$@ ($BITS):	"
+	PATH="obj$BITS" LD_LIBRARY_PATH="../obj$BITS" $ENV "$@"
+    fi
+}
+
 run_test () {
     for bits in 32 64; do
-	if [ -d obj$bits ]; then
-	    echo -n "$@ ($bits):	"
-	    PATH="obj$bits" LD_LIBRARY_PATH="../obj$bits" $ENV "$@"
-	fi
+	run_test_bits $bits "$@"
     done
 }
 
@@ -35,8 +44,10 @@ preload_test () {
 
 elflink_test () {
     run_test "$@"
+    # Test we don't blow up if not linked for hugepage
+    preload_test HUGETLB_ELF=yes "$@" 
     run_test "xH.$@"
-    preload_test HUGETLB_ELF=yes "xH.$@"
+    run_test HUGETLB_ELF=yes "xH.$@"
 }
 
 run_test gethugepagesize
@@ -52,7 +63,7 @@ run_test malloc
 preload_test HUGETLB_MORECORE=yes malloc
 run_test malloc_manysmall
 preload_test HUGETLB_MORECORE=yes malloc_manysmall
-run_test straddle_4GB
-run_test huge_at_4GB_normal_below
-run_test huge_below_4GB_normal_above
+run_test_bits 64 straddle_4GB
+run_test_bits 64 huge_at_4GB_normal_below
+run_test_bits 64 huge_below_4GB_normal_above
 elflink_test linkhuge

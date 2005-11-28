@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <dlfcn.h>
@@ -39,7 +40,6 @@ int main(int argc, char *argv[])
 {
 	int hpage_size;
 	int fd;
-	int err;
 
 	test_init(argc, argv);
 

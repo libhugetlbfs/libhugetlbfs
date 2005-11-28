@@ -16,7 +16,6 @@ int main(int argc, char *argv[])
 	void *p, *q;
 	unsigned int *pl, *ql;
 	int i;
-	int err;
 
 	test_init(argc, argv);
 

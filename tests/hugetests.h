@@ -7,6 +7,7 @@
 #define RC_PASS 	0
 #define RC_CONFIG 	1
 #define RC_FAIL		2
+#define RC_BUG		99
 
 extern int verbose_test;
 extern char *test_name;
@@ -53,6 +54,13 @@ void cleanup(void);
 		cleanup();				\
 		printf("Bad configuration\n");	\
 		exit(RC_CONFIG);			\
+	} while (0)
+
+#define TEST_BUG(fmt, ...)					\
+	do {						\
+		cleanup();				\
+		printf("BUG in testsuite: " fmt "\n", ##__VA_ARGS__);	\
+		exit(RC_BUG);				\
 	} while (0)
 
 #endif /* _HUGETESTS_H */

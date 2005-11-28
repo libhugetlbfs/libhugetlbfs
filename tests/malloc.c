@@ -14,7 +14,7 @@ int block_sizes[] = {
 
 int main(int argc, char *argv[])
 {
-	int i, j;
+	int i;
 	char *env;
 	int expect_hugepage = 0;
 	char *p;

@@ -1,5 +1,6 @@
 #define _LARGEFILE64_SOURCE /* Need this for statfs64 */
-
+#define _GNU_SOURCE
+#include <dlfcn.h>
 #include <features.h>
 
 #include <stdio.h>
@@ -366,5 +367,4 @@ int shmem_setup(int nr_hugepages)
 	else
 		return 0;
 }
-
 #endif

@@ -21,7 +21,6 @@ int main(int argc, char *argv[])
 	int fd;
 	void *p;
 	volatile unsigned int *q;
-	int i;
 	int err;
 	struct sigaction sa = {
 		.sa_sigaction = sigbus_handler,

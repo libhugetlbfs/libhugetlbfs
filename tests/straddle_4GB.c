@@ -13,7 +13,6 @@ int main(int argc, char *argv[])
 	int hpage_size;
 	int fd;
 	void *p;
-	int err;
 	unsigned long straddle_addr;
 
 	test_init(argc, argv);
@@ -23,7 +22,7 @@ int main(int argc, char *argv[])
 		CONFIG();
 
 	if (sizeof(void *) <= 4)
-		IRRELEVANT();
+		TEST_BUG("64-bit only");
 
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)
@@ -67,7 +66,7 @@ int main(int argc, char *argv[])
 		verbose_printf("got %p instead\n", p);
 		FAIL("Wrong address with MAP_FIXED");
 	}
-	verbose_printf("done\n", p);
+	verbose_printf("done\n");
 
 	if (test_addr_huge(p) != 1)
 		FAIL("Mapped address is not hugepage");
