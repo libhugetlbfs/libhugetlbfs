@@ -23,7 +23,6 @@ static void segv_handler(int signum, siginfo_t *si, void *uc)
 	FAIL("Segmentation fault");
 }
 
-
 void test_init(int argc, char *argv[])
 {
 	int err;

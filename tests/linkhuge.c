@@ -17,9 +17,6 @@ static unsigned char big_data[BLOCK_SIZE] = "dummy";
 static int small_bss;
 static unsigned char big_bss[BLOCK_SIZE];
 
-static int small_htlb __attribute__((section (".hugetlb.bss")));
-static unsigned char big_htlb[BLOCK_SIZE] __attribute__((section (".hugetlb.bss")));
-
 struct test_entry {
 	const char *name;
 	int *small;
@@ -27,10 +24,8 @@ struct test_entry {
 	char linkchar;
 	int small_huge, big_huge;
 } testtab[] = {
-	{ "DATA", &small_data, big_data, },
+	{ "DATA", &small_data, big_data, 'D' },
 	{ "BSS", &small_bss, big_bss, 'B' },
-	{ ".hugetlb.bss", &small_htlb, big_htlb, 'H', },
-
 };
 
 #define NUM_TESTS	(sizeof(testtab) / sizeof(testtab[0]))

@@ -1,9 +1,10 @@
 LIB_TESTS = gethugepagesize test_root find_path unlinked_fd \
-	readback truncate shared private empty_mounts 
+	readback truncate shared private empty_mounts \
+	ptrace-write-hugepage
 LIB_TESTS_64 = straddle_4GB huge_at_4GB_normal_below \
 	huge_below_4GB_normal_above
 PRELOAD_TESTS = malloc malloc_manysmall
-ELFLINK_TESTS = linkhuge
+ELFLINK_TESTS = linkhuge linkhuge_nofd
 
 CFLAGS = -O2 -Wall -g
 CPPFLAGS = -I..
@@ -12,7 +13,7 @@ LDFLAGS32 = -L../obj32
 LDFLAGS64 = -L../obj64
 
 TESTS = $(LIB_TESTS) $(PRELOAD_TESTS) $(ELFLINK_TESTS) \
-	$(ELFLINK_TESTS:%=xH.%) $(ELFLINK_TESTS:%=xHB.%)
+	$(ELFLINK_TESTS:%=xB.%) $(ELFLINK_TESTS:%=xBDT.%)
 TESTS_64 = $(LIB_TESTS_64)
 
 ARCH = $(shell uname -m | sed -e s/i.86/i386/)
@@ -80,23 +81,23 @@ $(ELFLINK_TESTS:%=obj64/%): %: %.o obj64/testutils.o
 	@$(VECHO) LD64 "(elflink test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS)
 
-obj32/xH.%: $(SCRIPTS32).xH obj32/%.o obj32/testutils.o
-	@$(VECHO) LD32 "(xH test)" $@
+obj32/xB.%: $(SCRIPTS32).xB obj32/%.o obj32/testutils.o
+	@$(VECHO) LD32 "(xB test)" $@
 	@mkdir -p obj32
 	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ -Wl,-T $^ $(LDLIBS)
 
-obj64/xH.%: $(SCRIPTS64).xH obj64/%.o obj64/testutils.o
-	@$(VECHO) LD64 "(xH test)" $@
+obj64/xB.%: $(SCRIPTS64).xB obj64/%.o obj64/testutils.o
+	@$(VECHO) LD64 "(xB test)" $@
 	@mkdir -p obj64
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ -Wl,-T $^ $(LDLIBS)
 
-obj32/xHB.%: $(SCRIPTS32).xHB obj32/%.o obj32/testutils.o
-	@$(VECHO) LD32 "(xHB test)" $@
+obj32/xBDT.%: $(SCRIPTS32).xBDT obj32/%.o obj32/testutils.o
+	@$(VECHO) LD32 "(xBDT test)" $@
 	@mkdir -p obj32
 	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ -Wl,-T $^ $(LDLIBS)
 
-obj64/xHB.%: $(SCRIPTS64).xHB obj64/%.o obj64/testutils.o
-	@$(VECHO) LD64 "(xHB test)" $@
+obj64/xBDT.%: $(SCRIPTS64).xBDT obj64/%.o obj64/testutils.o
+	@$(VECHO) LD64 "(xBDT test)" $@
 	@mkdir -p obj64
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ -Wl,-T $^ $(LDLIBS)
 

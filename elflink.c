@@ -80,8 +80,14 @@ static void remap_segments(struct seg_info *seg, int num)
 	void *tmp;
 	
 	/* Prepare the hugetlbfs files */
-	for (i = 0; i < num; i++)
+	for (i = 0; i < num; i++) {
 		seg[i].fd = hugetlbfs_unlinked_fd();
+		if (seg[i].fd < 0) {
+			ERROR("Couldn't open hugetlb file for segment %d: %s\n",
+			      i, strerror(errno));
+			return;
+		}
+	}
 	
 	/* Step 1.  Map the hugetlbfs files anywhere to copy data */
 	/* Step 2.  We can then unmap all the areas */
@@ -90,14 +96,26 @@ static void remap_segments(struct seg_info *seg, int num)
 	 * which uses static data (ie. printf)
 	 */
 	for (i = 0; i < num; i++) {
-		tmp = mmap(NULL, ALIGN(seg[i].memsz, hpage_size),
-			   PROT_READ|PROT_WRITE, MAP_SHARED, seg[i].fd, 0);
-		if (tmp == MAP_FAILED)
+		int copysize = seg[i].memsz;
+		int mapsize = ALIGN(seg[i].memsz, hpage_size);
+
+		if (! copysize)
+			continue;
+
+		tmp = mmap(NULL, mapsize, PROT_READ|PROT_WRITE, MAP_SHARED,
+			   seg[i].fd, 0);
+		if (tmp == MAP_FAILED) {
 			ERROR("Couldn't map hugepage segment to copy data\n");
+			abort();
+		}
 
-		memcpy(tmp, seg[i].vaddr, seg[i].memsz);
+		DEBUG("Temporarily mapped hugepage segment %d at %p. "
+		      "Copying %d bytes from %p...", i, tmp, copysize,
+		      seg[i].vaddr);
+		memcpy(tmp, seg[i].vaddr, copysize);
+		DEBUG("done\n");
 
-		munmap(tmp, seg[i].memsz);
+		munmap(tmp, mapsize);
 		munmap(seg[i].vaddr, seg[i].memsz);
 	}
 

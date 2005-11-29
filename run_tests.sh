@@ -46,8 +46,8 @@ elflink_test () {
     run_test "$@"
     # Test we don't blow up if not linked for hugepage
     preload_test "$@" 
-    run_test "xH.$@"
-    run_test "xHB.$@"
+    run_test "xB.$@"
+    run_test "xBDT.$@"
 }
 
 run_test gethugepagesize
@@ -60,10 +60,12 @@ run_test truncate
 run_test shared
 run_test private
 run_test malloc
-preload_test HUGETLB_MORECORE=yes malloc
-run_test malloc_manysmall
-preload_test HUGETLB_MORECORE=yes malloc_manysmall
-run_test_bits 64 straddle_4GB
-run_test_bits 64 huge_at_4GB_normal_below
-run_test_bits 64 huge_below_4GB_normal_above
-elflink_test linkhuge
+run_test ptrace-write-hugepage
+#preload_test HUGETLB_MORECORE=yes malloc
+#run_test malloc_manysmall
+#preload_test HUGETLB_MORECORE=yes malloc_manysmall
+#run_test_bits 64 straddle_4GB
+#run_test_bits 64 huge_at_4GB_normal_below
+#run_test_bits 64 huge_below_4GB_normal_above
+#elflink_test HUGETLB_VERBOSE=0 linkhuge_nofd # Lib error msgs expected on a PASS
+#elflink_test linkhuge

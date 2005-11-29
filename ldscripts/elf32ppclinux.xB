@@ -1,12 +1,10 @@
 /* Default linker script, for normal executables */
-OUTPUT_FORMAT("elf32-i386", "elf32-i386",
-	      "elf32-i386")
-OUTPUT_ARCH(i386)
+OUTPUT_FORMAT("elf32-powerpc", "elf32-powerpc",
+	      "elf32-powerpc")
+OUTPUT_ARCH(powerpc:common)
 ENTRY(_start)
-SEARCH_DIR("/usr/i486-linux-gnu/lib"); SEARCH_DIR("/usr/local/lib"); SEARCH_DIR("/lib"); SEARCH_DIR("/usr/lib");
+SEARCH_DIR("/usr/powerpc-linux-gnu/lib"); SEARCH_DIR("/usr/local/lib"); SEARCH_DIR("/lib"); SEARCH_DIR("/usr/lib");
 INPUT(-lhugetlbfs);
-/* Do we need any of these for elf?
-   __DYNAMIC = 0;    */
 PHDRS
 {
   headers PT_PHDR PHDRS ;
@@ -21,7 +19,7 @@ PHDRS
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
-  PROVIDE (__executable_start = 0x08048000); . = 0x08048000 + SIZEOF_HEADERS;
+  PROVIDE (__executable_start = 0x10000000); . = 0x10000000 + SIZEOF_HEADERS;
   .interp         : { *(.interp) } :text :interp
   .hash           : { *(.hash) } :text
   .dynsym         : { *(.dynsym) }
@@ -51,6 +49,16 @@ SECTIONS
   .rela.dtors     : { *(.rela.dtors) }
   .rel.got        : { *(.rel.got) }
   .rela.got       : { *(.rela.got) }
+  .rela.got1           : { *(.rela.got1) }
+  .rela.got2           : { *(.rela.got2) }
+  .rel.sdata      : { *(.rel.sdata .rel.sdata.* .rel.gnu.linkonce.s.*) }
+  .rela.sdata     : { *(.rela.sdata .rela.sdata.* .rela.gnu.linkonce.s.*) }
+  .rel.sbss       : { *(.rel.sbss .rel.sbss.* .rel.gnu.linkonce.sb.*) }
+  .rela.sbss      : { *(.rela.sbss .rela.sbss.* .rela.gnu.linkonce.sb.*) }
+  .rel.sdata2     : { *(.rel.sdata2 .rel.sdata2.* .rel.gnu.linkonce.s2.*) }
+  .rela.sdata2    : { *(.rela.sdata2 .rela.sdata2.* .rela.gnu.linkonce.s2.*) }
+  .rel.sbss2      : { *(.rel.sbss2 .rel.sbss2.* .rel.gnu.linkonce.sb2.*) }
+  .rela.sbss2     : { *(.rela.sbss2 .rela.sbss2.* .rela.gnu.linkonce.sb2.*) }
   .rel.bss        : { *(.rel.bss .rel.bss.* .rel.gnu.linkonce.b.*) }
   .rela.bss       : { *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*) }
   .rel.plt        : { *(.rel.plt) }
@@ -58,50 +66,62 @@ SECTIONS
   .init           :
   {
     KEEP (*(.init))
-  } =0x90909090
-  .plt            : { *(.plt) }
+  } =0
   .text           :
   {
     *(.text .stub .text.* .gnu.linkonce.t.*)
     KEEP (*(.text.*personality*))
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
-  } =0x90909090
+    *(.glink)
+  } =0
   .fini           :
   {
     KEEP (*(.fini))
-  } =0x90909090
+  } =0
   PROVIDE (__etext = .);
   PROVIDE (_etext = .);
   PROVIDE (etext = .);
   .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
   .rodata1        : { *(.rodata1) }
+  .sdata2         :
+  {
+    PROVIDE (_SDA2_BASE_ = 32768);
+    *(.sdata2 .sdata2.* .gnu.linkonce.s2.*)
+  }
+  .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) }
   .eh_frame_hdr : { *(.eh_frame_hdr) }
   .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) }
-  .gcc_except_table   : ONLY_IF_RO { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) }
+  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) }
   /* Adjust the address for the data segment.  We want to adjust up to
      the same address within the page on the next page up.  */
-  . = ALIGN (0x1000) - ((0x1000 - .) & (0x1000 - 1)); . = DATA_SEGMENT_ALIGN (0x1000, 0x1000);
+  . = ALIGN (0x10000) - ((0x10000 - .) & (0x10000 - 1)); . = DATA_SEGMENT_ALIGN (0x10000, 0x1000);
   /* Exception handling  */
   .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) } :data
-  .gcc_except_table   : ONLY_IF_RW { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) }
+  .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) }
   /* Thread Local Storage sections  */
   .tdata	  : { *(.tdata .tdata.* .gnu.linkonce.td.*) }
   .tbss		  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) }
-  /* Ensure the __preinit_array_start label is properly aligned.  We
-     could instead move the label definition inside the section, but
-     the linker would then create the section even if it turns out to
-     be empty, which isn't pretty.  */
-  . = ALIGN(32 / 8);
-  PROVIDE (__preinit_array_start = .);
-  .preinit_array     : { KEEP (*(.preinit_array)) }
-  PROVIDE (__preinit_array_end = .);
-  PROVIDE (__init_array_start = .);
-  .init_array     : { KEEP (*(.init_array)) }
-  PROVIDE (__init_array_end = .);
-  PROVIDE (__fini_array_start = .);
-  .fini_array     : { KEEP (*(.fini_array)) }
-  PROVIDE (__fini_array_end = .);
+  .preinit_array     :
+  {
+    PROVIDE_HIDDEN (__preinit_array_start = .);
+    KEEP (*(.preinit_array))
+    PROVIDE_HIDDEN (__preinit_array_end = .);
+  }
+  .init_array     :
+  {
+     PROVIDE_HIDDEN (__init_array_start = .);
+     KEEP (*(SORT(.init_array.*)))
+     KEEP (*(.init_array))
+     PROVIDE_HIDDEN (__init_array_end = .);
+  }
+  .fini_array     :
+  {
+    PROVIDE_HIDDEN (__fini_array_start = .);
+    KEEP (*(.fini_array))
+    KEEP (*(SORT(.fini_array.*)))
+    PROVIDE_HIDDEN (__fini_array_end = .);
+  }
   .ctors          :
   {
     /* gcc uses crtbegin.o to find the start of
@@ -131,10 +151,12 @@ SECTIONS
   }
   .jcr            : { KEEP (*(.jcr)) }
   .data.rel.ro : { *(.data.rel.ro.local) *(.data.rel.ro*) }
+  .got1           : { *(.got1) }
+  .got2           : { *(.got2) }
   .dynamic        : { *(.dynamic) } :dynamic :data
-  .got            : { *(.got) }
-  . = DATA_SEGMENT_RELRO_END (12, .);
-  .got.plt        : { *(.got.plt) }
+  .got            : SPECIAL { *(.got) }
+  . = DATA_SEGMENT_RELRO_END (0, .);
+  .plt            : SPECIAL { *(.plt) }
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
@@ -142,31 +164,41 @@ SECTIONS
     SORT(CONSTRUCTORS)
   }
   .data1          : { *(.data1) }
-  _edata = .;
-  PROVIDE (edata = .);
+  .got            : SPECIAL { *(.got) }
+  /* We want the small data sections together, so single-instruction offsets
+     can access them all, and initialized data all before uninitialized, so
+     we can shorten the on-disk segment size.  */
+  .sdata          :
+  {
+    PROVIDE (_SDA_BASE_ = 32768);
+    *(.sdata .sdata.* .gnu.linkonce.s.*)
+  }
+  _edata = .; PROVIDE (edata = .);
+  .plt            : SPECIAL { *(.plt) }
+  . = ALIGN(32 / 8);
+  . = ALIGN(32 / 8);
+  . = DATA_SEGMENT_END (.);
+  /* Hugepage area */
+  . = ALIGN(0x10000000);	/* Align to next 256MB segment */
+  /* Saving hugepages is more important than saving executable size, so
+   * we don't attempt to maintain congruence here */
   __bss_start = .;
-  .bss            :
+  .sbss           :
+  {
+    PROVIDE (__sbss_start = .); PROVIDE (___sbss_start = .);
+    *(.dynsbss)
+    *(.sbss .sbss.* .gnu.linkonce.sb.*)
+    *(.scommon)
+    PROVIDE (__sbss_end = .); PROVIDE (___sbss_end = .);
+  } :htlb
+  .bss        :
   {
    *(.dynbss)
    *(.bss .bss.* .gnu.linkonce.b.*)
    *(COMMON)
-   /* Align here to ensure that the .bss section occupies space up to
-      _end.  Align after .bss to ensure correct alignment even if the
-      .bss section disappears because there are no input sections.  */
-   . = ALIGN(32 / 8);
   }
-  . = ALIGN(32 / 8);
   _end = .;
   PROVIDE (end = .);
-  . = DATA_SEGMENT_END (.);
-  /* Hugepage area */
-  . = ALIGN(0x1000000); /* Align to 16MB (4MB hugepage size, plus some slack in case of larger hugepages in future */
-  __hugetlb_start = .;
-  .hugetlb.bss        :
-  {
-   *(.hugetlb.bss)
-  } :htlb
-  __hugetlb_end = .;
   /* Stabs debugging sections.  */
   .stab          0 : { *(.stab) }
   .stabstr       0 : { *(.stabstr) }
@@ -200,5 +232,6 @@ SECTIONS
   .debug_funcnames 0 : { *(.debug_funcnames) }
   .debug_typenames 0 : { *(.debug_typenames) }
   .debug_varnames  0 : { *(.debug_varnames) }
+  /DISCARD/	: { *(.fixup) }
   /DISCARD/ : { *(.note.GNU-stack) }
 }
