@@ -1,5 +1,5 @@
 CPPFLAGS = -D__LIBHUGETLBFS__
-CFLAGS = -O2 -Wall -fPIC -g -fno-unit-at-a-time
+CFLAGS = -O2 -Wall -fPIC -g
 LDLIBS =
 
 LIBOBJS = hugeutils.o elflink.o morecore.o debug.o

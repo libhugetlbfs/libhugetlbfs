@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
@@ -61,6 +62,8 @@ static void parse_phdrs(Elf_Ehdr *ehdr)
 			prot |= PROT_READ;
 		if (phdr[i].p_flags & PF_W)
 			prot |= PROT_WRITE;
+		if (phdr[i].p_flags & PF_X)
+			prot |= PROT_EXEC;
 
 		DEBUG("Hugepage segment %d (phdr %d): %lx-%lx  (filesz=%lx)\n",
 		      htlb_num_segs, i, vaddr, vaddr+memsz, filesz);
@@ -71,6 +74,18 @@ static void parse_phdrs(Elf_Ehdr *ehdr)
 		htlb_seg_table[htlb_num_segs].prot = prot;
 		htlb_num_segs++;
 	}
+}
+
+/* Ok, we want to print an error and abort, but our PLT may be
+ * unmapped... */
+static void unmapped_abort(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+	abort();
 }
 
 static void remap_segments(struct seg_info *seg, int num)
@@ -106,7 +121,7 @@ static void remap_segments(struct seg_info *seg, int num)
 			   seg[i].fd, 0);
 		if (tmp == MAP_FAILED) {
 			ERROR("Couldn't map hugepage segment to copy data\n");
-			abort();
+			return;
 		}
 
 		DEBUG("Temporarily mapped hugepage segment %d at %p. "
@@ -119,23 +134,23 @@ static void remap_segments(struct seg_info *seg, int num)
 		munmap(seg[i].vaddr, seg[i].memsz);
 	}
 
-	/* NB: we can't do the remap as hugepages within the main loop
-	 * because of PowerPC: we may nede to unmap all the normal
-	 * segments before the MMU segment is ok for hugepages */
 	/* Step 3.  Rebuild the address space with hugetlb mappings */
+	/* NB: we can't do the remap as hugepages within the main loop
+	 * because of PowerPC: we may need to unmap all the normal
+	 * segments before the MMU segment is ok for hugepages */
 	for (i = 0; i < num; i++) {
 		tmp = mmap(seg[i].vaddr, ALIGN(seg[i].memsz, hpage_size),
 			   seg[i].prot, MAP_PRIVATE|MAP_FIXED, seg[i].fd, 0);
 		if (tmp == MAP_FAILED) {
-			ERROR("Failed to map hugepage segment %d (%p-%p): %s\n",
-			      i, seg[i].vaddr, seg[i].vaddr+seg[i].memsz,
+			unmapped_abort("Failed to map hugepage segment %d "
+				      "(%p-%p): %s\n", i, seg[i].vaddr,
+				      seg[i].vaddr+seg[i].memsz,
 			      strerror(errno));
-			abort();
 		}
 		if (tmp != seg[i].vaddr) {
-			/* FIXME: probaly not safe to call printf here... */
-			ERROR("Mapped hugepage segment %d (%p-%p) at wrong address %p\n",
-			      i, seg[i].vaddr, seg[i].vaddr+seg[i].memsz, tmp);
+			unmapped_abort("Mapped hugepage segment %d (%p-%p) at "
+				       "wrong address %p\n", i, seg[i].vaddr,
+				       seg[i].vaddr+seg[i].memsz, tmp);
 			abort();
 		}
 	}
@@ -161,3 +176,4 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 	else
 		DEBUG("Executable is not linked for hugepage segments\n");
 }
+

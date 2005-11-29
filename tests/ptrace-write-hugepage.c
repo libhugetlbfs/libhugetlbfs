@@ -83,6 +83,7 @@ int main(int argc, char *argv[])
 		.sa_sigaction = sigchld_handler,
 		.sa_flags = SA_SIGINFO,
 	};
+	struct sigaction old_sa;
 
 
 	test_init(argc, argv);
@@ -95,7 +96,7 @@ int main(int argc, char *argv[])
 	if (fd < 0)
 		FAIL("hugetlbfs_unlinked_fd()");
 
-	err = sigaction(SIGCHLD, &sa, NULL);
+	err = sigaction(SIGCHLD, &sa, &old_sa);
 	if (err)
 		FAIL("Can't install SIGCHLD handler");
 	
@@ -130,8 +131,11 @@ int main(int argc, char *argv[])
 	do_poke(cpid, p);
 	do_poke(cpid, p + getpagesize());
 
+	err = sigaction(SIGCHLD, &old_sa, NULL);
+	if (err)
+		FAIL("Clearing SIGCHLD handler");
+
 	ptrace(PTRACE_KILL, cpid, NULL, NULL);
 	
 	PASS();
 }
-
