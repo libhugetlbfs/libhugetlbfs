@@ -9,6 +9,7 @@
 #include <sys/mman.h>
 #include <errno.h>
 #include <elf.h>
+#include <dlfcn.h>
 
 #ifdef __LP64__
 #define Elf_Ehdr	Elf64_Ehdr
@@ -20,13 +21,6 @@
 
 #include "hugetlbfs.h"
 #include "libhugetlbfs_internal.h"
-
-struct seg_info {
-	void *vaddr;
-	unsigned long filesz, memsz;
-	int prot;
-	int fd;
-};
 
 #define MAX_HTLB_SEGS	2
 
@@ -76,88 +70,114 @@ static void parse_phdrs(Elf_Ehdr *ehdr)
 	}
 }
 
-/* Ok, we want to print an error and abort, but our PLT may be
- * unmapped... */
-static void unmapped_abort(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
-	va_end(ap);
-	abort();
-}
-
-static void remap_segments(struct seg_info *seg, int num)
+static int prepare_segments(struct seg_info *seg, int num)
 {
 	int hpage_size = gethugepagesize();
 	int i;
-	void *tmp;
+	void *p;
 	
 	/* Prepare the hugetlbfs files */
 	for (i = 0; i < num; i++) {
-		seg[i].fd = hugetlbfs_unlinked_fd();
-		if (seg[i].fd < 0) {
-			ERROR("Couldn't open hugetlb file for segment %d: %s\n",
-			      i, strerror(errno));
-			return;
-		}
-	}
-	
-	/* Step 1.  Map the hugetlbfs files anywhere to copy data */
-	/* Step 2.  We can then unmap all the areas */
-	/* From here until after step 3 we enter a black hole.
-	 * Since we are unmapping program segments, we can't call anything
-	 * which uses static data (ie. printf)
-	 */
-	for (i = 0; i < num; i++) {
+		int fd;
 		int copysize = seg[i].memsz;
-		int mapsize = ALIGN(seg[i].memsz, hpage_size);
+		int size = ALIGN(seg[i].memsz, hpage_size);
 
-		if (! copysize)
-			continue;
-
-		tmp = mmap(NULL, mapsize, PROT_READ|PROT_WRITE, MAP_SHARED,
-			   seg[i].fd, 0);
-		if (tmp == MAP_FAILED) {
-			ERROR("Couldn't map hugepage segment to copy data\n");
-			return;
+		fd = hugetlbfs_unlinked_fd();
+		if (fd < 0) {
+			ERROR("Couldn't open file for segment %d: %s\n",
+			      i, strerror(errno));
+			return -1;
 		}
 
-		DEBUG("Temporarily mapped hugepage segment %d at %p. "
-		      "Copying %d bytes from %p...", i, tmp, copysize,
-		      seg[i].vaddr);
-		memcpy(tmp, seg[i].vaddr, copysize);
-		DEBUG("done\n");
+		seg[i].fd = fd;
 
-		munmap(tmp, mapsize);
-		munmap(seg[i].vaddr, seg[i].memsz);
+		p = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+		if (p == MAP_FAILED) {
+			ERROR("Couldn't map hugepage segment to copy data\n");
+			return -1;
+		}
+		
+		DEBUG("Mapped hugeseg %d at %p. Copying %d bytes from %p...",
+		      i, p, copysize, seg[i].vaddr);
+		memcpy(p, seg[i].vaddr, copysize);
+		DEBUG_CONT("done\n");
+
+		munmap(p, size);
 	}
+
+	return 0;
+}
+
+/* This function prints an error message to stderr, then aborts.  It
+ * is safe to call, even if the executable segments are presently
+ * unmapped.
+ *
+ * FIXME: This works in practice, but I suspect it is not guaranteed
+ * safe: the library functions we call could in theory call other
+ * functions via the PLT which will blow up. */
+static void unmapped_abort(const char *fmt, ...)
+{
+	static int (*p_vfprintf)(FILE *, const char *, va_list);
+	static void (*p_abort)(void);
+	static FILE *se;
+	va_list ap;
+
+	if (!fmt) {
+		/* Setup */
+		p_vfprintf = dlsym(RTLD_DEFAULT, "vfprintf");
+		p_abort = dlsym(RTLD_DEFAULT, "abort");
+		se = stderr;
+		return;
+	}
+
+	va_start(ap, fmt);
+	(*p_vfprintf)(se, fmt, ap);
+	va_end(ap);
+
+	(*p_abort)();
+}
+
+void remap_segments(struct seg_info *seg, int num)
+{
+	int hpage_size = gethugepagesize();
+	int i;
+	void *p;
+
+	/* This is the hairy bit, between unmap and remap we enter a
+	 * black hole.  We can't call anything which uses static data
+	 * (ie. essentially any library function...)
+	 */
+
+	/* Initialize a function for printing errors and aborting
+	 * which is safe in the event of segments being unmapped */
+	unmapped_abort(NULL);
+
+	for (i = 0; i < num; i++)
+		munmap(seg[i].vaddr, seg[i].memsz);
 
 	/* Step 3.  Rebuild the address space with hugetlb mappings */
 	/* NB: we can't do the remap as hugepages within the main loop
 	 * because of PowerPC: we may need to unmap all the normal
 	 * segments before the MMU segment is ok for hugepages */
 	for (i = 0; i < num; i++) {
-		tmp = mmap(seg[i].vaddr, ALIGN(seg[i].memsz, hpage_size),
-			   seg[i].prot, MAP_PRIVATE|MAP_FIXED, seg[i].fd, 0);
-		if (tmp == MAP_FAILED) {
-			unmapped_abort("Failed to map hugepage segment %d "
-				      "(%p-%p): %s\n", i, seg[i].vaddr,
-				      seg[i].vaddr+seg[i].memsz,
-			      strerror(errno));
-		}
-		if (tmp != seg[i].vaddr) {
+		unsigned long mapsize = ALIGN(seg[i].memsz, hpage_size);
+
+		p = mmap(seg[i].vaddr, mapsize, seg[i].prot,
+			 MAP_PRIVATE|MAP_FIXED, seg[i].fd, 0);
+		if (p == MAP_FAILED)
+			unmapped_abort("Failed to map hugepage segment %d: "
+				       "%p-%p (errno=%d)\n", i, seg[i].vaddr,
+				       seg[i].vaddr+mapsize, errno);
+		if (p != seg[i].vaddr)
 			unmapped_abort("Mapped hugepage segment %d (%p-%p) at "
 				       "wrong address %p\n", i, seg[i].vaddr,
-				       seg[i].vaddr+seg[i].memsz, tmp);
-			abort();
-		}
+				       seg[i].vaddr+mapsize, p);
 	}
 	/* The segments are all back at this point.
 	 * and it should be safe to reference static data
 	 */
 }
+
 
 static void __attribute__ ((constructor)) setup_elflink(void)
 {
@@ -171,9 +191,18 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 	}
 
 	parse_phdrs(ehdr);
-	if (htlb_num_segs)
-		remap_segments(htlb_seg_table, htlb_num_segs);
-	else
+
+	if (htlb_num_segs == 0) {
 		DEBUG("Executable is not linked for hugepage segments\n");
+		return;
+	}
+
+
+	/* Step 1.  Map the hugetlbfs files anywhere to copy data */
+	if (prepare_segments(htlb_seg_table, htlb_num_segs) != 0)
+		return;
+
+	/* Step 2.  Unmap the old segments, map in the new ones */
+	remap_segments(htlb_seg_table, htlb_num_segs);
 }
 

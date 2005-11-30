@@ -3,8 +3,9 @@ LIB_TESTS = gethugepagesize test_root find_path unlinked_fd \
 	ptrace-write-hugepage
 LIB_TESTS_64 = straddle_4GB huge_at_4GB_normal_below \
 	huge_below_4GB_normal_above
-PRELOAD_TESTS = malloc malloc_manysmall
-ELFLINK_TESTS = linkhuge linkhuge_nofd
+NOLIB_TESTS = malloc malloc_manysmall dummy
+LDSCRIPT_TESTS = zero_filesize_segment
+HUGELINK_TESTS = linkhuge linkhuge_nofd
 
 CFLAGS = -O2 -Wall -g
 CPPFLAGS = -I..
@@ -12,8 +13,9 @@ LDLIBS = -ldl
 LDFLAGS32 = -L../obj32
 LDFLAGS64 = -L../obj64
 
-TESTS = $(LIB_TESTS) $(PRELOAD_TESTS) $(ELFLINK_TESTS) \
-	$(ELFLINK_TESTS:%=xB.%) $(ELFLINK_TESTS:%=xBDT.%)
+TESTS = $(LIB_TESTS) $(NOLIB_TESTS) $(LDSCRIPT_TESTS) $(HUGELINK_TESTS) \
+	$(HUGELINK_TESTS:%=xB.%) $(HUGELINK_TESTS:%=xBDT.%)
+
 TESTS_64 = $(LIB_TESTS_64)
 
 ARCH = $(shell uname -m | sed -e s/i.86/i386/)
@@ -38,7 +40,8 @@ VECHO = echo -e "\t"
 .SILENT:
 endif
 
-DEPFILES = $(TESTS:%=%.d) testutils.d
+DEPFILES = $(LIB_TESTS:%=%.d) $(NOLIB_TESTS:%=%.d) $(HUGELINK_TESTS:%=%.d) \
+	testutils.d
 
 ALLTESTS = $(foreach DIR,$(OBJDIRS),$(TESTS:%=$(DIR)/%))
 ifdef CC64
@@ -65,20 +68,28 @@ $(LIB_TESTS:%=obj64/%) $(LIB_TESTS_64:%=obj64/%): %: %.o obj64/testutils.o
 	@$(VECHO) LD64 "(lib test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ -lhugetlbfs $(LDLIBS)
 
-$(PRELOAD_TESTS:%=obj32/%): %: %.o obj32/testutils.o
-	@$(VECHO) LD32 "(preload test)" $@
+$(NOLIB_TESTS:%=obj32/%): %: %.o obj32/testutils.o
+	@$(VECHO) LD32 "(nolib test)" $@
 	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS)
 
-$(PRELOAD_TESTS:%=obj64/%): %: %.o obj64/testutils.o
-	@$(VECHO) LD64 "(preload test)" $@
+$(NOLIB_TESTS:%=obj64/%): %: %.o obj64/testutils.o
+	@$(VECHO) LD64 "(nolib test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS)
 
-$(ELFLINK_TESTS:%=obj32/%): %: %.o obj32/testutils.o
-	@$(VECHO) LD32 "(elflink test)" $@
+$(LDSCRIPT_TESTS:%=obj32/%): obj32/%: %.ld
+	@$(VECHO) LD32 "(preload test)" $@
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ -Lobj32 $^ $(LDLIBS)
+
+$(LDSCRIPT_TESTS:%=obj64/%): obj64/%: %.ld
+	@$(VECHO) LD64 "(preload test)" $@
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ -Lobj64 $^ $(LDLIBS)
+
+$(HUGELINK_TESTS:%=obj32/%): %: %.o obj32/testutils.o
+	@$(VECHO) LD32 "(hugelink test)" $@
 	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS)
 
-$(ELFLINK_TESTS:%=obj64/%): %: %.o obj64/testutils.o
-	@$(VECHO) LD64 "(elflink test)" $@
+$(HUGELINK_TESTS:%=obj64/%): %: %.o obj64/testutils.o
+	@$(VECHO) LD64 "(hugelink test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS)
 
 obj32/xB.%: $(SCRIPTS32).xB obj32/%.o obj32/testutils.o

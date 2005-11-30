@@ -50,6 +50,8 @@ elflink_test () {
     run_test "xBDT.$@"
 }
 
+#run_test dummy
+run_test zero_filesize_segment
 run_test gethugepagesize
 run_test test_root
 run_test find_path

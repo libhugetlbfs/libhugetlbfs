@@ -93,10 +93,9 @@ SECTIONS
   .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) } :htext
   .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) } :htext
 
-  /* Hugepage area.  We don't maintain address congruence here,
-   * because saving hugepages is more important than saving executable
-   * size. */
-  . = ALIGN(0x1000000);	/* Align to next 16MB hugepage */
+  /* We don't maintain address congruence here, because saving
+   * hugepages is more important than saving executable size. */
+  . = ALIGN (. + 0x1000000, 0x1000000);
   /* Exception handling  */
   .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) } :hdata
   .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) } :hdata
@@ -155,9 +154,9 @@ SECTIONS
   .got1           : { *(.got1) } :hdata
   .got2           : { *(.got2) } :hdata
   .dynamic        : { *(.dynamic) } :dynamic :hdata
-  .got            : SPECIAL { *(.got) } :hdata
+  .got            :  { *(.got.plt .got) } :hdata
 /*  . = DATA_SEGMENT_RELRO_END (0, .); */
-  .plt            : SPECIAL { *(.plt) } :hdata
+  .plt            :  { *(.plt) } :hdata
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
@@ -165,7 +164,6 @@ SECTIONS
     SORT(CONSTRUCTORS)
   } :hdata
   .data1          : { *(.data1) } :hdata
-  .got            : SPECIAL { *(.got) } :hdata
   /* We want the small data sections together, so single-instruction offsets
      can access them all, and initialized data all before uninitialized, so
      we can shorten the on-disk segment size.  */
@@ -184,7 +182,6 @@ SECTIONS
     *(.scommon)
     PROVIDE (__sbss_end = .); PROVIDE (___sbss_end = .);
   } :hdata
-  .plt            : SPECIAL { *(.plt) } :hdata
   .bss            :
   {
    *(.dynbss)

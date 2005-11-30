@@ -22,51 +22,51 @@ SECTIONS
   PROVIDE (__executable_start = 0x10000000); . = 0x10000000 + SIZEOF_HEADERS;
   .interp         : { *(.interp) } :text :interp
   .hash           : { *(.hash) } :text
-  .dynsym         : { *(.dynsym) }
-  .dynstr         : { *(.dynstr) }
-  .gnu.version    : { *(.gnu.version) }
-  .gnu.version_d  : { *(.gnu.version_d) }
-  .gnu.version_r  : { *(.gnu.version_r) }
-  .rel.init       : { *(.rel.init) }
-  .rela.init      : { *(.rela.init) }
-  .rel.text       : { *(.rel.text .rel.text.* .rel.gnu.linkonce.t.*) }
-  .rela.text      : { *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*) }
-  .rel.fini       : { *(.rel.fini) }
-  .rela.fini      : { *(.rela.fini) }
-  .rel.rodata     : { *(.rel.rodata .rel.rodata.* .rel.gnu.linkonce.r.*) }
-  .rela.rodata    : { *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*) }
-  .rel.data.rel.ro   : { *(.rel.data.rel.ro*) }
-  .rela.data.rel.ro   : { *(.rel.data.rel.ro*) }
-  .rel.data       : { *(.rel.data .rel.data.* .rel.gnu.linkonce.d.*) }
-  .rela.data      : { *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*) }
-  .rel.tdata	  : { *(.rel.tdata .rel.tdata.* .rel.gnu.linkonce.td.*) }
-  .rela.tdata	  : { *(.rela.tdata .rela.tdata.* .rela.gnu.linkonce.td.*) }
-  .rel.tbss	  : { *(.rel.tbss .rel.tbss.* .rel.gnu.linkonce.tb.*) }
-  .rela.tbss	  : { *(.rela.tbss .rela.tbss.* .rela.gnu.linkonce.tb.*) }
-  .rel.ctors      : { *(.rel.ctors) }
-  .rela.ctors     : { *(.rela.ctors) }
-  .rel.dtors      : { *(.rel.dtors) }
-  .rela.dtors     : { *(.rela.dtors) }
-  .rel.got        : { *(.rel.got) }
-  .rela.got       : { *(.rela.got) }
-  .rela.got1           : { *(.rela.got1) }
-  .rela.got2           : { *(.rela.got2) }
-  .rel.sdata      : { *(.rel.sdata .rel.sdata.* .rel.gnu.linkonce.s.*) }
-  .rela.sdata     : { *(.rela.sdata .rela.sdata.* .rela.gnu.linkonce.s.*) }
-  .rel.sbss       : { *(.rel.sbss .rel.sbss.* .rel.gnu.linkonce.sb.*) }
-  .rela.sbss      : { *(.rela.sbss .rela.sbss.* .rela.gnu.linkonce.sb.*) }
-  .rel.sdata2     : { *(.rel.sdata2 .rel.sdata2.* .rel.gnu.linkonce.s2.*) }
-  .rela.sdata2    : { *(.rela.sdata2 .rela.sdata2.* .rela.gnu.linkonce.s2.*) }
-  .rel.sbss2      : { *(.rel.sbss2 .rel.sbss2.* .rel.gnu.linkonce.sb2.*) }
-  .rela.sbss2     : { *(.rela.sbss2 .rela.sbss2.* .rela.gnu.linkonce.sb2.*) }
-  .rel.bss        : { *(.rel.bss .rel.bss.* .rel.gnu.linkonce.b.*) }
-  .rela.bss       : { *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*) }
-  .rel.plt        : { *(.rel.plt) }
-  .rela.plt       : { *(.rela.plt) }
+  .dynsym         : { *(.dynsym) } :text
+  .dynstr         : { *(.dynstr) } :text
+  .gnu.version    : { *(.gnu.version) } :text
+  .gnu.version_d  : { *(.gnu.version_d) } :text
+  .gnu.version_r  : { *(.gnu.version_r) } :text
+  .rel.init       : { *(.rel.init) } :text
+  .rela.init      : { *(.rela.init) } :text
+  .rel.text       : { *(.rel.text .rel.text.* .rel.gnu.linkonce.t.*) } :text
+  .rela.text      : { *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*) } :text
+  .rel.fini       : { *(.rel.fini) } :text
+  .rela.fini      : { *(.rela.fini) } :text
+  .rel.rodata     : { *(.rel.rodata .rel.rodata.* .rel.gnu.linkonce.r.*) } :text
+  .rela.rodata    : { *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*) } :text
+  .rel.data.rel.ro   : { *(.rel.data.rel.ro*) } :text
+  .rela.data.rel.ro   : { *(.rel.data.rel.ro*) } :text
+  .rel.data       : { *(.rel.data .rel.data.* .rel.gnu.linkonce.d.*) } :text
+  .rela.data      : { *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*) } :text
+  .rel.tdata	  : { *(.rel.tdata .rel.tdata.* .rel.gnu.linkonce.td.*) } :text
+  .rela.tdata	  : { *(.rela.tdata .rela.tdata.* .rela.gnu.linkonce.td.*) } :text
+  .rel.tbss	  : { *(.rel.tbss .rel.tbss.* .rel.gnu.linkonce.tb.*) } :text
+  .rela.tbss	  : { *(.rela.tbss .rela.tbss.* .rela.gnu.linkonce.tb.*) } :text
+  .rel.ctors      : { *(.rel.ctors) } :text
+  .rela.ctors     : { *(.rela.ctors) } :text
+  .rel.dtors      : { *(.rel.dtors) } :text
+  .rela.dtors     : { *(.rela.dtors) } :text
+  .rel.got        : { *(.rel.got) } :text
+  .rela.got       : { *(.rela.got) } :text
+  .rela.got1           : { *(.rela.got1) } :text
+  .rela.got2           : { *(.rela.got2) } :text
+  .rel.sdata      : { *(.rel.sdata .rel.sdata.* .rel.gnu.linkonce.s.*) } :text
+  .rela.sdata     : { *(.rela.sdata .rela.sdata.* .rela.gnu.linkonce.s.*) } :text
+  .rel.sbss       : { *(.rel.sbss .rel.sbss.* .rel.gnu.linkonce.sb.*) } :text
+  .rela.sbss      : { *(.rela.sbss .rela.sbss.* .rela.gnu.linkonce.sb.*) } :text
+  .rel.sdata2     : { *(.rel.sdata2 .rel.sdata2.* .rel.gnu.linkonce.s2.*) } :text
+  .rela.sdata2    : { *(.rela.sdata2 .rela.sdata2.* .rela.gnu.linkonce.s2.*) } :text
+  .rel.sbss2      : { *(.rel.sbss2 .rel.sbss2.* .rel.gnu.linkonce.sb2.*) } :text
+  .rela.sbss2     : { *(.rela.sbss2 .rela.sbss2.* .rela.gnu.linkonce.sb2.*) } :text
+  .rel.bss        : { *(.rel.bss .rel.bss.* .rel.gnu.linkonce.b.*) } :text
+  .rela.bss       : { *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*) } :text
+  .rel.plt        : { *(.rel.plt) } :text
+  .rela.plt       : { *(.rela.plt) } :text
   .init           :
   {
     KEEP (*(.init))
-  } =0
+  } :text =0
   .text           :
   {
     *(.text .stub .text.* .gnu.linkonce.t.*)
@@ -74,54 +74,54 @@ SECTIONS
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
     *(.glink)
-  } =0
+  } :text =0
   .fini           :
   {
     KEEP (*(.fini))
-  } =0
+  } :text =0
   PROVIDE (__etext = .);
   PROVIDE (_etext = .);
   PROVIDE (etext = .);
-  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
-  .rodata1        : { *(.rodata1) }
+  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) } :text
+  .rodata1        : { *(.rodata1) } :text
   .sdata2         :
   {
     PROVIDE (_SDA2_BASE_ = 32768);
     *(.sdata2 .sdata2.* .gnu.linkonce.s2.*)
-  }
-  .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) }
-  .eh_frame_hdr : { *(.eh_frame_hdr) }
-  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) }
-  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) }
+  } :text
+  .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) } :text
+  .eh_frame_hdr : { *(.eh_frame_hdr) } :text
+  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) } :text
+  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) } :text
   /* Adjust the address for the data segment.  We want to adjust up to
      the same address within the page on the next page up.  */
   . = ALIGN (0x10000) - ((0x10000 - .) & (0x10000 - 1)); . = DATA_SEGMENT_ALIGN (0x10000, 0x1000);
   /* Exception handling  */
   .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) } :data
-  .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) }
+  .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) } :data
   /* Thread Local Storage sections  */
-  .tdata	  : { *(.tdata .tdata.* .gnu.linkonce.td.*) }
-  .tbss		  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) }
+  .tdata	  : { *(.tdata .tdata.* .gnu.linkonce.td.*) } :data
+  .tbss		  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) } :data
   .preinit_array     :
   {
     PROVIDE_HIDDEN (__preinit_array_start = .);
     KEEP (*(.preinit_array))
     PROVIDE_HIDDEN (__preinit_array_end = .);
-  }
+  } :data
   .init_array     :
   {
      PROVIDE_HIDDEN (__init_array_start = .);
      KEEP (*(SORT(.init_array.*)))
      KEEP (*(.init_array))
      PROVIDE_HIDDEN (__init_array_end = .);
-  }
+  } :data
   .fini_array     :
   {
     PROVIDE_HIDDEN (__fini_array_start = .);
     KEEP (*(.fini_array))
     KEEP (*(SORT(.fini_array.*)))
     PROVIDE_HIDDEN (__fini_array_end = .);
-  }
+  } :data
   .ctors          :
   {
     /* gcc uses crtbegin.o to find the start of
@@ -141,30 +141,30 @@ SECTIONS
     KEEP (*(EXCLUDE_FILE (*crtend*.o ) .ctors))
     KEEP (*(SORT(.ctors.*)))
     KEEP (*(.ctors))
-  }
+  } :data
   .dtors          :
   {
     KEEP (*crtbegin*.o(.dtors))
     KEEP (*(EXCLUDE_FILE (*crtend*.o ) .dtors))
     KEEP (*(SORT(.dtors.*)))
     KEEP (*(.dtors))
-  }
-  .jcr            : { KEEP (*(.jcr)) }
-  .data.rel.ro : { *(.data.rel.ro.local) *(.data.rel.ro*) }
-  .got1           : { *(.got1) }
-  .got2           : { *(.got2) }
+  } :data
+  .jcr            : { KEEP (*(.jcr)) } :data
+  .data.rel.ro : { *(.data.rel.ro.local) *(.data.rel.ro*) } :data
+  .got1           : { *(.got1) } :data
+  .got2           : { *(.got2) } :data
   .dynamic        : { *(.dynamic) } :dynamic :data
-  .got            : SPECIAL { *(.got) }
+  .got            : SPECIAL { *(.got) } :data
   . = DATA_SEGMENT_RELRO_END (0, .);
-  .plt            : SPECIAL { *(.plt) }
+  .plt            : SPECIAL { *(.plt) } :data
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
     KEEP (*(.gnu.linkonce.d.*personality*))
     SORT(CONSTRUCTORS)
-  }
-  .data1          : { *(.data1) }
-  .got            : SPECIAL { *(.got) }
+  } :data
+  .data1          : { *(.data1) } :data
+  .got            : SPECIAL { *(.got) } :data
   /* We want the small data sections together, so single-instruction offsets
      can access them all, and initialized data all before uninitialized, so
      we can shorten the on-disk segment size.  */
@@ -172,16 +172,19 @@ SECTIONS
   {
     PROVIDE (_SDA_BASE_ = 32768);
     *(.sdata .sdata.* .gnu.linkonce.s.*)
-  }
+  } :data
   _edata = .; PROVIDE (edata = .);
-  .plt            : SPECIAL { *(.plt) }
+  .plt            : SPECIAL { *(.plt) } :data
   . = ALIGN(32 / 8);
   . = ALIGN(32 / 8);
   . = DATA_SEGMENT_END (.);
   /* Hugepage area */
-  . = ALIGN(0x10000000);	/* Align to next 256MB segment */
   /* Saving hugepages is more important than saving executable size, so
    * we don't attempt to maintain congruence here */
+  . = ALIGN(0x10000000);	/* Align to next 256MB segment */
+  /* HACK: workaround fact that kernel may not cope with segments with zero
+   * filesize */
+  .hugetlb.data : { LONG(1) } :htlb
   __bss_start = .;
   .sbss           :
   {
@@ -194,9 +197,16 @@ SECTIONS
   .bss        :
   {
    *(.dynbss)
-   *(.bss .bss.* .gnu.linkonce.b.*)
    *(COMMON)
-  }
+   /* Align here to ensure that the .bss section occupies space up to
+      _end.  Align after .bss to ensure correct alignment even if the
+      .bss section disappears because there are no input sections.
+      FIXME: Why do we need it? When there is no .bss section, we don't
+      pad the .data section.  */
+   . = ALIGN(. != 0 ? 32 / 8 : 1);
+  } :htlb
+  . = ALIGN(32 / 8);
+  . = ALIGN(32 / 8);
   _end = .;
   PROVIDE (end = .);
   /* Stabs debugging sections.  */

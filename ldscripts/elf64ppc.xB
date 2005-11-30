@@ -174,13 +174,17 @@ SECTIONS
   . = ALIGN(64 / 8);
   . = DATA_SEGMENT_END (.);
   /* Hugepage area */
-  . = ALIGN(0x10000000000);	/* Align to next 1TB area */
   /* Saving hugepages is more important than saving executable size, so
    * we don't attempt to maintain congruence here */
+  . = ALIGN(0x10000000000);	/* Align to next 1TB area */
+  /* HACK: workaround fact that kernel may not cope with segments with zero
+   * filesize */
+  .hugetlb.data : { LONG(1) } :htlb
   __bss_start = .;
   .tocbss	 ALIGN(8) : { *(.tocbss)} :htlb
   .sbss           :
   {
+
     *(.dynsbss)
     *(.sbss .sbss.* .gnu.linkonce.sb.*)
     *(.scommon)

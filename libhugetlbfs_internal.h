@@ -24,6 +24,17 @@ extern int __hugetlbfs_verbose;
 	if (__hugetlbfs_verbose >= 3) \
 		fprintf(stderr, "libhugetlbfs: " __VA_ARGS__)
 
+#define DEBUG_CONT(...) \
+	if (__hugetlbfs_verbose >= 3) \
+		fprintf(stderr, __VA_ARGS__)
+
 extern void __hugetlbfs_init_debug(void);
+
+struct seg_info {
+	void *vaddr;
+	unsigned long filesz, memsz;
+	int prot;
+	int fd;
+};
 
 #endif /* _LIBHUGETLBFS_INTERNAL_H */
