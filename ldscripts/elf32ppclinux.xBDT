@@ -95,7 +95,10 @@ SECTIONS
 
   /* We don't maintain address congruence here, because saving
    * hugepages is more important than saving executable size. */
-  . = ALIGN (. + 0x1000000, 0x1000000);
+  /* Just move to the very next hugepage, rather than using a guard
+   * page, because for ppc32 binaries we can't separate the text and
+   * PLT by >32MB */
+  . = ALIGN (0x1000000);
   /* Exception handling  */
   .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) } :hdata
   .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) } :hdata
