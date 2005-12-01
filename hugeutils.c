@@ -88,7 +88,11 @@ static long read_meminfo(const char *tag)
 	}
 	buf[len] = '\0';
 
-	p = strstr(buf, tag) + strlen(tag);
+	p = strstr(buf, tag);
+	if (!p)
+		return -1; /* looks like the line we want isn't there */
+
+	p += strlen(tag);
 	val = strtol(p, &q, 0);
 	if (! isspace(*q)) {
 		ERROR("Couldn't parse /proc/meminfo value\n");
