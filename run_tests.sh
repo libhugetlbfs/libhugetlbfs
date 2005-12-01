@@ -69,5 +69,5 @@ preload_test HUGETLB_MORECORE=yes malloc_manysmall
 run_test_bits 64 straddle_4GB
 run_test_bits 64 huge_at_4GB_normal_below
 run_test_bits 64 huge_below_4GB_normal_above
-elflink_test HUGETLB_VERBOSE=0 linkhuge_nofd # Lib error msgs expected on a PASS
+elflink_test HUGETLB_VERBOSE=0 linkhuge_nofd # Lib error msgs expected
 elflink_test linkhuge

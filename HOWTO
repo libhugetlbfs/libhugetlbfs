@@ -1,0 +1,114 @@
+libhugetlbfs HOWTO
+==================
+
+Author: David Gibson <dwg@au1.ibm.com>
+Last updated: Thursday, 1st December 2005
+
+Prerequisites
+-------------
+
+	kernel:
+
+To use hugepage explicitly with the help of libhugetlbfs, any kernel
+with hugepages configured in should be sufficient, as long as you use
+MAP_SHARED mappings only.
+
+To use MAP_PRIVATE mappings, or to use the automatic malloc()/morecore
+feature, or to use the hugepage text/data/bss feature, you will need a
+kernel with hugepage COW support.  This is in current -mm, or you can
+apply Adam/my patches manually.
+
+WARNING: In the course of writing this library, I've tracked down and
+fixed a number of hugepage related kernel bugs.  The testsuite
+contains tests for these bugs, some of which WILL CRASH HARD a kernel
+without the relevant fixes, some of which only went into Linus' git
+tree 30 Nov 2005.
+
+
+Building the library
+--------------------
+
+Type "make".  Optionally you can (manually) copy the 32 and 64 bit
+versions of the library (obj32/libhugetlbfs.so and
+obj64/libhugetlbfs.so) somewhere more useful.  Alternatively you can
+just point back at the wherever you built the library when you build
+an program using it.
+
+For good measure you can run through the testsuite with "make check",
+however note the WARNING under Prerequisites above.
+
+
+Using hugepage malloc() / morecore
+----------------------------------
+
+To run an program using the automatic hugepage malloc()/morecore
+feature, you must set two environment variables.  First set
+"LD_PRELOAD" to the full path to the libhugetlbfs.so as built above
+(make sure to get either the 32 or 64 bit version as appropriate to
+your program).  This tells the dynamic linker to load libhugetlbfs
+even though the program wasn't linked against it.  Second set the
+environment variable "HUGETLB_MORECORE" to anything.  This tells the
+library to override libc's normal morecore() function with a hugepage
+version and use it for malloc().  From this point all malloc()s should
+come from hugepage memory until it runs out.
+
+e.g. if you have built libhugetlbfs in ~/libhugetlbfs, the following
+would work for a 64-bit program:
+
+	export LD_PRELOAD=~/libhugetlbfs/obj64/libhugetlbfs.so
+	HUGETLB_MORECORE=yes <your app command line>
+
+Using hugepage text/data/bss
+----------------------------
+
+	Linking the app:
+
+To place an app's text, data and/or bss into hugepages you need to
+re-link it using one of the special linker scripts in the ldscripts/
+directory of libhugetlbfs.  To do this use
+	ld -T <path to script> <other link arguments>
+OR
+	cc -Wl,-T <patch to script> <other link arguments>
+
+The "other link arguments" should be whatever you'd normally pass to
+the linker when linking your app.  The libhugetlbfs linker scripts, as
+well as rearranging the sections and segments automatically link in
+the libhugetlbfs library, so you may need to add in a -L<path> option
+to give the directory of the libhugetlbfs.so file.
+
+	Which script to use:
+
+All the scripts have names of the for <platform>.<linktype>.  The
+platforms are:
+	elf32ppclinux		- Use for 32-bit apps on PowerPC
+	elf64ppc		- Use for 64-bit apps on PowerPC
+	elf_i386		- Use for 32-bit apps on x86
+
+The link types are:
+	xB			- puts BSS into hugepages
+	xBDT			- puts text, static data and BSS into hugepages
+
+	Running the app:
+
+The specially linked app needs libhugetlbfs, so you may need to set
+LD_LIBRARY_PATH so that it can locate libhugetlbfs.so.  Other than
+that, once the app is linked with the correct script, it should only
+be necessary to run it normally to activate the text/data/bss hugepage
+feature.  Upon initialisation libhugetlbfs will detect the special
+flags in the app's ELF header and remap the requested program segments
+into hugepages.
+
+Troubleshooting
+---------------
+
+The library has a certain amount of debugging code built in, which can
+be controlled with the environment variable HUGETLB_VERBOSE.  By
+default the debug level is "1" which means the library will only print
+relatively serious error messages.  Setting HUGETLB_VERBOSE=2 or
+higher will enable more debug messages (at present 2 is the highest
+debug level, but that may change).  Setting HUGETLB_VERBOSE=0 will
+silence the library completely, even in the case of errors - the only
+exception is in cases where the library has to abort(), which can
+happen if something goes wrong in the middle of unmapping and
+remapping segments for the text/data/bss feature.
+
