@@ -1,5 +1,5 @@
 LIB_TESTS = gethugepagesize test_root find_path unlinked_fd \
-	readback truncate shared private empty_mounts \
+	readback truncate shared private empty_mounts meminfo_nohuge \
 	ptrace-write-hugepage
 LIB_TESTS_64 = straddle_4GB huge_at_4GB_normal_below \
 	huge_below_4GB_normal_above

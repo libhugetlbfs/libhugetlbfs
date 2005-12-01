@@ -57,6 +57,7 @@ run_test test_root
 run_test find_path
 run_test unlinked_fd
 run_test empty_mounts
+run_test meminfo_nohuge
 run_test readback
 run_test truncate
 run_test shared

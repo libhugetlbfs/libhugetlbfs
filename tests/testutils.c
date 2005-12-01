@@ -18,13 +18,16 @@ void  __attribute__((weak)) cleanup(void)
 {
 }
 
+#if 0
 static void segv_handler(int signum, siginfo_t *si, void *uc)
 {
 	FAIL("Segmentation fault");
 }
+#endif
 
 void test_init(int argc, char *argv[])
 {
+#if 0
 	int err;
 	struct sigaction sa = {
 		.sa_sigaction = segv_handler,
@@ -36,6 +39,7 @@ void test_init(int argc, char *argv[])
 	err = sigaction(SIGSEGV, &sa, NULL);
 	if (err)
 		FAIL("Can't install SEGV handler");
+#endif
 
 	if (getenv("QUIET_TEST"))
 		verbose_test = 0;
