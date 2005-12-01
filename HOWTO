@@ -18,12 +18,29 @@ feature, or to use the hugepage text/data/bss feature, you will need a
 kernel with hugepage COW support.  This is in current -mm, or you can
 apply Adam/my patches manually.
 
+The malloc()/morecore features will generate warnings if used on
+powerpc with a kernel where hugepage mappings don't respect the hint
+address.  The patch to fix this went into paulus PowerPC tree on 24
+Nov 2005, and is expected to go into mainline after 2.6.15.  Hugepage
+malloc()/morecore should still work without this patch, but the size
+of the hugepage heap will be limited (to around 256M for 32-bit and
+1TB for 64-bit).
+
 WARNING: In the course of writing this library, I've tracked down and
 fixed a number of hugepage related kernel bugs.  The testsuite
 contains tests for these bugs, some of which WILL CRASH HARD a kernel
 without the relevant fixes, some of which only went into Linus' git
 tree 30 Nov 2005.
 
+	binutils:
+
+To use the text/data/bss feature (and indeed to build the testsuite)
+you will need a recent binutils.  Specifically it needs to support the
+ONLY_IF_RO and ONLY_IF_RW constructs.  The only reason for this is
+that the hugepage linker scripts are based on recent versions of the
+standard linker scripts which include these constructs.  I'm hoping to
+be able to relax this requirement, but I haven't gotten around to it
+yet.
 
 Building the library
 --------------------
@@ -57,6 +74,18 @@ would work for a 64-bit program:
 
 	export LD_PRELOAD=~/libhugetlbfs/obj64/libhugetlbfs.so
 	HUGETLB_MORECORE=yes <your app command line>
+
+Under some circumstances you may wish to specify the address at which
+the hugepage heap is located.  This can be done by setting the
+environment variable HUGETLB_MORECORE_HEAPBASE to the heap address in
+hex.  Note that this will not be effective on powerpc systems without
+the kernel patch to make hugepage hint addresses be respected (see
+Prerequisites, above).  By default the hugepage heap begins at roughly
+the same place a normal page heap would, rounded up by some amount.
+On ppc32 the normal page heap address is rounded up to a multiple of
+256M (i.e. putting it in the next MMU segment), on ppc64 the address
+is rounded up to a multiple of 1TB, and on all other platforms the
+address is rounded up to the size of a hugepage.
 
 Using hugepage text/data/bss
 ----------------------------
