@@ -6,26 +6,52 @@
 
 #include "hugetests.h"
 
-#define BLOCK_SIZE	65536
-#define SMALL_CONST	0xdeadbeef
+#define BLOCK_SIZE	16384
+#define CONST	0xdeadbeef
 
 #define barrier()	asm volatile ("" : : : "memory" )
 
+#define BIG_INIT	{ \
+	[0] = CONST, [17] = CONST, [BLOCK_SIZE-1] = CONST, \
+}
 static int small_data = 1;
-static unsigned char big_data[BLOCK_SIZE] = "dummy";
+static int big_data[BLOCK_SIZE] = BIG_INIT;
 
 static int small_bss;
-static unsigned char big_bss[BLOCK_SIZE];
+static int big_bss[BLOCK_SIZE];
+
+const int small_const = CONST;
+const int big_const[BLOCK_SIZE] = BIG_INIT;
+
+static int static_func(int x)
+{
+	return x;
+}
+
+int global_func(int x)
+{
+	return x;
+}
 
 struct test_entry {
 	const char *name;
-	int *small;
-	unsigned char *big;
+	void *data;
+	int size;
 	char linkchar;
-	int small_huge, big_huge;
+	int writable, execable;
+	int is_huge;
 } testtab[] = {
-	{ "DATA", &small_data, big_data, 'D' },
-	{ "BSS", &small_bss, big_bss, 'B' },
+#define RWENT(name, linkchar)	{ #name, &name, sizeof(name), linkchar, 1, 0, }
+#define ROENT(name, linkchar)	{ #name, &name, sizeof(name), linkchar, 0, 0, }
+#define RXENT(name, linkchar)	{ #name, &name, sizeof(name), linkchar, 0, 1, }
+	RWENT(small_data, 'D'),
+	RWENT(big_data, 'D'),
+	RWENT(small_bss, 'B'),
+	RWENT(big_bss, 'B'),
+	ROENT(small_const, 'T'),
+	ROENT(big_const, 'T'),
+	RXENT(static_func, 'T'),
+	RXENT(global_func, 'T'),
 };
 
 #define NUM_TESTS	(sizeof(testtab) / sizeof(testtab[0]))
@@ -57,22 +83,29 @@ static void get_link_string(const char *argv0)
 static void do_test(struct test_entry *te)
 {
 	int i;
+	volatile int *p = te->data;
 
-	*(te->small) = SMALL_CONST;
-	barrier();
-	if (*(te->small) != SMALL_CONST)
-		FAIL("small mismatch (%s)\n", te->name);
+	if (te->writable) {
+		for (i = 0; i < (te->size / sizeof(*p)); i++)
+			p[i] = CONST ^ i;
 
-	te->small_huge = (test_addr_huge(te->small) == 1);
+		barrier();
 
-	for (i = 0; i < BLOCK_SIZE; i++)
-		te->big[i] = (i & 0xff);
-	barrier();
-	for (i = 0; i < BLOCK_SIZE; i++)
-		if (te->big[i] != (i & 0xff))
-			FAIL("big mismatch (%s)\n", te->name);
+		for (i = 0; i < (te->size / sizeof(*p)); i++)
+			if (p[i] != (CONST ^ i))
+				FAIL("mismatch on %s", te->name);
+	} else if (te->execable) {
+		int (*pf)(int) = te->data;
 
-	te->big_huge = (test_addr_huge(te->big) == 1);
+		if ((*pf)(CONST) != CONST)
+			FAIL("%s returns incorrect results", te->name);
+	} else {
+		/* Otherwise just read touch it */
+		for (i = 0; i < (te->size / sizeof(*p)); i++)
+			p[i];
+	}
+
+	te->is_huge = (test_addr_huge(te->data) == 1);
 }
 
 int main(int argc, char *argv[])
@@ -89,15 +122,9 @@ int main(int argc, char *argv[])
 		do_test(testtab + i);
 	}
 
-	verbose_printf("Small data huge for:");
+	verbose_printf("Hugepages used for:");
 	for (i = 0; i < NUM_TESTS; i++)
-		if (testtab[i].small_huge)
-			verbose_printf(" %s", testtab[i].name);
-	verbose_printf("\n");
-
-	verbose_printf("Big data huge for:");
-	for (i = 0; i < NUM_TESTS; i++)
-		if (testtab[i].big_huge)
+		if (testtab[i].is_huge)
 			verbose_printf(" %s", testtab[i].name);
 	verbose_printf("\n");
 
@@ -105,12 +132,8 @@ int main(int argc, char *argv[])
 		char linkchar = testtab[i].linkchar;
 
 		if (linkchar && strchr(link_string, linkchar)) {
-			if (! testtab[i].small_huge)
-				FAIL("Small %s not hugepage\n",
-				     testtab[i].name);
-			if (! testtab[i].big_huge)
-				FAIL("Big %s not hugepage\n",
-				     testtab[i].name);
+			if (! testtab[i].is_huge)
+				FAIL("%s is not hugepage\n", testtab[i].name);
 		}
 	}
 	PASS();
