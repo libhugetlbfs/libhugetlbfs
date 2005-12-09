@@ -64,6 +64,7 @@ run_test shared
 run_test private
 run_test malloc
 run_test ptrace-write-hugepage
+run_test icache-hygeine
 preload_test HUGETLB_MORECORE=yes malloc
 run_test malloc_manysmall
 preload_test HUGETLB_MORECORE=yes malloc_manysmall

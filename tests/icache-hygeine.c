@@ -24,7 +24,7 @@
 #include "hugetests.h"
 
 #define COPY_SIZE	128
-#define NUM_REPETITIONS	128	/* Seems to be enough to trigger reliably */
+#define NUM_REPETITIONS	64	/* Seems to be enough to trigger reliably */
 
 void cacheflush(void *p)
 {
@@ -90,6 +90,7 @@ void test_once(int fd)
 
 	if (sigsetjmp(sig_escape, 1)) {
 		sig_expected = NULL;
+		ftruncate(fd, 0);
 		return;
 	}
 

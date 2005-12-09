@@ -12,8 +12,8 @@
 
 #include "hugetests.h"
 
-/* We override the normal open, so libhugetlbfs gets an apparently
- * empty /proc/mounts or /etc/mtab */
+/* We override the normal open, so libhugetlbfs gets a /proc/meminfo
+ * which doesn't contain any hugepage information */
 int open(const char *path, int flags, ...)
 {
 	int (*old_open)(const char *, int, ...);

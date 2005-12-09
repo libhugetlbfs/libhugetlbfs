@@ -42,7 +42,7 @@ struct test_entry {
 	int is_huge;
 } testtab[] = {
 #define RWENT(name, linkchar)	{ #name, &name, sizeof(name), linkchar, 1, 0, }
-#define ROENT(name, linkchar)	{ #name, &name, sizeof(name), linkchar, 0, 0, }
+#define ROENT(name, linkchar)	{ #name, (void *)&name, sizeof(name), linkchar, 0, 0, }
 #define RXENT(name, linkchar)	{ #name, &name, sizeof(name), linkchar, 0, 1, }
 	RWENT(small_data, 'D'),
 	RWENT(big_data, 'D'),
