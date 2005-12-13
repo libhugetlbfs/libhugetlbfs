@@ -235,8 +235,6 @@ void remap_segments(struct seg_info *seg, int num)
 	int i;
 	void *p;
 
-	malloc(8192);
-
 	/* This is the hairy bit, between unmap and remap we enter a
 	 * black hole.  We can't call anything which uses static data
 	 * (ie. essentially any library function...)
