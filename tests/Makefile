@@ -9,7 +9,7 @@ HUGELINK_TESTS = linkhuge linkhuge_nofd
 
 CFLAGS = -O2 -Wall -g
 CPPFLAGS = -I..
-LDLIBS = -ldl
+LDLIBS = -ldl -lpthread
 LDFLAGS32 = -L../obj32
 LDFLAGS64 = -L../obj64
 

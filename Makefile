@@ -31,9 +31,11 @@ DEPFILES = $(LIBOBJS:%.o=%.d)
 
 all:	libs tests
 
+.PHONY:	tests libs
+
 libs:	$(OBJDIRS:%=%/libhugetlbfs.so) $(OBJDIRS:%=%/libhugetlbfs.a)
 
-.PHONY:	tests
+tests:	libs	# Force make to build the library first
 tests:	tests/all
 
 tests/%:

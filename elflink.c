@@ -5,11 +5,16 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <string.h>
+#include <signal.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
 #include <elf.h>
 #include <dlfcn.h>
+
+#include "hugetlbfs.h"
+#include "libhugetlbfs_internal.h"
 
 #ifdef __LP64__
 #define Elf_Ehdr	Elf64_Ehdr
@@ -19,8 +24,30 @@
 #define Elf_Phdr	Elf32_Phdr
 #endif
 
-#include "hugetlbfs.h"
-#include "libhugetlbfs_internal.h"
+#ifdef __i386__
+/* The normal i386 syscall macros don't work with -fPIC :( */
+#undef _syscall2
+#define _syscall2(type,name,type1,arg1,type2,arg2) \
+type name(type1 arg1,type2 arg2) \
+{ \
+long __res; \
+__asm__ volatile ("push %%ebx; movl %2,%%ebx; int $0x80; pop %%ebx" \
+        : "=a" (__res) \
+        : "0" (__NR_##name),"r" ((long)(arg1)),"c" ((long)(arg2))); \
+__syscall_return(type,__res); \
+}
+#undef _syscall3
+#define _syscall3(type,name,type1,arg1,type2,arg2,type3,arg3) \
+type name(type1 arg1,type2 arg2,type3 arg3) \
+{ \
+long __res; \
+__asm__ volatile ("push %%ebx; movl %2,%%ebx; int $0x80; pop %%ebx" \
+        : "=a" (__res) \
+        : "0" (__NR_##name),"r" ((long)(arg1)),"c" ((long)(arg2)), \
+                  "d" ((long)(arg3))); \
+__syscall_return(type,__res); \
+}
+#endif /* __i386__ */
 
 #define MAX_HTLB_SEGS	2
 
@@ -112,29 +139,94 @@ static int prepare_segments(struct seg_info *seg, int num)
  * is safe to call, even if the executable segments are presently
  * unmapped.
  *
- * FIXME: This works in practice, but I suspect it is not guaranteed
- * safe: the library functions we call could in theory call other
- * functions via the PLT which will blow up. */
-static void unmapped_abort(const char *fmt, ...)
+ * Arguments are printf() like, but at present supports only %d and %p
+ * with no modifiers
+ *
+ * FIXME: This works in practice, but I suspect it
+ * is not guaranteed safe: the library functions we call could in
+ * theory call other functions via the PLT which will blow up. */
+#define __NR_sys_write __NR_write
+#define __NR_sys_getpid __NR_getpid
+#define __NR_sys_kill __NR_kill
+static _syscall3(ssize_t,sys_write,int,fd,const void *,buf,size_t,count);
+static _syscall0(pid_t,sys_getpid);
+static _syscall2(int,sys_kill,pid_t,pid,int,sig);
+static void write_err(const char *start, int len)
 {
-	static int (*p_vfprintf)(FILE *, const char *, va_list);
-	static void (*p_abort)(void);
-	static FILE *se;
-	va_list ap;
+	sys_write(2, start, len);
+}
+static void sys_abort(void)
+{
+	pid_t pid = sys_getpid();
 
-	if (!fmt) {
-		/* Setup */
-		p_vfprintf = dlsym(RTLD_DEFAULT, "vfprintf");
-		p_abort = dlsym(RTLD_DEFAULT, "abort");
-		se = stderr;
-		return;
+	sys_kill(pid, SIGABRT);
+}
+static void write_err_base(unsigned long val, int base)
+{
+	const char digit[] = "0123456789abcdef";
+	char str1[sizeof(val)*8];
+	char str2[sizeof(val)*8];
+	int len = 0;
+	int i;
+
+	str1[0] = '0';
+	while (val) {
+		str1[len++] = digit[val % base];
+		val /= base;
 	}
 
+	if (len == 0)
+		len = 1;
+
+	/* Reverse digits */
+	for (i = 0; i < len; i++)
+		str2[i] = str1[len-i-1];
+
+	write_err(str2, len);
+}
+
+static void unmapped_abort(const char *fmt, ...)
+{
+	const char *p, *q;
+	int done = 0;
+	unsigned long val;
+	va_list ap;
+
+	/* World's worst printf()... */
 	va_start(ap, fmt);
-	(*p_vfprintf)(se, fmt, ap);
+	p = q = fmt;
+	while (! done) {
+		switch (*p) {
+		case '\0':
+			write_err(q, p-q);
+			done = 1;
+			break;
+
+		case '%':
+			write_err(q, p-q);
+			p++;
+			switch (*p) {
+			case 'u':
+				val = va_arg(ap, unsigned);
+				write_err_base(val, 10);
+				p++;
+				break;
+			case 'p':
+				val = (unsigned long)va_arg(ap, void *);
+				write_err_base(val, 16);
+				p++;
+				break;
+			}
+			q = p;
+			break;
+		default:
+			p++;
+		}
+	}
+
 	va_end(ap);
 
-	(*p_abort)();
+	sys_abort();
 }
 
 void remap_segments(struct seg_info *seg, int num)
@@ -143,15 +235,12 @@ void remap_segments(struct seg_info *seg, int num)
 	int i;
 	void *p;
 
+	malloc(8192);
+
 	/* This is the hairy bit, between unmap and remap we enter a
 	 * black hole.  We can't call anything which uses static data
 	 * (ie. essentially any library function...)
 	 */
-
-	/* Initialize a function for printing errors and aborting
-	 * which is safe in the event of segments being unmapped */
-	unmapped_abort(NULL);
-
 	for (i = 0; i < num; i++)
 		munmap(seg[i].vaddr, seg[i].memsz);
 
@@ -165,11 +254,11 @@ void remap_segments(struct seg_info *seg, int num)
 		p = mmap(seg[i].vaddr, mapsize, seg[i].prot,
 			 MAP_PRIVATE|MAP_FIXED, seg[i].fd, 0);
 		if (p == MAP_FAILED)
-			unmapped_abort("Failed to map hugepage segment %d: "
-				       "%p-%p (errno=%d)\n", i, seg[i].vaddr,
+			unmapped_abort("Failed to map hugepage segment %u: "
+				       "%p-%p (errno=%u)\n", i, seg[i].vaddr,
 				       seg[i].vaddr+mapsize, errno);
 		if (p != seg[i].vaddr)
-			unmapped_abort("Mapped hugepage segment %d (%p-%p) at "
+			unmapped_abort("Mapped hugepage segment %u (%p-%p) at "
 				       "wrong address %p\n", i, seg[i].vaddr,
 				       seg[i].vaddr+mapsize, p);
 	}
