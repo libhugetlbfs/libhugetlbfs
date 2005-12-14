@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (hpage_size < 0)
-		CONFIG();
+		CONFIG("No hugepage kernel support");
 
 	FAIL("");
 }

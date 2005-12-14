@@ -34,6 +34,13 @@ void cleanup(void);
 		exit(RC_PASS);				\
 	} while (0)
 
+#define	PASS_INCONCLUSIVE()				\
+	do {						\
+		cleanup();				\
+		printf("PASS (inconclusive)\n");	\
+		exit(RC_PASS);				\
+	} while (0)
+
 #define IRRELEVANT()					\
 	do {						\
 		cleanup();				\
@@ -49,14 +56,14 @@ void cleanup(void);
 		exit(RC_FAIL);				\
 	} while (0)
 
-#define CONFIG()					\
+#define CONFIG(fmt, ...)				\
 	do {						\
 		cleanup();				\
-		printf("Bad configuration\n");	\
+		printf("Bad configuration: " fmt "\n", ##__VA_ARGS__);	\
 		exit(RC_CONFIG);			\
 	} while (0)
 
-#define TEST_BUG(fmt, ...)					\
+#define TEST_BUG(fmt, ...)				\
 	do {						\
 		cleanup();				\
 		printf("BUG in testsuite: " fmt "\n", ##__VA_ARGS__);	\

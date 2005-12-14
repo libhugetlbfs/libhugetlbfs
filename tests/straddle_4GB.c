@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 
 	hpage_size = gethugepagesize();
 	if (hpage_size < 0)
-		CONFIG();
+		CONFIG("No hugepage kernel support");
 
 	if (sizeof(void *) <= 4)
 		TEST_BUG("64-bit only");

@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 	dir = hugetlbfs_find_path();
 
 	if (! dir)
-		CONFIG();
+		CONFIG("No hugepage mount");
 
 	verbose_printf("Found hugetlbfs path at %s\n", dir);
 

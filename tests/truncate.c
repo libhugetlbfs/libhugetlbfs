@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 
 	hpage_size = gethugepagesize();
 	if (hpage_size < 0)
-		CONFIG();
+		CONFIG("No hugepage kernel support");
 
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)

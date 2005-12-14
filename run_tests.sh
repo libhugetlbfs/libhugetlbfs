@@ -51,25 +51,37 @@ elflink_test () {
 }
 
 #run_test dummy
-run_test zero_filesize_segment
-run_test gethugepagesize
-run_test test_root
-run_test find_path
-run_test unlinked_fd
-run_test empty_mounts
-run_test meminfo_nohuge
-run_test readback
-run_test truncate
-run_test shared
-run_test private
-run_test malloc
-run_test ptrace-write-hugepage
-run_test icache-hygeine
-preload_test HUGETLB_MORECORE=yes malloc
-run_test malloc_manysmall
-preload_test HUGETLB_MORECORE=yes malloc_manysmall
-run_test_bits 64 straddle_4GB
-run_test_bits 64 huge_at_4GB_normal_below
-run_test_bits 64 huge_below_4GB_normal_above
-elflink_test HUGETLB_VERBOSE=0 linkhuge_nofd # Lib error msgs expected
-elflink_test linkhuge
+# Kernel background tests not requiring hugepage support
+	run_test zero_filesize_segment
+
+# Library background tests not requiring hugepage support
+	run_test test_root
+	run_test meminfo_nohuge
+
+# Library tests requiring kernel hugepage support
+	run_test gethugepagesize
+	run_test empty_mounts
+
+# Tests requiring an active and usable hugepage mount
+	run_test find_path
+	run_test unlinked_fd
+	run_test readback
+	run_test truncate
+	run_test shared
+
+# Specific kernel bug tests
+	run_test ptrace-write-hugepage
+	run_test icache-hygeine
+	run_test slbpacaflush
+	run_test_bits 64 straddle_4GB
+	run_test_bits 64 huge_at_4GB_normal_below
+	run_test_bits 64 huge_below_4GB_normal_above
+
+# Tests requiring an active mount and hugepage COW
+	run_test private
+	run_test malloc
+	preload_test HUGETLB_MORECORE=yes malloc
+	run_test malloc_manysmall
+	preload_test HUGETLB_MORECORE=yes malloc_manysmall
+	elflink_test HUGETLB_VERBOSE=0 linkhuge_nofd # Lib error msgs expected
+	elflink_test linkhuge

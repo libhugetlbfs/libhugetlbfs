@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)
-		CONFIG();
+		CONFIG("Couldn't get hugepage fd");
 
 	for (i = 0; i < NUM_REPETITIONS; i++)
 		test_once(fd);
