@@ -29,6 +29,11 @@ SCRIPTS32 = ../ldscripts/elf32ppclinux
 else
 ifeq ($(ARCH),i386)
 SCRIPTS32 = ../ldscripts/elf_i386
+else
+ifeq ($(ARCH),x86_64)
+SCRIPTS32 = ../ldscripts/elf_i386
+SCRIPTS64 = ../ldscripts/elf_x86_64
+endif
 endif
 endif
 endif

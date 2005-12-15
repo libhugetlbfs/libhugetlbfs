@@ -10,7 +10,12 @@ ifeq ($(ARCH),ppc64)
 CC32 = gcc
 CC64 = gcc -m64
 else
+ifeq ($(ARCH),x86_64)
+CC32 = gcc -m32
+CC64 = gcc -m64
+else
 CC32 = gcc
+endif
 endif
 
 ifdef CC32
@@ -76,9 +81,13 @@ obj64/libhugetlbfs.so: $(LIBOBJS:%=obj64/%)
 	@$(VECHO) LD64 "(shared)" $@
 	$(CC64) $(LDFLAGS) -shared -o $@ $^ $(LDLIBS)
 
-%.i:	%.c
+obj32/%.i:	%.c
 	@$(VECHO) CPP $@
-	$(CC) $(CPPFLAGS) -E $< > $@
+	$(CC32) $(CPPFLAGS) -E $< > $@
+
+obj64/%.i:	%.c
+	@$(VECHO) CPP $@
+	$(CC64) $(CPPFLAGS) -E $< > $@
 
 obj32/%.s:	%.c
 	@$(VECHO) CC32 -S $@
