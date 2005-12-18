@@ -124,7 +124,7 @@ static int prepare_segments(struct seg_info *seg, int num)
 			return -1;
 		}
 		
-		DEBUG("Mapped hugeseg %d at %p. Copying %d bytes from %p...",
+		DEBUG("Mapped hugeseg %d at %p. Copying %ld bytes from %p...",
 		      i, p, copysize, seg[i].vaddr);
 		memcpy(p, seg[i].vaddr, copysize);
 		DEBUG_CONT("done\n");
