@@ -106,8 +106,8 @@ static int prepare_segments(struct seg_info *seg, int num)
 	/* Prepare the hugetlbfs files */
 	for (i = 0; i < num; i++) {
 		int fd;
-		int copysize = seg[i].memsz;
-		int size = ALIGN(seg[i].memsz, hpage_size);
+		unsigned long copysize = seg[i].memsz;
+		unsigned long size = ALIGN(seg[i].memsz, hpage_size);
 
 		fd = hugetlbfs_unlinked_fd();
 		if (fd < 0) {
