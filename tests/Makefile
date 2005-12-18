@@ -67,11 +67,11 @@ obj64/%.o: %.c
 
 $(LIB_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 	@$(VECHO) LD32 "(lib test)" $@
-	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ -lhugetlbfs $(LDLIBS)
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS) -lhugetlbfs 
 
 $(LIB_TESTS:%=obj64/%) $(LIB_TESTS_64:%=obj64/%): %: %.o obj64/testutils.o
 	@$(VECHO) LD64 "(lib test)" $@
-	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ -lhugetlbfs $(LDLIBS)
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs 
 
 $(NOLIB_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 	@$(VECHO) LD32 "(nolib test)" $@
@@ -100,22 +100,22 @@ $(HUGELINK_TESTS:%=obj64/%): %: %.o obj64/testutils.o
 obj32/xB.%: $(SCRIPTS32).xB obj32/%.o obj32/testutils.o
 	@$(VECHO) LD32 "(xB test)" $@
 	@mkdir -p obj32
-	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ -Wl,-T $^ $(LDLIBS)
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $(LDLIBS) -Wl,-T $^
 
 obj64/xB.%: $(SCRIPTS64).xB obj64/%.o obj64/testutils.o
 	@$(VECHO) LD64 "(xB test)" $@
 	@mkdir -p obj64
-	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ -Wl,-T $^ $(LDLIBS)
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,-T $^ 
 
 obj32/xBDT.%: $(SCRIPTS32).xBDT obj32/%.o obj32/testutils.o
 	@$(VECHO) LD32 "(xBDT test)" $@
 	@mkdir -p obj32
-	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ -Wl,-T $^ $(LDLIBS)
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $(LDLIBS) -Wl,-T $^
 
 obj64/xBDT.%: $(SCRIPTS64).xBDT obj64/%.o obj64/testutils.o
 	@$(VECHO) LD64 "(xBDT test)" $@
 	@mkdir -p obj64
-	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ -Wl,-T $^ $(LDLIBS)
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,-T $^
 
 clean:
 	@$(VECHO) CLEAN "(tests)"
