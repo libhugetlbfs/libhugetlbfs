@@ -90,8 +90,8 @@ SECTIONS
   } :htext
   .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) } :htext
   .eh_frame_hdr : { *(.eh_frame_hdr) } :htext
-  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) } :htext
-  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) } :htext
+/*  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) } :htext */
+/*  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) } :htext */
 
   /* We don't maintain address congruence here, because saving
    * hugepages is more important than saving executable size. */
@@ -100,30 +100,30 @@ SECTIONS
    * PLT by >32MB */
   . = ALIGN (0x1000000);
   /* Exception handling  */
-  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) } :hdata
-  .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) } :hdata
+  .eh_frame       : /*ONLY_IF_RW*/ { KEEP (*(.eh_frame)) } :hdata
+  .gcc_except_table   : /*ONLY_IF_RW*/ { *(.gcc_except_table .gcc_except_table.*) } :hdata
   /* Thread Local Storage sections  */
   .tdata	  : { *(.tdata .tdata.* .gnu.linkonce.td.*) } :hdata
   .tbss		  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) } :hdata
   .preinit_array     :
   {
-    PROVIDE_HIDDEN (__preinit_array_start = .);
+    PROVIDE /*_HIDDEN*/ (__preinit_array_start = .);
     KEEP (*(.preinit_array))
-    PROVIDE_HIDDEN (__preinit_array_end = .);
+    PROVIDE /*_HIDDEN*/ (__preinit_array_end = .);
   } :hdata
   .init_array     :
   {
-     PROVIDE_HIDDEN (__init_array_start = .);
+     PROVIDE /*_HIDDEN*/ (__init_array_start = .);
      KEEP (*(SORT(.init_array.*)))
      KEEP (*(.init_array))
-     PROVIDE_HIDDEN (__init_array_end = .);
+     PROVIDE /*_HIDDEN*/ (__init_array_end = .);
   } :hdata
   .fini_array     :
   {
-    PROVIDE_HIDDEN (__fini_array_start = .);
+    PROVIDE /*_HIDDEN*/ (__fini_array_start = .);
     KEEP (*(.fini_array))
     KEEP (*(SORT(.fini_array.*)))
-    PROVIDE_HIDDEN (__fini_array_end = .);
+    PROVIDE /*_HIDDEN*/ (__fini_array_end = .);
   } :hdata
   .ctors          :
   {

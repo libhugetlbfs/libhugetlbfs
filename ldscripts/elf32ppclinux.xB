@@ -91,36 +91,36 @@ SECTIONS
   } :text
   .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) } :text
   .eh_frame_hdr : { *(.eh_frame_hdr) } :text
-  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) } :text
-  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) } :text
+/*  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) } :text */
+/*  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) } :text */
   /* Adjust the address for the data segment.  We want to adjust up to
      the same address within the page on the next page up.  */
   . = ALIGN (0x10000) - ((0x10000 - .) & (0x10000 - 1)); . = DATA_SEGMENT_ALIGN (0x10000, 0x1000);
   /* Exception handling  */
-  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) } :data
-  .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) } :data
+  .eh_frame       : /*ONLY_IF_RW*/ { KEEP (*(.eh_frame)) } :data
+  .gcc_except_table   : /*ONLY_IF_RW*/ { *(.gcc_except_table .gcc_except_table.*) } :data
   /* Thread Local Storage sections  */
   .tdata	  : { *(.tdata .tdata.* .gnu.linkonce.td.*) } :data
   .tbss		  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) } :data
   .preinit_array     :
   {
-    PROVIDE_HIDDEN (__preinit_array_start = .);
+    PROVIDE /*_HIDDEN*/ (__preinit_array_start = .);
     KEEP (*(.preinit_array))
-    PROVIDE_HIDDEN (__preinit_array_end = .);
+    PROVIDE /*_HIDDEN*/ (__preinit_array_end = .);
   } :data
   .init_array     :
   {
-     PROVIDE_HIDDEN (__init_array_start = .);
+     PROVIDE /*_HIDDEN*/ (__init_array_start = .);
      KEEP (*(SORT(.init_array.*)))
      KEEP (*(.init_array))
-     PROVIDE_HIDDEN (__init_array_end = .);
+     PROVIDE /*_HIDDEN*/ (__init_array_end = .);
   } :data
   .fini_array     :
   {
-    PROVIDE_HIDDEN (__fini_array_start = .);
+    PROVIDE /*_HIDDEN*/ (__fini_array_start = .);
     KEEP (*(.fini_array))
     KEEP (*(SORT(.fini_array.*)))
-    PROVIDE_HIDDEN (__fini_array_end = .);
+    PROVIDE /*_HIDDEN*/ (__fini_array_end = .);
   } :data
   .ctors          :
   {
@@ -154,9 +154,9 @@ SECTIONS
   .got1           : { *(.got1) } :data
   .got2           : { *(.got2) } :data
   .dynamic        : { *(.dynamic) } :dynamic :data
-  .got            : SPECIAL { *(.got) } :data
-  . = DATA_SEGMENT_RELRO_END (0, .);
-  .plt            : SPECIAL { *(.plt) } :data
+/*  .got            : SPECIAL { *(.got) } :data*/
+/*  . = DATA_SEGMENT_RELRO_END (0, .);*/
+/*  .plt            : SPECIAL { *(.plt) } :data*/
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
@@ -164,7 +164,7 @@ SECTIONS
     SORT(CONSTRUCTORS)
   } :data
   .data1          : { *(.data1) } :data
-  .got            : SPECIAL { *(.got) } :data
+  .got            : /*SPECIAL*/ { *(.got) } :data
   /* We want the small data sections together, so single-instruction offsets
      can access them all, and initialized data all before uninitialized, so
      we can shorten the on-disk segment size.  */
@@ -174,7 +174,7 @@ SECTIONS
     *(.sdata .sdata.* .gnu.linkonce.s.*)
   } :data
   _edata = .; PROVIDE (edata = .);
-  .plt            : SPECIAL { *(.plt) } :data
+  .plt            : /*SPECIAL*/ { *(.plt) } :data
   . = ALIGN(32 / 8);
   . = ALIGN(32 / 8);
   . = DATA_SEGMENT_END (.);
