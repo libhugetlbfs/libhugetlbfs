@@ -22,7 +22,7 @@ SECTIONS
   /* Read-only sections, merged into text segment: */
   /* Different from the normal origin addres, because we need to make
    * it hugepage aligned */
-  PROVIDE (__executable_start = 0x08000000); . = 0x08000000 + SIZEOF_HEADERS;
+  __executable_start = 0x08000000; . = 0x08000000 + SIZEOF_HEADERS;
   .interp         : { *(.interp) } :text :interp
   .hash           : { *(.hash) } :text
   .dynsym         : { *(.dynsym) } :text

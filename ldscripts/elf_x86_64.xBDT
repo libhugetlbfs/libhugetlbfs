@@ -22,7 +22,7 @@ SECTIONS
   /* Read-only sections, merged into text segment: */
   /* Different from the normal origin address, because we make it 16MB
    * aligned, in case of future larger hugepages */
-  PROVIDE (__executable_start = 0x1000000); . = 0x1000000 + SIZEOF_HEADERS;
+  __executable_start = 0x1000000; . = 0x1000000 + SIZEOF_HEADERS;
   .interp         : { *(.interp) } :interp :text
   .hash           : { *(.hash) } :text
   .dynsym         : { *(.dynsym) } :text
