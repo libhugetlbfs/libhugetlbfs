@@ -37,4 +37,9 @@ struct seg_info {
 	int fd;
 };
 
+#if defined(__powerpc64__) && !defined(__LP64__)
+/* Older binutils fail to provide this symbol */
+#define __LP64__
+#endif
+
 #endif /* _LIBHUGETLBFS_INTERNAL_H */
