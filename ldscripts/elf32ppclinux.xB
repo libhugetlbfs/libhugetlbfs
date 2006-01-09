@@ -1,4 +1,4 @@
-/* Default linker script, for normal executables */
+/* Link script for normal executables with BSS in hugepages */
 OUTPUT_FORMAT("elf32-powerpc", "elf32-powerpc",
 	      "elf32-powerpc")
 OUTPUT_ARCH(powerpc:common)
