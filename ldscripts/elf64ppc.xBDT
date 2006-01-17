@@ -19,6 +19,7 @@ SECTIONS
   /* Read-only sections, merged into text segment: */
   __executable_start = 0x10000000; . = 0x10000000 + SIZEOF_HEADERS;
   .interp         : { *(.interp) } :interp :htext
+  .note.SuSE   : { *(.note.ABI-tag) } :htext :note
   .note.ABI-tag   : { *(.note.ABI-tag) } :htext :note
   .hash           : { *(.hash) } :htext
   .dynsym         : { *(.dynsym) } :htext
