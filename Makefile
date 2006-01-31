@@ -50,7 +50,19 @@ check:	all
 	./run_tests.sh
 
 checkv:	all
-	./run_tests.sh -v -V
+	./run_tests.sh -vV
+
+func:	all
+	./run_tests.sh -t func
+
+funcv:	all
+	./run_tests.sh -t func -vV
+
+stress:	all
+	./run_tests.sh -t stress
+
+stressv: all
+	./run_tests.sh -t stress -vV
 
 # Don't want to remake objects just 'cos the directory timestamp changes
 $(OBJDIRS): %:

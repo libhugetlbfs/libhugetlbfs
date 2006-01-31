@@ -89,4 +89,7 @@ void cleanup(void);
 		exit(RC_BUG);				\
 	} while (0)
 
+/* stressutils.c stuff */
+void remove_shmid(int shmid);
+
 #endif /* _HUGETESTS_H */

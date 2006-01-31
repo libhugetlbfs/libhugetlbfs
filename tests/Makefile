@@ -6,6 +6,7 @@ LIB_TESTS_64 = straddle_4GB huge_at_4GB_normal_below \
 NOLIB_TESTS = malloc malloc_manysmall dummy
 LDSCRIPT_TESTS = zero_filesize_segment
 HUGELINK_TESTS = linkhuge linkhuge_nofd
+STRESS_TESTS = mmap-gettest mmap-cow shm-gettest shm-getraw shm-fork
 
 CFLAGS = -O2 -Wall -g
 CPPFLAGS = -I..
@@ -14,7 +15,8 @@ LDFLAGS32 = -L../obj32
 LDFLAGS64 = -L../obj64
 
 TESTS = $(LIB_TESTS) $(NOLIB_TESTS) $(LDSCRIPT_TESTS) $(HUGELINK_TESTS) \
-	$(HUGELINK_TESTS:%=xB.%) $(HUGELINK_TESTS:%=xBDT.%)
+	$(HUGELINK_TESTS:%=xB.%) $(HUGELINK_TESTS:%=xBDT.%) \
+	$(STRESS_TESTS)
 
 TESTS_64 = $(LIB_TESTS_64)
 
@@ -96,6 +98,15 @@ $(HUGELINK_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 $(HUGELINK_TESTS:%=obj64/%): %: %.o obj64/testutils.o
 	@$(VECHO) LD64 "(hugelink test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS)
+
+$(STRESS_TESTS:%=obj32/%): %: %.o obj32/testutils.o obj32/stressutils.o
+	@$(VECHO) LD32 "(lib test)" $@
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS) -lhugetlbfs 
+
+$(STRESS_TESTS:%=obj64/%): %: %.o obj64/testutils.o obj64/stressutils.o
+	@$(VECHO) LD64 "(lib test)" $@
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs 
+
 
 obj32/xB.%: $(SCRIPTS32).xB obj32/%.o obj32/testutils.o
 	@$(VECHO) LD32 "(xB test)" $@
