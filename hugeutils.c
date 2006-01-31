@@ -263,6 +263,20 @@ int hugetlbfs_unlinked_fd(void)
 	return fd;
 }
 
+/********************************************************************/
+/* Library user visible DIAGNOSES/DEBUGGING ONLY functions          */
+/********************************************************************/
+
+long hugetlbfs_num_free_pages(void)
+{
+	return read_meminfo("HugePages_Free:");
+}
+
+long hugetlbfs_num_pages(void)
+{
+	return read_meminfo("HugePages_Total:");
+}
+
 #if 0
 
 int get_sysctl(char *file)
@@ -335,16 +349,6 @@ int find_mount_hugetlbfs(char *mountpoint, size_t strsz)
 		default:
 			return ret;
 	}
-}
-
-int get_nr_free_huge_pages()
-{
-	return read_meminfo("HugePages_Free:");
-}
-
-int get_nr_total_huge_pages()
-{
-	return read_meminfo("HugePages_Total:");
 }
 
 int set_nr_hugepages(int num)
