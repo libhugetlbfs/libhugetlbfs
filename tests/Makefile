@@ -124,6 +124,6 @@ clean:
 	rm -f $(TESTS)
 
 %.d: %.c
-	@$(CC) $(CPPFLAGS) -MM -MT "$*.o $@" $< > $@
+	@$(CC) $(CPPFLAGS) -MM -MT "$(foreach DIR,$(OBJDIRS),$(DIR)/$*.o) $@" $< > $@
 
 -include $(DEPFILES)
