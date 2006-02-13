@@ -30,11 +30,16 @@ preload_test () {
 }
 
 elflink_test () {
-    run_test "$@"
+    args=("$@")
+    N="$[$#-1]"
+    baseprog="${args[$N]}"
+    unset args[$N]
+    set -- "${args[@]}"
+    run_test "$@" "$baseprog"
     # Test we don't blow up if not linked for hugepage
-    preload_test "$@" 
-    run_test "xB.$@"
-    run_test "xBDT.$@"
+    preload_test "$@" "$baseprog"
+    run_test "$@" "xB.$baseprog"
+    run_test "$@" "xBDT.$baseprog"
 }
 
 functional_tests () {
