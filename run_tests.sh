@@ -40,6 +40,9 @@ elflink_test () {
     preload_test "$@" "$baseprog"
     run_test "$@" "xB.$baseprog"
     run_test "$@" "xBDT.$baseprog"
+    # Test that HUGETLB_ELFMAP=no inhibits remapping as intended
+    run_test HUGETLB_ELFMAP=no "$@" "xB.$baseprog"
+    run_test HUGETLB_ELFMAP=no "$@" "xBDT.$baseprog"
 }
 
 functional_tests () {

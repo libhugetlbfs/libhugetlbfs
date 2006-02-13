@@ -289,6 +289,14 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 {
 	extern Elf_Ehdr __executable_start __attribute__((weak));
 	Elf_Ehdr *ehdr = &__executable_start;
+	char *env;
+
+	env = getenv("HUGETLB_ELFMAP");
+	if (env && (strcasecmp(env, "no") == 0)) {
+		DEBUG("HUGETLB_ELFMAP=%s, not attempting to remap program "
+		      "segments\n", env);
+		return;
+	}
 
 	if (! ehdr) {
 		DEBUG("Couldn't locate __executable_start, "

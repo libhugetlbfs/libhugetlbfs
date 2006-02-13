@@ -130,12 +130,19 @@ static void do_test(struct test_entry *te)
 int main(int argc, char *argv[])
 {
 	int i;
+	char *env;
+	int elfmap_inhibited;
 
 	test_init(argc, argv);
 
 	get_link_string(argv[0]);
 
-	verbose_printf("Link string is [%s]\n", link_string);
+	env = getenv("HUGETLB_ELFMAP");
+
+	verbose_printf("Link string is [%s], HUGETLB_ELFMAP=%s\n",
+		       link_string, env);
+
+	elfmap_inhibited = env && (strcasecmp(env, "no") == 0);
 
 	for (i = 0; i < NUM_TESTS; i++) {
 		do_test(testtab + i);
@@ -150,9 +157,16 @@ int main(int argc, char *argv[])
 	for (i = 0; i < NUM_TESTS; i++) {
 		char linkchar = testtab[i].linkchar;
 
-		if (linkchar && strchr(link_string, linkchar)) {
-			if (! testtab[i].is_huge)
-				FAIL("%s is not hugepage\n", testtab[i].name);
+		if (elfmap_inhibited) {
+			if (testtab[i].is_huge)
+				FAIL("%s is hugepage despite HUGETLB_ELFMAP=%s\n",
+				     testtab[i].name, env);
+		} else {
+			if (linkchar && strchr(link_string, linkchar)) {
+				if (! testtab[i].is_huge)
+					FAIL("%s is not hugepage\n",
+					     testtab[i].name);
+			}
 		}
 	}
 	PASS();
