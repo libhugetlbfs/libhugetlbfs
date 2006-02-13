@@ -134,26 +134,6 @@ obj64/xBDT.%: $(SCRIPTS64).xBDT $(HUGETLBFS_LD) obj64/%.o obj64/testutils.o
 	@ln -sf ../$(HUGETLBFS_LD) obj64/ld
 	$(CC64) -B./obj64 $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,--hugetlbfs-script-path=$(SCRIPTS) -Wl,--hugetlbfs-link=BDT $(filter %.o,$^)
 
-#obj64/xB.%: $(SCRIPTS64).xB obj32/%.o obj32/testutils.o
-#	@$(VECHO) LD32 "(xB test)" $@
-#	@mkdir -p obj32
-#	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $(LDLIBS) -Wl,-T $^
-
-#obj64/xB.%: $(SCRIPTS64).xB obj64/%.o obj64/testutils.o
-#	@$(VECHO) LD64 "(xB test)" $@
-#	@mkdir -p obj64
-#	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,-T $^ 
-
-#obj32/xBDT.%: $(SCRIPTS32).xBDT obj32/%.o obj32/testutils.o
-#	@$(VECHO) LD32 "(xBDT test)" $@
-#	@mkdir -p obj32
-#	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $(LDLIBS) -Wl,-T $^
-
-#obj64/xBDT.%: $(SCRIPTS64).xBDT obj64/%.o obj64/testutils.o
-#	@$(VECHO) LD64 "(xBDT test)" $@
-#	@mkdir -p obj64
-#	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,-T $^
-
 clean:
 	@$(VECHO) CLEAN "(tests)"
 	rm -f *~ *.o *.so *.a *.d core a.out
