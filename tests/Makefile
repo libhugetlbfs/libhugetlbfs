@@ -23,25 +23,9 @@ TESTS_64 = $(LIB_TESTS_64)
 ARCH = $(shell uname -m | sed -e s/i.86/i386/)
 
 SCRIPTS=../ldscripts
+SCRIPTS32 = $(SCRIPTS)/$(ELF32)
+SCRIPTS64 = $(SCRIPTS)/$(ELF64)
 HUGETLBFS_LD=../ld.hugetlbfs
-
-ifeq ($(ARCH),ppc64)
-SCRIPTS32 = $(SCRIPTS)/elf32ppclinux
-SCRIPTS64 = $(SCRIPTS)/elf64ppc
-else
-ifeq ($(ARCH),ppc)
-SCRIPTS32 = $(SCRIPTS)/elf32ppclinux
-else
-ifeq ($(ARCH),i386)
-SCRIPTS32 = $(SCRIPTS)/elf_i386
-else
-ifeq ($(ARCH),x86_64)
-SCRIPTS32 = $(SCRIPTS)/elf_i386
-SCRIPTS64 = $(SCRIPTS)/elf_x86_64
-endif
-endif
-endif
-endif
 
 ifdef V
 VECHO = :
@@ -114,25 +98,25 @@ obj32/xB.%: $(SCRIPTS32).xB $(HUGETLBFS_LD) obj32/%.o obj32/testutils.o
 	@$(VECHO) LD32 "(xB test)" $@
 	@mkdir -p obj32
 	@ln -sf ../$(HUGETLBFS_LD) obj32/ld
-	$(CC32) -B./obj32  $(LDFLAGS) $(LDFLAGS32) -o $@ $(LDLIBS) -Wl,--hugetlbfs-script-path=$(SCRIPTS) -Wl,--hugetlbfs-link=B $(filter %.o,$^)
+	$(CC32) -B./obj32  $(LDFLAGS) $(LDFLAGS32) -o $@ $(LDLIBS) -Wl,--hugetlbfs-link=B $(filter %.o,$^)
 
 obj64/xB.%: $(SCRIPTS64).xB $(HUGETLBFS_LD) obj64/%.o obj64/testutils.o
 	@$(VECHO) LD64 "(xB test)" $@
 	@mkdir -p obj64
 	@ln -sf ../$(HUGETLBFS_LD) obj64/ld
-	$(CC64) -B./obj64 $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,--hugetlbfs-script-path=$(SCRIPTS) -Wl,--hugetlbfs-link=B $(filter %.o,$^)
+	$(CC64) -B./obj64 $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,--hugetlbfs-link=B $(filter %.o,$^)
 
 obj32/xBDT.%: $(SCRIPTS32).xBDT $(HUGETLBFS_LD) obj32/%.o obj32/testutils.o
 	@$(VECHO) LD32 "(xBDT test)" $@
 	@mkdir -p obj32
 	@ln -sf ../$(HUGETLBFS_LD) obj32/ld
-	$(CC32) -B./obj32 $(LDFLAGS) $(LDFLAGS32) -o $@ $(LDLIBS) -Wl,--hugetlbfs-script-path=$(SCRIPTS) -Wl,--hugetlbfs-link=BDT $(filter %.o,$^)
+	$(CC32) -B./obj32 $(LDFLAGS) $(LDFLAGS32) -o $@ $(LDLIBS) -Wl,--hugetlbfs-link=BDT $(filter %.o,$^)
 
 obj64/xBDT.%: $(SCRIPTS64).xBDT $(HUGETLBFS_LD) obj64/%.o obj64/testutils.o
 	@$(VECHO) LD64 "(xBDT test)" $@
 	@mkdir -p obj64
 	@ln -sf ../$(HUGETLBFS_LD) obj64/ld
-	$(CC64) -B./obj64 $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,--hugetlbfs-script-path=$(SCRIPTS) -Wl,--hugetlbfs-link=BDT $(filter %.o,$^)
+	$(CC64) -B./obj64 $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,--hugetlbfs-link=BDT $(filter %.o,$^)
 
 clean:
 	@$(VECHO) CLEAN "(tests)"

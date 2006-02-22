@@ -7,6 +7,13 @@ if [ -n "$LD_HUGETLBFS_RECURSION" ]; then
 fi
 export LD_HUGETLBFS_RECURSION=1
 
+### SET DEFAULT LDSCRIPT PATH HERE ###
+if [ -z "$HUGETLB_LDSCRIPT_PATH" ]; then
+    # Assume this script is running from the libhugetlbfs source tree,
+    # and look for the ldscripts accordingly
+    HUGETLB_LDSCRIPT_PATH=$(dirname $(readlink $0))/ldscripts
+fi
+
 # Try to figure out what's the underlying linker to invoke
 if [ -z "$LD" ]; then
     for x in $(which -a ld); do
@@ -36,7 +43,7 @@ while [ -n "$1" ]; do
 	    HTLB_LINK="${arg#--hugetlbfs-link=}"
 	    ;;
 	--hugetlbfs-script-path=*)
-	    HTLB_SCRIPT_PATH="${arg#--hugetlbfs-script-path=}"
+	    HUGETLB_LDSCRIPT_PATH="${arg#--hugetlbfs-script-path=}"
 	    ;;
 	--)
 	    args=("${args[@]}" "$@")
@@ -51,8 +58,8 @@ while [ -n "$1" ]; do
 done
 
 if [ -n "$HTLB_LINK" ]; then
-    SCRIPT="$EMU.x$HTLB_LINK"
-    HTLBOPTS="-T${HTLB_SCRIPT_PATH}/${SCRIPT}"
+    LDSCRIPT="$EMU.x$HTLB_LINK"
+    HTLBOPTS="-T${HUGETLB_LDSCRIPT_PATH}/${LDSCRIPT}"
 fi
 
 ${LD} "${args[@]}" ${HTLBOPTS}
