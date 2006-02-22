@@ -19,6 +19,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 #include <unistd.h>
 #include <sys/mman.h>
 
@@ -49,12 +51,12 @@ int main(int argc, char *argv[])
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED,
 		 fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap() 1");
+		FAIL("mmap() 1: %s", strerror(errno));
 
 	q = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED,
 		 fd, 0);
 	if (q == MAP_FAILED)
-		FAIL("mmap() 2");
+		FAIL("mmap() 2: %s", strerror(errno));
 
 	pl = p;
 	for (i = 0; i < (hpage_size / sizeof(*pl)); i++) {
