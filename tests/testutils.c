@@ -23,8 +23,11 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <string.h>
+#include <errno.h>
 #include <signal.h>
 #include <sys/vfs.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 
 #include "hugetests.h"
 
@@ -140,4 +143,16 @@ int test_addr_huge(void *p)
 		return -1;
 
 	return (sb.f_type == HUGETLBFS_MAGIC);
+}
+
+int remove_shmid(int shmid)
+{
+	if (shmid > 0) {
+		if (shmctl(shmid, IPC_RMID, NULL) != 0) {
+			ERROR("shmctl(%x, IPC_RMID) failed (%s)\n",
+			      shmid, strerror(errno));
+			return -1;
+		}
+	}
+	return 0;
 }

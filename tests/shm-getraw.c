@@ -44,7 +44,8 @@ int shmid;
 
 void cleanup(void)
 {
-	remove_shmid(shmid);
+	if (remove_shmid(shmid) != 0)
+		TEST_BUG("Couldn't remove shm segment");
 }
 
 int main(int argc, char ** argv)
@@ -54,15 +55,12 @@ int main(int argc, char ** argv)
 	size_t hpage_size = gethugepagesize();
 	volatile char *shmaddr;
 	char *buffer;
-	struct shmid_ds shmbuf;
 	int raw_fd;
 
 	test_init(argc, argv);
 
-	if (argc < 3) {
-		ERROR("Usage:  %s <# pages> <device>\n", argv[0]);
-		CONFIG();
-	}
+	if (argc < 3)
+		CONFIG("Usage:  %s <# pages> <device>", argv[0]);
 
 	nr_hugepages = atoi(argv[1]);
 
@@ -71,48 +69,35 @@ int main(int argc, char ** argv)
 	buffer = malloc(hpage_size*sizeof(char));
 
 	raw_fd = open(argv[2], O_RDONLY);
-	if (!raw_fd) {
-		PERROR("Cannot open raw device.\n");
-		CONFIG();
-	}
+	if (!raw_fd)
+		CONFIG("Cannot open raw device: %s", strerror(errno));
 
 	size = hpage_size * nr_hugepages;
 
 	verbose_printf("Requesting %zu bytes\n", size);
 
-	if ((shmid = shmget(2, size, SHM_HUGETLB|IPC_CREAT|SHM_R|SHM_W )) < 0) {
-		PERROR("Failure:");
-		FAIL();
-	}
+	if ((shmid = shmget(2, size, SHM_HUGETLB|IPC_CREAT|SHM_R|SHM_W )) < 0)
+		FAIL("shmget(): %s", strerror(errno));
+
 	verbose_printf("shmid: 0x%x\n", shmid);
 	shmaddr = shmat(shmid, 0, SHM_RND) ;
-	if (shmaddr == MAP_FAILED) {
-		PERROR("Shared Memory Attach Failure:");
-		FAIL();
-	}
+	if (shmaddr == MAP_FAILED)
+		FAIL("shmat() failed: %s", strerror(errno));
+
 	verbose_printf("shmaddr: %p\n", shmaddr);
 
 	/* Read a page from device and write to shm segment */
 	for (i = 0; i < size; i+=hpage_size) {
-		if (!read(raw_fd, buffer, hpage_size)) {
-			PERROR("Can't read from raw device\n");
-			CONFIG();
-		}
+		if (!read(raw_fd, buffer, hpage_size))
+			FAIL("Can't read from raw device: %s",
+			     strerror(errno));
 		memcpy((char*)(shmaddr + i), buffer, hpage_size);
 	}
 
 	verbose_printf("Done.\n");
-	if (shmdt((const void *)shmaddr) != 0) {
-		PERROR("Detached Failure:");
-		FAIL();
-	}
-	if (shmctl(shmid, IPC_RMID, &shmbuf)) {
-		PERROR("Destroy failure:");
-		FAIL();
-	}
-	shmid = 0;
+	if (shmdt((const void *)shmaddr) != 0)
+		FAIL("shmdt() failed: %s", strerror(errno));
 
 	free(buffer);
 	PASS();
 }
-

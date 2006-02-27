@@ -9,6 +9,8 @@ unset HUGETLB_MORECORE
 
 ENV=/usr/bin/env
 
+TOTAL_HPAGES=$(grep 'HugePages_Total:' /proc/meminfo | cut -f2 -d:)
+
 run_test_bits () {
     BITS=$1
     shift
@@ -85,15 +87,23 @@ functional_tests () {
 
 stress_tests () {
     ITERATIONS=10           # Number of iterations for looping tests
-    THREADS=10              # Number of threads for multi-threaded tests
-    NRPAGES=16
-    DEVICE=/dev/full
+    NRPAGES=$1
 
     run_test mmap-gettest ${ITERATIONS} ${NRPAGES}
-    run_test mmap-cow ${THREADS} ${NRPAGES}
-    run_test shm-gettest ${ITERATIONS} ${NRPAGES}
+
+    # mmap-cow needs a hugepages for each thread plus one extra
+    run_test mmap-cow $[NRPAGES-1] ${NRPAGES}
+
+    THREADS=10    # Number of threads for shm-fork
+    # Run shm-fork once using half available hugepages, then once using all
+    # This is to catch off-by-ones or races in the kernel allocated that
+    # can make allocating all hugepages a problem
+    if [ ${NRPAGES} -gt 1 ]; then
+	run_test shm-fork ${THREADS} $[NRPAGES/2]
+    fi
     run_test shm-fork ${THREADS} ${NRPAGES}
-    run_test shm-getraw ${NRPAGES} ${DEVICE}
+
+    run_test shm-getraw ${NRPAGES} /dev/full
 }
 
 while getopts "vVdt:" ARG ; do
@@ -120,7 +130,7 @@ for set in $TESTSETS; do
 	    functional_tests
 	    ;;
 	"stress")
-	    stress_tests
+	    stress_tests $TOTAL_HPAGES
 	    ;;
     esac
 done

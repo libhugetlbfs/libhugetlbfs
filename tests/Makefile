@@ -86,11 +86,11 @@ $(HUGELINK_TESTS:%=obj64/%): %: %.o obj64/testutils.o
 	@$(VECHO) LD64 "(hugelink test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS)
 
-$(STRESS_TESTS:%=obj32/%): %: %.o obj32/testutils.o obj32/stressutils.o
+$(STRESS_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 	@$(VECHO) LD32 "(lib test)" $@
 	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS) -lhugetlbfs 
 
-$(STRESS_TESTS:%=obj64/%): %: %.o obj64/testutils.o obj64/stressutils.o
+$(STRESS_TESTS:%=obj64/%): %: %.o obj64/testutils.o
 	@$(VECHO) LD64 "(lib test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs 
 

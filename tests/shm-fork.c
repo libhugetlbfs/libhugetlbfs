@@ -45,96 +45,92 @@ int shmid;
 #define MAX_PROCS 200
 #define BUF_SZ 256
 
+#define CHILD_FAIL(thread, fmt, ...) \
+	do { \
+		verbose_printf("Thread %d (pid=%d) FAIL: " fmt, \
+			       thread, getpid(), __VA_ARGS__); \
+		exit(1); \
+	} while (0)
+
 void cleanup(void)
 {
-	remove_shmid(shmid);
+	if (remove_shmid(shmid) != 0)
+		TEST_BUG("Could not remove shm segment");
+}
+
+void do_child(int thread, unsigned long size)
+{
+	volatile char *shmaddr;
+	int j, k;
+
+	verbose_printf(".");
+	for (j=0; j<5; j++) {
+		shmaddr = shmat(shmid, 0, SHM_RND);
+		if (shmaddr == MAP_FAILED)
+			CHILD_FAIL(thread, "shmat() failed: %s",
+				   strerror(errno));
+		
+		for (k=0;k<size;k++)
+			shmaddr[k] = (char) (k);
+		for (k=0;k<size;k++)
+			if (shmaddr[k] != (char)k)
+				CHILD_FAIL(thread, "Index %d mismatch", k);
+
+		if (shmdt((const void *)shmaddr) != 0)
+			CHILD_FAIL(thread, "shmdt() failed: %s",
+				   strerror(errno));
+	}
+	exit(0);
 }
 	
 int main(int argc, char ** argv)
 {
-	unsigned int size;
+	unsigned long size;
 	unsigned int hpage_size;
 	int pid, status;
 	int i;
-	volatile char *shmaddr;
-	struct shmid_ds shmbuf;
 	int wait_list[MAX_PROCS];
-	int passfail = 0;
 
 	test_init(argc, argv);
 
-	if (argc < 3) {
-		ERROR("Usage:  %s <# procs> <# pages>\n", argv[0]);
-		CONFIG();
-	}
+	if (argc < 3)
+		CONFIG("Usage:  %s <# procs> <# pages>", argv[0]);
 
 	numprocs = atoi(argv[1]);
 	nr_hugepages = atoi(argv[2]);
+
+	if (numprocs > MAX_PROCS)
+		CONFIG("Cannot spawn more than %d processes", MAX_PROCS);
 	
 	hpage_size = gethugepagesize();
-	if (numprocs > MAX_PROCS) {
-		ERROR("Cannot spawn more than %i processes\n", MAX_PROCS);
-		CONFIG();
-	}
         size = hpage_size * nr_hugepages;
-	verbose_printf("Requesting %u bytes\n", size);
-	if ((shmid = shmget(2, size, SHM_HUGETLB|IPC_CREAT|SHM_R|SHM_W )) < 0) {
-		PERROR("shmget:");
-		FAIL();
-	}
-	verbose_printf("shmid: %i\n", shmid);
+	verbose_printf("Requesting %lu bytes\n", size);
+	if ((shmid = shmget(2, size, SHM_HUGETLB|IPC_CREAT|SHM_R|SHM_W )) < 0)
+		FAIL("shmget(): %s", strerror(errno));
+
+	verbose_printf("shmid: %d\n", shmid);
 			
 	verbose_printf("Spawning children:\n");
 	for (i=0; i<numprocs; i++) {
-		if ((pid = fork()) < 0) {
-			PERROR("fork:");
-			FAIL();
-		}
-		if (pid == 0) {
-			int j, k;
-			verbose_printf(".");
-			for (j=0; j<5; j++) {
-				shmaddr = shmat(shmid, 0, SHM_RND);
-				if (shmaddr == MAP_FAILED)
-					FAIL("shmat failed: %s (PID=%d)\n",
-					     strerror(errno), getpid());
+		if ((pid = fork()) < 0)
+			FAIL("fork(): %s", strerror(errno));
 
-				for (k=0;k<size;k++)
-					shmaddr[k] = (char) (k);
-				for (k=0;k<size;k++)
-					if (shmaddr[k] != (char)k) {
-						ERROR("Index %d mismatch.", k);
-						exit(1);
-					}
-				if (shmdt((const void *)shmaddr) != 0) {
-					PERROR("shmdt:");
-					exit(1);
-				}
-			}
-			exit(0);
-		}
+		if (pid == 0)
+			do_child(i, size);
+
 		wait_list[i] = pid;
 	}
+
 	for (i=0; i<numprocs; i++) {
 		waitpid(wait_list[i], &status, 0);
 		if (WEXITSTATUS(status) != 0)
-			passfail = 1;
-		if (WIFSIGNALED(status)) {
-			ERROR("pid %i received unhandled signal\n", wait_list[i]);
-			passfail = 1;
-		}
-	}
-	
-	if (shmctl(shmid, IPC_RMID, &shmbuf)) {
-		PERROR("Destroy failure:");
-		FAIL();
-	}
-	shmid = 0;
+			FAIL("Thread %d (pid=%d) failed", i, wait_list[i]);
 
-	verbose_printf("\n");
-	if (!passfail)
-		PASS();
-	else
-		FAIL();
+		if (WIFSIGNALED(status))
+			FAIL("Thread %d (pid=%d) received unhandled signal",
+			     i, wait_list[i]);
+	}
+
+	PASS();
 }
 

@@ -16,6 +16,8 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
+#define _GNU_SOURCE
+
 #include <sys/types.h>
 #include <sys/shm.h>
 #include <sys/wait.h>
@@ -44,129 +46,132 @@ extern int errno;
 #define HTLB_FILE "mmap-cow"
 #define BUF_SZ 256
 #define MAX_PROCS 100
-#define PRIVATE 0
-#define SHARED 1
+
+#define CHILD_FAIL(thread, fmt, ...) \
+	do { \
+		verbose_printf("Thread %d (pid=%d) FAIL: " fmt, \
+			       thread, getpid(), __VA_ARGS__); \
+		exit(1); \
+	} while (0)
 
 /* Setup Configuration */
 int nr_hugepages;		/* Number of huge pages to allocate */
 unsigned int threads;		/* Number of threads to run */
-char mountpoint[BUF_SZ];	/* Location of mounted hugetlbfs */
 
-int mmap_file(char *mount, char **addr, int *fh, size_t size, int shared)
+int mmap_file(int fd, char **addr, size_t size, int type)
 {
 	int flags = 0;
 
-	/* First, open the file */
-	*fh = hugetlbfs_unlinked_fd();
-	if (*fh < 0) {
-		PERROR("Unable to open temp file in hugetlbfs");
-		CONFIG();
-	}
+	*addr = mmap(NULL, size, PROT_READ|PROT_WRITE, flags | type, fd, 0);
+	if (*addr == MAP_FAILED)
+		return -1;
 
-	(shared) ? (flags |= MAP_SHARED) : (flags |= MAP_PRIVATE);
-	*addr = mmap(NULL, size, PROT_READ|PROT_WRITE, flags, *fh, 0);
-	if (addr == MAP_FAILED) {
-		PERROR("Failed to mmap the hugetlb file");
-		CONFIG();
-	}
 	return 0;
 }
 
-int do_work(int thread, size_t size) {
+void do_work(int thread, size_t size, int fd)
+{
 	char *addr;
-	int fh;
 	size_t i;
 	char pattern = thread+65;
 
-	if (mmap_file(mountpoint, &addr, &fh, size, PRIVATE)) {
-		ERROR("mmap failed\n");
-		return -1;
-	}
-	verbose_printf("%i: Mapped at address %p\n", thread, addr);
+	if (mmap_file(fd, &addr, size, MAP_PRIVATE))
+		CHILD_FAIL(thread, "mmap() failed: %s", strerror(errno));
+
+	verbose_printf("Thread %d (pid=%d): Mapped at address %p\n",
+		       thread, getpid(), addr);
 
 	/* Write to the mapping with a distinct pattern */
-	verbose_printf("%i: Writing %c to the mapping\n", thread, pattern);
-	for (i = 0; i < size; i++) {
+	verbose_printf("Thread %d (pid=%d): Writing %c to the mapping\n",
+		       thread, getpid(), pattern);
+	for (i = 0; i < size; i++)
 		memcpy((char *)addr+i, &pattern, 1);
-	}
 
-	if (msync(addr, size, MS_SYNC)) {
-		PERROR("msync");
-		return -1;
-	}
+	if (msync(addr, size, MS_SYNC))
+		CHILD_FAIL(thread, "msync() failed: %s", strerror(errno));
 
 	/* Verify the pattern */
-	for (i = 0; i < size; i++) {
-		if (addr[i] != pattern) {
-			ERROR("%i: Memory corruption at %p: Got %c, Expected %c\n",
-				thread, &addr[i], addr[i], pattern);
-			return -1;
-		}
-	}
-	verbose_printf("%i: Pattern verified\n", thread);
+	for (i = 0; i < size; i++)
+		if (addr[i] != pattern)
+			CHILD_FAIL(thread, "Corruption at %p; "
+				   "Got %c, Expected %c",
+				   &addr[i], addr[i], pattern);
+
+	verbose_printf("Thread %d (pid=%d): Pattern verified\n",
+		       thread, getpid());
 
 	/* Munmap the area */
 	munmap(addr, size);
-	close(fh);
-	return 0;
+	close(fd);
+	exit(0);
 }
 
 int main(int argc, char ** argv)
 {
 	char *addr;
 	size_t hpage_size, size;
-	int i, pid, status, fh;
+	int i, pid, status, fd, ret;
 	int wait_list[MAX_PROCS];
-	int passfail = 0;
 
 	test_init(argc, argv);
 
-	if (argc < 3) {
-		ERROR("Usage: mmap-cow <# threads> <# pages>\n");
-		exit(RC_CONFIG);
-	}
+	if (argc < 3)
+		CONFIG("Usage: mmap-cow <# threads> <# pages>\n");
+
 	nr_hugepages = atoi(argv[2]);
 	threads = atoi(argv[1]);
 
+	if ((threads+1) > nr_hugepages)
+		CONFIG("Need more hugepages than threads\n");
+
 	hpage_size = gethugepagesize();
-	size = (nr_hugepages/threads) * hpage_size;
+	/* Have to have enough available hugepages for each thread to
+	 * get its own copy, plus one for the parent/page-cache */
+	size = (nr_hugepages / (threads+1)) * hpage_size;
 	verbose_printf("hpage_size is %zx, Size is %zu, threads: %u\n",
 		       hpage_size, size, threads);
+
+	/* First, open the file */
+	fd = hugetlbfs_unlinked_fd();
+	if (fd < 0)
+		CONFIG("hugetlbfs_unlinked_fd() failed: %s\n",
+		       strerror(errno));
 
 	/* First, mmap the file with MAP_SHARED and fill with data
 	 * If this is not done, then the fault handler will not be
 	 * called in the kernel since private mappings will be
 	 * created for the children at prefault time.
 	 */
-	if (mmap_file(mountpoint, &addr, &fh, size, SHARED)) {
-		PERROR("Failed to create shared mapping");
-		CONFIG();
-	}
+	if (mmap_file(fd, &addr, size, MAP_SHARED))
+		FAIL("Failed to create shared mapping: %s", strerror(errno));
+
 	for (i = 0; i < size; i += 8) {
 		memcpy(addr+i, "deadbeef", 8);
 	}
 
 	for (i=0; i<threads; i++) {
-		if ((pid = fork()) < 0) {
-			PERROR("fork");
-			FAIL();
-		}
-		if (pid == 0) {
-			exit(do_work(i, size));
-		}
+		if ((pid = fork()) < 0)
+			FAIL("fork: %s", strerror(errno));
+
+		if (pid == 0)
+			do_work(i, size, fd);
+
 		wait_list[i] = pid;
 	}
 	for (i=0; i<threads; i++) {
-		waitpid(wait_list[i], &status, 0);
+		ret = waitpid(wait_list[i], &status, 0);
+		if (ret < 0)
+			FAIL("waitpid(): %s", strerror(errno));
 		if (WEXITSTATUS(status) != 0)
-			passfail = 1;
+			FAIL("Thread %d (pid=%d) failed", i, wait_list[i]);
+		
+		if (WIFSIGNALED(status))
+			FAIL("Thread %d (pid=%d) received unhandled signal", i,
+			     wait_list[i]);
 	}
 
 	munmap(addr, size);
-	close(fh);
+	close(fd);
 
-	if (!passfail)
-		PASS();
-	else
-		FAIL();
+	PASS();
 }

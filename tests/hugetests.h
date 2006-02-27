@@ -9,7 +9,7 @@
  *
  * This library is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * MECHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -43,7 +43,6 @@ void cleanup(void);
 		printf(__VA_ARGS__)
 #define ERR	"ERR: "
 #define ERROR(fmt, args...)	fprintf(stderr, ERR fmt, ## args)
-#define PERROR(x)		perror(ERR x)
 
 
 #define	PASS()						\
@@ -90,6 +89,6 @@ void cleanup(void);
 	} while (0)
 
 /* stressutils.c stuff */
-void remove_shmid(int shmid);
+int remove_shmid(int shmid);
 
 #endif /* _HUGETESTS_H */

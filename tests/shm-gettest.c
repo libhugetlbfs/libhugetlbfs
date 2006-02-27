@@ -44,28 +44,26 @@ size_t hpage_size;
 
 void cleanup(void)
 {
-	remove_shmid(shmid);
+	if (remove_shmid(shmid) != 0)
+		TEST_BUG("Couldn't remove shm segment");
 }
 
 void do_one(size_t size) {
 	size_t i,j;
 	char pattern;
 	char *shmaddr;
-	struct shmid_ds shmbuf;
 
 	verbose_printf("Requesting %zu bytes\n", size);
 
-	if ((shmid =shmget(2, size, SHM_HUGETLB|IPC_CREAT|SHM_R|SHM_W )) < 0) {
-		PERROR("shmget");
-		FAIL();
-	}
+	if ((shmid = shmget(2, size, SHM_HUGETLB|IPC_CREAT|SHM_R|SHM_W )) < 0)
+		FAIL("shmget(): %s", strerror(errno));
+
 	verbose_printf("shmid: 0x%x\n", shmid);
 
 	shmaddr = shmat(shmid, 0, SHM_RND) ;
-	if (shmaddr == MAP_FAILED) {
-		PERROR("shmat");
-		FAIL();
-	}
+	if (shmaddr == MAP_FAILED)
+		FAIL("shmat(): %s", strerror(errno));
+
 	verbose_printf("shmaddr: %p\n", shmaddr);
 
 	for (i = 0; i < nr_hugepages; i++) {
@@ -77,24 +75,15 @@ void do_one(size_t size) {
 	for (i = 0; i < nr_hugepages; i++) {
 		pattern = 65+(i%26);
 		verbose_printf("Verifying %p\n", (shmaddr+(i*hpage_size)));
-		for (j = 0; j < hpage_size; j++) {
-			if (*(shmaddr+(i*hpage_size)+j) != pattern) {
-				ERROR("Verifying the segment failed");
-				ERROR("Got %c, expected %c\n",*(shmaddr+(i*hpage_size)+j),pattern);
-				FAIL();
-			}
-		}
+		for (j = 0; j < hpage_size; j++)
+			if (*(shmaddr+(i*hpage_size)+j) != pattern)
+				FAIL("Verifying the segment failed. "
+				     "Got %c, expected %c",
+				     *(shmaddr+(i*hpage_size)+j), pattern);
 	}
 
-	if (shmdt((const void *)shmaddr) != 0) {
-		PERROR("shmdt");
-		FAIL();
-	}
-	if (shmctl(shmid, IPC_RMID, &shmbuf)) {
-		PERROR("Destroy failure");
-		FAIL();
-	}
-	shmid = 0;
+	if (shmdt((const void *)shmaddr) != 0)
+		FAIL("shmdt(): %s", strerror(errno));
 }
 
 int main(int argc, char ** argv)
@@ -104,10 +93,8 @@ int main(int argc, char ** argv)
 
 	test_init(argc, argv);
 
-	if (argc < 3) {
-		ERROR("Usage: shmgettest <# iterations> <# pages>\n");
-		CONFIG();
-	}
+	if (argc < 3)
+		CONFIG("Usage: shmgettest <# iterations> <# pages>\n");
 
 	iter = atoi(argv[1]);
 	nr_hugepages = atoi(argv[2]);
@@ -115,9 +102,8 @@ int main(int argc, char ** argv)
 	hpage_size = gethugepagesize();
 	size = nr_hugepages * hpage_size;
 
-	for (i=0; i < iter; i++) {
+	for (i=0; i < iter; i++)
 		do_one(size);
-	}
 
 	PASS();
 }

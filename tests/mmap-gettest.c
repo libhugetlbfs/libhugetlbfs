@@ -62,20 +62,17 @@ int do_one(char *mountpoint, size_t size) {
 
 	/* Map the files with MAP_PRIVATE */
 	ma = mmap(NULL, size, (PROT_READ|PROT_WRITE), MAP_SHARED, fha, 0);
-	if (ma == MAP_FAILED) {
-		PERROR("Failed to mmap the hugetlb file");
-		FAIL();
-	}
+	if (ma == MAP_FAILED)
+		FAIL("Failed to mmap the hugetlb file: %s", strerror(errno));
 
 	/* Make sure the page is zeroed */
 	for (i = 0; i < nr_hugepages; i++) {
 		verbose_printf("Verifying %p\n", (ma+(i*hpage_size)));
 		for (j = 0; j < hpage_size; j++) {
-			if (*(ma+(i*hpage_size)+j) != 0) {
-				ERROR("Verifying the mmap area failed");
-				ERROR("Got %c, expected 0\n",*(ma+(i*hpage_size)+j));
-				FAIL();
-			}
+			if (*(ma+(i*hpage_size)+j) != 0)
+				FAIL("Verifying the mmap area failed. "
+				     "Got %c, expected 0",
+				     *(ma+(i*hpage_size)+j));
 		}
 	}
 	/* Fill each file with a pattern */
@@ -90,11 +87,10 @@ int do_one(char *mountpoint, size_t size) {
 		pattern = 65+(i%26);
 		verbose_printf("Verifying %p\n", (ma+(i*hpage_size)));
 		for (j = 0; j < hpage_size; j++) {
-			if (*(ma+(i*hpage_size)+j) != pattern) {
-				ERROR("Verifying the mmap area failed");
-				ERROR("Got %c, expected %c\n",*(ma+(i*hpage_size)+j),pattern);
-				FAIL();
-			}
+			if (*(ma+(i*hpage_size)+j) != pattern)
+				FAIL("Verifying the mmap area failed. "
+				     "Got %c, expected %c",
+				     *(ma+(i*hpage_size)+j),pattern);
 		}
 	}
 
@@ -113,10 +109,8 @@ int main(int argc, char ** argv)
 
 	test_init(argc, argv);
 
-	if (argc < 3) {
-		ERROR("Usage: %s <# iterations> <# pages>\n", argv[0]);
-		CONFIG();
-	}
+	if (argc < 3)
+		CONFIG("Usage: %s <# iterations> <# pages>\n", argv[0]);
 
 	iter = atoi(argv[1]);
 	nr_hugepages = atoi(argv[2]);
@@ -125,7 +119,7 @@ int main(int argc, char ** argv)
 	size = nr_hugepages * hpage_size;
 
 	for (i=0; i < iter; i++) {
-		verbose_printf("Iteration %i\n", i);
+		verbose_printf("Iteration %d\n", i);
 		do_one(hugetlb_mount, size);
 	}
 
