@@ -83,11 +83,14 @@ functional_tests () {
     preload_test HUGETLB_MORECORE=yes malloc_manysmall
     elflink_test HUGETLB_VERBOSE=0 linkhuge_nofd # Lib error msgs expected
     elflink_test linkhuge
+
+# Accounting bug tests
+    run_test chunk-overcommit $TOTAL_HPAGES
 }
 
 stress_tests () {
     ITERATIONS=10           # Number of iterations for looping tests
-    NRPAGES=$1
+    NRPAGES=$TOTAL_HPAGES
 
     run_test mmap-gettest ${ITERATIONS} ${NRPAGES}
 
@@ -130,7 +133,7 @@ for set in $TESTSETS; do
 	    functional_tests
 	    ;;
 	"stress")
-	    stress_tests $TOTAL_HPAGES
+	    stress_tests
 	    ;;
     esac
 done
