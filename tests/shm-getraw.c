@@ -40,7 +40,7 @@ extern int errno;
 	"* device will be read into a shared memory segment.               *"
 
 int nr_hugepages;
-int shmid;
+int shmid = -1;
 
 void cleanup(void)
 {

@@ -39,7 +39,7 @@ extern int errno;
 
 unsigned int iter;
 int nr_hugepages;
-int shmid;
+int shmid = -1;
 size_t hpage_size;
 
 void cleanup(void)

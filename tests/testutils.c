@@ -147,7 +147,7 @@ int test_addr_huge(void *p)
 
 int remove_shmid(int shmid)
 {
-	if (shmid > 0) {
+	if (shmid >= 0) {
 		if (shmctl(shmid, IPC_RMID, NULL) != 0) {
 			ERROR("shmctl(%x, IPC_RMID) failed (%s)\n",
 			      shmid, strerror(errno));

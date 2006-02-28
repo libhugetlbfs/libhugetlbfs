@@ -40,7 +40,7 @@ extern int errno;
 /* Global Configuration */
 int nr_hugepages;
 int numprocs;
-int shmid;
+int shmid = -1;
 
 #define MAX_PROCS 200
 #define BUF_SZ 256
