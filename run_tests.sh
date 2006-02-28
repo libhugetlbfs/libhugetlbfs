@@ -66,6 +66,7 @@ functional_tests () {
     run_test readback
     run_test truncate
     run_test shared
+    run_test mprotect
 
 # Specific kernel bug tests
     run_test ptrace-write-hugepage
