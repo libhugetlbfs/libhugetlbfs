@@ -87,6 +87,7 @@ functional_tests () {
 
 # Accounting bug tests
     run_test chunk-overcommit $TOTAL_HPAGES
+    run_test alloc-instantiate-race $TOTAL_HPAGES
 }
 
 stress_tests () {
