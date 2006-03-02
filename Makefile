@@ -29,6 +29,7 @@ ifeq ($(ARCH),i386)
 CC32 = gcc
 ELF32 = elf_i386
 LIB32 = lib
+else
 ifeq ($(ARCH),x86_64)
 CC32 = gcc -m32
 CC64 = gcc -m64
