@@ -18,12 +18,14 @@
  */
 
 #define _LARGEFILE64_SOURCE
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 #include <signal.h>
 #include <sys/vfs.h>
 #include <sys/ipc.h>
@@ -47,21 +49,25 @@ static void segv_handler(int signum, siginfo_t *si, void *uc)
 }
 #endif
 
+static void sigint_handler(int signum, siginfo_t *si, void *uc)
+{
+	cleanup();
+	fprintf(stderr, "%s (pid=%d)\n", strsignal(signum), getpid());
+	exit(RC_BUG);
+}
+
 void test_init(int argc, char *argv[])
 {
-#if 0
 	int err;
-	struct sigaction sa = {
-		.sa_sigaction = segv_handler,
-		.sa_flags = SA_SIGINFO,
+	struct sigaction sa_int = {
+		.sa_sigaction = sigint_handler,
 	};
 
 	test_name = argv[0];
 
-	err = sigaction(SIGSEGV, &sa, NULL);
+	err = sigaction(SIGINT, &sa_int, NULL);
 	if (err)
-		FAIL("Can't install SEGV handler");
-#endif
+		FAIL("Can't install SIGINT handler");
 
 	if (getenv("QUIET_TEST"))
 		verbose_test = 0;

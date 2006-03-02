@@ -44,8 +44,7 @@ size_t hpage_size;
 
 void cleanup(void)
 {
-	if (remove_shmid(shmid) != 0)
-		TEST_BUG("Couldn't remove shm segment");
+	remove_shmid(shmid);
 }
 
 void do_one(size_t size) {

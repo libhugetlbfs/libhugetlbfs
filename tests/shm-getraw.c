@@ -44,8 +44,7 @@ int shmid = -1;
 
 void cleanup(void)
 {
-	if (remove_shmid(shmid) != 0)
-		TEST_BUG("Couldn't remove shm segment");
+	remove_shmid(shmid);
 }
 
 int main(int argc, char ** argv)

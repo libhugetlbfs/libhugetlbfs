@@ -54,8 +54,7 @@ int shmid = -1;
 
 void cleanup(void)
 {
-	if (remove_shmid(shmid) != 0)
-		TEST_BUG("Could not remove shm segment");
+	remove_shmid(shmid);
 }
 
 void do_child(int thread, unsigned long size)
