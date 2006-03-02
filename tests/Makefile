@@ -21,8 +21,6 @@ TESTS = $(LIB_TESTS) $(NOLIB_TESTS) $(LDSCRIPT_TESTS) $(HUGELINK_TESTS) \
 
 TESTS_64 = $(LIB_TESTS_64)
 
-ARCH = $(shell uname -m | sed -e s/i.86/i386/)
-
 SCRIPTS=../ldscripts
 SCRIPTS32 = $(SCRIPTS)/$(ELF32)
 SCRIPTS64 = $(SCRIPTS)/$(ELF64)

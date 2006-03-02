@@ -10,7 +10,7 @@ INSTALL = install
 CFLAGS = -O2 -Wall -fPIC -g
 CPPFLAGS = -D__LIBHUGETLBFS__
 
-ARCH = $(shell uname -m)
+ARCH = $(shell uname -m | sed -e s/i.86/i386/)
 
 ifeq ($(ARCH),ppc64)
 CC32 = gcc
