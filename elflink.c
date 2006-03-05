@@ -26,7 +26,7 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/syscall.h>
-#include <unistd.h>
+#include <linux/unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
 #include <elf.h>
