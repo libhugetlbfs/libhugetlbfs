@@ -147,26 +147,34 @@ static void test_prot(void *p, int prot)
 	}
 }
 
-static void test_mprotect(int fd, int prot1, int prot2)
+static void test_mprotect(int fd, char *testname, 
+			  unsigned long len1, int prot1,
+			  unsigned long len2, int prot2)
 {
 	void *p;
 	int err;
 
+	verbose_printf("Testing %s\n", testname);
 	verbose_printf("Mapping with prot=%x\n", prot1);
-	p = mmap(NULL, hpage_size, prot1, MAP_SHARED, fd, 0);
+	p = mmap(NULL, len1, prot1, MAP_SHARED, fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap(prot=%x): %s", prot1, strerror(errno));
+		FAIL("%s: mmap(prot=%x): %s", testname, prot1,
+		     strerror(errno));
 
 	test_prot(p, prot1);
 
 	verbose_printf("mprotect()ing to prot=%x\n", prot2);
-	err = mprotect(p, hpage_size, prot2);
+	err = mprotect(p, len2, prot2);
 	if (err != 0)
-		FAIL("mprotect(prot=%x): %s", prot2, strerror(errno));
+		FAIL("%s: mprotect(prot=%x): %s", testname, prot2,
+		     strerror(errno));
 
 	test_prot(p, prot2);
+
+	if (len2 < len1)
+		test_prot(p + len2, prot1);
 	
-	munmap(p, hpage_size);
+	munmap(p, len1);
 }
 
 int main(int argc, char *argv[])
@@ -196,14 +204,23 @@ int main(int argc, char *argv[])
 
 	verbose_printf("instantiating page\n");
 
-	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+	p = mmap(NULL, 2*hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 	if (p == MAP_FAILED)
 		FAIL("mmap(): %s", strerror(errno));
 	memset(p, 0, hpage_size);
 	munmap(p, hpage_size);
 
-	test_mprotect(fd, PROT_READ, PROT_READ|PROT_WRITE);
-	test_mprotect(fd, PROT_READ|PROT_WRITE, PROT_READ);
+	/* Basic protection change tests */
+	test_mprotect(fd, "R->RW", hpage_size, PROT_READ,
+		      hpage_size, PROT_READ|PROT_WRITE);
+	test_mprotect(fd, "RW->R", hpage_size, PROT_READ|PROT_WRITE,
+		      hpage_size, PROT_READ);
+
+	/* Tests which require VMA splitting */
+	test_mprotect(fd, "R->RW 1/2", 2*hpage_size, PROT_READ,
+		      hpage_size, PROT_READ|PROT_WRITE);
+	test_mprotect(fd, "RW->R 1/2", 2*hpage_size, PROT_READ|PROT_WRITE,
+		      hpage_size, PROT_READ);
 
 	PASS();
 }
