@@ -179,7 +179,9 @@ SECTIONS
     *(.sbss .sbss.* .gnu.linkonce.sb.*)
     *(.scommon)
   } :hdata
-  .plt            : { *(.plt) } :hdata
+  /* Ensure the plt appears in the on-disk portion of the binary so it
+   * will be copied during hugetlb remapping */
+  .plt            : { LONG(0) *(.plt) } :hdata
   .bss            :
   {
    *(.dynbss)

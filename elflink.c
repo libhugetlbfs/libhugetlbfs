@@ -72,6 +72,7 @@ __syscall_return(type,__res); \
 
 static struct seg_info htlb_seg_table[MAX_HTLB_SEGS];
 static int htlb_num_segs;
+static int minimal_copy = 1;
 
 static void parse_phdrs(Elf_Ehdr *ehdr)
 {
@@ -125,8 +126,18 @@ static int prepare_segments(struct seg_info *seg, int num)
 	/* Prepare the hugetlbfs files */
 	for (i = 0; i < num; i++) {
 		int fd;
-		unsigned long copysize = seg[i].memsz;
+		unsigned long copysize;
 		unsigned long size = ALIGN(seg[i].memsz, hpage_size);
+		
+		/* Subtle, copying only filesz bytes of the segment
+		 * allows for much better performance than copying all of
+		 * memsz but it requires that all data (such as the plt)
+		 * must be contained in the filesz portion of the segment.
+		 */
+		if (minimal_copy)
+			copysize = seg[i].filesz;
+		else
+			copysize = seg[i].memsz;
 
 		fd = hugetlbfs_unlinked_fd();
 		if (fd < 0) {
@@ -302,6 +313,13 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 		DEBUG("Couldn't locate __executable_start, "
 		      "not attempting to remap segments\n");
 		return;
+	}
+	
+	env = getenv("HUGETLB_MINIMAL_COPY");
+	if (env && (strcasecmp(env, "no") == 0)) {
+		DEBUG("HUGETLB_MINIMAL_COPY=%s, disabling filesz copy "
+			"optimization\n", env);
+		minimal_copy = 0;
 	}
 
 	parse_phdrs(ehdr);

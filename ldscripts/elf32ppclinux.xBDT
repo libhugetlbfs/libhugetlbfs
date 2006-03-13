@@ -161,7 +161,9 @@ SECTIONS
   .dynamic        : { *(.dynamic) } :dynamic :hdata
   .got            :  { *(.got.plt .got) } :hdata
 /*  . = DATA_SEGMENT_RELRO_END (0, .); */
-  .plt            :  { *(.plt) } :hdata
+  /* Ensure the plt appears in the on-disk portion of the binary so it
+   * will be copied during hugetlb remapping */
+  .plt            :  { LONG(0) *(.plt) } :hdata
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
