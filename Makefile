@@ -54,7 +54,11 @@ LIBDIR64 = $(PREFIX)/$(LIB64)
 LDSCRIPTDIR = $(PREFIX)/lib/ldscripts
 BINDIR = $(PREFIX)/bin
 
-INSTALL_LDSCRIPTS = $(foreach type,$(LDSCRIPT_TYPES),$(ELF32).x$(type) $(ELF64).x$(type))
+INSTALL_LDSCRIPTS = $(foreach type,$(LDSCRIPT_TYPES),$(ELF32).x$(type))
+ifdef CC64
+INSTALL_LDSCRIPTS += $(foreach type,$(LDSCRIPT_TYPES),$(ELF64).x$(type))
+endif
+
 
 ifdef V
 VECHO = :
