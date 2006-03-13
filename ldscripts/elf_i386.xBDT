@@ -24,6 +24,8 @@ SECTIONS
    * it hugepage aligned */
   __executable_start = 0x08000000; . = 0x08000000 + SIZEOF_HEADERS;
   .interp         : { *(.interp) } :text :interp
+  .note.SuSE      : { *(.note.SuSE) } :text :note
+  .note.ABI-tag	  : { *(.note.ABI-tag) } :text :note
   .hash           : { *(.hash) } :text
   .dynsym         : { *(.dynsym) } :text
   .dynstr         : { *(.dynstr) } :text
@@ -78,15 +80,15 @@ SECTIONS
   .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) } :text
   .rodata1        : { *(.rodata1) } :text
   .eh_frame_hdr : { *(.eh_frame_hdr) } :text
-  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) } :text
-  .gcc_except_table   : ONLY_IF_RO { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) } :text
+  /* .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) } :text
+  .gcc_except_table   : ONLY_IF_RO { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) } :text */
 
   /* We don't maintain address congruence here, because saving
    * hugepages is more important than saving executable size. */
   . = ALIGN (0x1000000); /* Align to 16MB (4MB hugepage size, plus some slack in case of larger hugepages in future */
   /* Exception handling  */
-  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) } :data
-  .gcc_except_table   : ONLY_IF_RW { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) } :data
+  .eh_frame       : /* ONLY_IF_RW */ { KEEP (*(.eh_frame)) } :data
+  .gcc_except_table   : /* ONLY_IF_RW */ { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) } :data
   /* Thread Local Storage sections  */
   .tdata	  : { *(.tdata .tdata.* .gnu.linkonce.td.*) } :data
   .tbss		  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) } :data
@@ -134,8 +136,7 @@ SECTIONS
   .jcr            : { KEEP (*(.jcr)) } :data
   .data.rel.ro : { *(.data.rel.ro.local) *(.data.rel.ro*) } :data
   .dynamic        : { *(.dynamic) } :dynamic :data
-  .got            : { *(.got) } :data
-  .got.plt        : { *(.got.plt) } :data
+  .got            : { *(.got.plt) *(.got) } :data
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
