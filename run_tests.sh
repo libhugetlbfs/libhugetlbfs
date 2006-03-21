@@ -10,6 +10,8 @@ unset HUGETLB_MORECORE
 ENV=/usr/bin/env
 
 TOTAL_HPAGES=$(grep 'HugePages_Total:' /proc/meminfo | cut -f2 -d:)
+HPAGE_SIZE=$(grep 'Hugepagesize:' /proc/meminfo | awk '{print $2}')
+HPAGE_SIZE=$(( $HPAGE_SIZE * 1024 ))
 
 run_test_bits () {
     BITS=$1
@@ -42,9 +44,25 @@ elflink_test () {
     preload_test "$@" "$baseprog"
     run_test "$@" "xB.$baseprog"
     run_test "$@" "xBDT.$baseprog"
+    # Test we don't blow up if HUGETLB_MINIMAL_COPY is diabled
+    run_test HUGETLB_MINIMAL_COPY=no "$@" "xB.$baseprog"
+    run_test HUGETLB_MINIMAL_COPY=no "$@" "xBDT.$baseprog"
     # Test that HUGETLB_ELFMAP=no inhibits remapping as intended
     run_test HUGETLB_ELFMAP=no "$@" "xB.$baseprog"
     run_test HUGETLB_ELFMAP=no "$@" "xBDT.$baseprog"
+}
+
+setup_shm_sysctl() {
+    SHMMAX=`cat /proc/sys/kernel/shmmax`
+    SHMALL=`cat /proc/sys/kernel/shmall`
+    LIMIT=$(( $HPAGE_SIZE * $TOTAL_HPAGES ))
+    echo "$LIMIT" > /proc/sys/kernel/shmmax
+    echo "$LIMIT" > /proc/sys/kernel/shmall
+}
+
+restore_shm_sysctl() {
+    echo "$SHMMAX" > /proc/sys/kernel/shmmax
+    echo "$SHMALL" > /proc/sys/kernel/shmall
 }
 
 functional_tests () {
@@ -99,6 +117,7 @@ stress_tests () {
     # mmap-cow needs a hugepages for each thread plus one extra
     run_test mmap-cow $[NRPAGES-1] ${NRPAGES}
 
+    setup_shm_sysctl
     THREADS=10    # Number of threads for shm-fork
     # Run shm-fork once using half available hugepages, then once using all
     # This is to catch off-by-ones or races in the kernel allocated that
@@ -109,6 +128,7 @@ stress_tests () {
     run_test shm-fork ${THREADS} ${NRPAGES}
 
     run_test shm-getraw ${NRPAGES} /dev/full
+    restore_shm_sysctl
 }
 
 while getopts "vVdt:" ARG ; do
