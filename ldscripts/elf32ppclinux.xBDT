@@ -163,7 +163,7 @@ SECTIONS
 /*  . = DATA_SEGMENT_RELRO_END (0, .); */
   /* Ensure the plt appears in the on-disk portion of the binary so it
    * will be copied during hugetlb remapping */
-  .plt            :  { LONG(0) *(.plt) } :hdata
+  .plt            :  { *(.plt) LONG(0) } :hdata
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
