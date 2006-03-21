@@ -10,7 +10,9 @@ unset HUGETLB_MORECORE
 ENV=/usr/bin/env
 
 TOTAL_HPAGES=$(grep 'HugePages_Total:' /proc/meminfo | cut -f2 -d:)
+[ -z "$TOTAL_HPAGES" ] && TOTAL_HPAGES=0
 HPAGE_SIZE=$(grep 'Hugepagesize:' /proc/meminfo | awk '{print $2}')
+[ -z "$HPAGE_SIZE" ] && HPAGE_SIZE=0
 HPAGE_SIZE=$(( $HPAGE_SIZE * 1024 ))
 
 run_test_bits () {
