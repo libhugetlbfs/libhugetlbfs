@@ -119,7 +119,7 @@ static void __attribute__((constructor)) setup_morecore(void)
 
 	env = getenv("HUGETLB_MORECORE_HEAPBASE");
 	if (env) {
-		heapaddr = strtol(env, &ep, 16);
+		heapaddr = strtoul(env, &ep, 16);
 		if (*ep != '\0') {
 			ERROR("Can't parse HUGETLB_MORECORE_HEAPBASE: %s\n",
 			      env);
