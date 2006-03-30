@@ -87,6 +87,7 @@ functional_tests () {
     run_test truncate
     run_test shared
     run_test mprotect
+    run_test mlock $TOTAL_HPAGES
 
 # Specific kernel bug tests
     run_test ptrace-write-hugepage
