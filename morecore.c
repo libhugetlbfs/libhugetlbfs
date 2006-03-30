@@ -53,6 +53,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 {
 	void *p;
 	long newsize = 0;
+	int ret;
 
 	DEBUG("hugetlbfs_morecore(%ld) = ...\n", (long)increment);
 
@@ -85,6 +86,15 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			      p, heapbase + mapsize);
 			return NULL;
 		}
+
+		/* Use mlock to guarantee these pages to the process */
+		ret = mlock(p, newsize);
+		if (ret) {
+			WARNING("Failed to reserve huge pages in hugetlbfs_morecore()\n");
+			munmap(p, newsize);
+			return NULL;
+		}
+		munlock(p, newsize);
 
 		mapsize += newsize;
 	}
