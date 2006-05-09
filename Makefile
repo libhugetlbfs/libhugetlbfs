@@ -141,7 +141,7 @@ obj32/%.s:	%.c
 	$(CC32) $(CPPFLAGS) $(CFLAGS) -o $@ -S $<
 
 obj64/%.s:	%.c
-	@$(VECHO) CC32 -S $@
+	@$(VECHO) CC64 -S $@
 	$(CC64) $(CPPFLAGS) $(CFLAGS) -o $@ -S $<
 
 clean:
