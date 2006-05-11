@@ -122,6 +122,8 @@ than stress tests (a subset of "make check") which is much quicker.
 The testsuite contains tests both for the library's features and for
 the underlying kernel hugepage functionality.
 
+NOTE: The testsuite must be run as the root user.
+
 WARNING: The testsuite contains testcases explicitly designed to test
 for a number of hugepage related kernel bugs uncovered during the
 library's development.  Some of these testcases WILL CRASH HARD a
@@ -179,7 +181,7 @@ Examples:
 
 If you've installed libhugetlbfs in the default place (under
 /usr/local) which is in the system library search path use:
-  $ LD_PRELOAD=libhugetlbfs HUGETLB_MORECORE=yes <your app command line>
+  $ LD_PRELOAD=libhugetlbfs.so HUGETLB_MORECORE=yes <your app command line>
 
 If you have built libhugetlbfs in ~/libhugetlbfs and haven't installed
 it yet, the following would work for a 64-bit program:
