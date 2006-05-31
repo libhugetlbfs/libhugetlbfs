@@ -1,0 +1,12 @@
+NOTICE: libhugetlbfs is a technology preview
+
+The libhugetlbfs project is a preview of providing applications with
+transparent access to system huge pages.   While the library will provide an
+application with easy access to huge pages when sufficient huge pages have been
+previously allocated on the system, additional development and testing is
+required to provide a stable transition to normal pages in a production
+environment.
+
+Use of this library may introduce instability under certain circumstances.
+Proper configuration of the system huge pages is required and thorough testing
+is highly recommended.
