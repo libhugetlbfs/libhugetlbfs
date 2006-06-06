@@ -87,6 +87,11 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			return NULL;
 		}
 
+#if 0
+/* Use of mlock is disabled because it results in bad numa behavior since
+ * the malloc'd memory is allocated node-local to the cpu calling morecore()
+ * and not to the cpu(s) that are actually using the memory.
+ */
 		/* Use mlock to guarantee these pages to the process */
 		ret = mlock(p, newsize);
 		if (ret) {
@@ -95,6 +100,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			return NULL;
 		}
 		munlock(p, newsize);
+#endif
 
 		mapsize += newsize;
 	}
