@@ -44,6 +44,7 @@
 #endif
 
 #ifdef __i386__
+#ifdef __syscall_return
 /* The normal i386 syscall macros don't work with -fPIC :( */
 #undef _syscall2
 #define _syscall2(type,name,type1,arg1,type2,arg2) \
@@ -66,6 +67,10 @@ __asm__ volatile ("push %%ebx; movl %2,%%ebx; int $0x80; pop %%ebx" \
                   "d" ((long)(arg3))); \
 __syscall_return(type,__res); \
 }
+#else /* __syscall_return */
+#warning __syscall_return macro not available. Some debugging will be \
+	disabled during executable remapping
+#endif /* __syscall_return */
 #endif /* __i386__ */
 
 #define MAX_HTLB_SEGS	2
