@@ -49,10 +49,15 @@ ifdef CC64
 OBJDIRS +=  obj64
 endif
 
-LIBDIR32 = $(PREFIX)/$(LIB32)
-LIBDIR64 = $(PREFIX)/$(LIB64)
-LDSCRIPTDIR = $(PREFIX)/lib/ldscripts
-BINDIR = $(PREFIX)/bin
+LIBDIR32 = $(DESTDIR)$(PREFIX)/$(LIB32)
+LIBDIR64 = $(DESTDIR)$(PREFIX)/$(LIB64)
+LDSCRIPTDIR = $(DESTDIR)$(PREFIX)/lib/ldscripts
+BINDIR = $(DESTDIR)$(PREFIX)/bin
+DOCDIR = $(DESTDIR)$(PREFIX)/share/doc/libhugetlbfs
+
+EXTRA_DIST = \
+	README \
+	HOWTO
 
 INSTALL_LDSCRIPTS = $(foreach type,$(LDSCRIPT_TYPES),$(ELF32).x$(type))
 ifdef CC64
@@ -175,4 +180,7 @@ install: all $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	$(INSTALL) -d $(LDSCRIPTDIR)
 	$(INSTALL) $(INSTALL_LDSCRIPTS:%=ldscripts/%) $(LDSCRIPTDIR)
 	$(INSTALL) -d $(BINDIR)
-	for x in $(INSTALL_OBJSCRIPT); do $(INSTALL) -m 755 objscript.$$x $(BINDIR)/$$x; done
+	$(INSTALL) -d $(DOCDIR)
+	for x in $(INSTALL_OBJSCRIPT); do \
+		$(INSTALL) -m 755 objscript.$$x $(BINDIR)/$$x; done
+	for x in $(EXTRA_DIST); do $(INSTALL) -m 755 $$x $(DOCDIR)/$$x; done
