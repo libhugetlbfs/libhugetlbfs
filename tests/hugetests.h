@@ -32,6 +32,7 @@ extern int verbose_test;
 extern char *test_name;
 void test_init(int argc, char *argv[]);
 int test_addr_huge(void *p);
+ino_t get_addr_inode(void *p);
 
 #define ALIGN(x, a)	(((x) + (a) - 1) & ~((a) - 1))
 

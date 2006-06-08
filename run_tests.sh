@@ -11,6 +11,8 @@ ENV=/usr/bin/env
 
 TOTAL_HPAGES=$(grep 'HugePages_Total:' /proc/meminfo | cut -f2 -d:)
 [ -z "$TOTAL_HPAGES" ] && TOTAL_HPAGES=0
+FREE_HPAGES=$(grep 'HugePages_Free:' /proc/meminfo | cut -f2 -d:)
+[ -z "$FREE_HPAGES" ] && FREE_HPAGES=0
 HPAGE_SIZE=$(grep 'Hugepagesize:' /proc/meminfo | awk '{print $2}')
 [ -z "$HPAGE_SIZE" ] && HPAGE_SIZE=0
 HPAGE_SIZE=$(( $HPAGE_SIZE * 1024 ))
@@ -54,11 +56,28 @@ elflink_test () {
     run_test HUGETLB_ELFMAP=no "$@" "xBDT.$baseprog"
 }
 
+elfshare_test () {
+    args=("$@")
+    N="$[$#-1]"
+    baseprog="${args[$N]}"
+    unset args[$N]
+    set -- "${args[@]}"
+    killall -HUP hugetlbd
+    run_test HUGETLB_SHARE=2 "$@" "xB.$baseprog" 10
+    killall -HUP hugetlbd
+    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog" 10
+    killall -HUP hugetlbd
+    run_test HUGETLB_SHARE=2 "$@" "xBDT.$baseprog" 10
+    killall -HUP hugetlbd
+    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog" 10
+}
+
 setup_shm_sysctl() {
     SHMMAX=`cat /proc/sys/kernel/shmmax`
     SHMALL=`cat /proc/sys/kernel/shmall`
     LIMIT=$(( $HPAGE_SIZE * $TOTAL_HPAGES ))
     echo "$LIMIT" > /proc/sys/kernel/shmmax
+    echo "set shmmax limit to $LIMIT"
     echo "$LIMIT" > /proc/sys/kernel/shmall
 }
 
@@ -87,7 +106,7 @@ functional_tests () {
     run_test truncate
     run_test shared
     run_test mprotect
-    run_test mlock $TOTAL_HPAGES
+    run_test mlock $FREE_HPAGES
 
 # Specific kernel bug tests
     run_test ptrace-write-hugepage
@@ -106,14 +125,31 @@ functional_tests () {
     elflink_test HUGETLB_VERBOSE=0 linkhuge_nofd # Lib error msgs expected
     elflink_test linkhuge
 
+# Sharing tests
+# Want some way to automatically start sharing daemon
+    if [ -z "$QUIET_TEST" -o "$HUGETLB_VERBOSE" == "99" ]; then
+      ../start_daemon.sh -d
+    else
+      ../start_daemon.sh
+    fi
+    sleep 5 # XXX: Wait for the daemon to start
+    elfshare_test linkshare
+    killall -INT hugetlbd
+
 # Accounting bug tests
-    run_test chunk-overcommit $TOTAL_HPAGES
-    run_test alloc-instantiate-race $TOTAL_HPAGES
+# reset free hpages because sharing will have held some
+# alternatively, use
+# killall -HUP hugetlbd
+# to make the sharing daemon give up the files
+    FREE_HPAGES=$(grep 'HugePages_Free:' /proc/meminfo | cut -f2 -d:)
+    [ -z "$FREE_HPAGES" ] && FREE_HPAGES=0
+    run_test chunk-overcommit $FREE_HPAGES
+    run_test alloc-instantiate-race $FREE_HPAGES
 }
 
 stress_tests () {
     ITERATIONS=10           # Number of iterations for looping tests
-    NRPAGES=$TOTAL_HPAGES
+    NRPAGES=$FREE_HPAGES
 
     run_test mmap-gettest ${ITERATIONS} ${NRPAGES}
 
@@ -128,7 +164,7 @@ stress_tests () {
     if [ ${NRPAGES} -gt 1 ]; then
 	run_test shm-fork ${THREADS} $[NRPAGES/2]
     fi
-    run_test shm-fork ${THREADS} ${NRPAGES}
+    run_test shm-fork ${THREADS} $[NRPAGES]
 
     run_test shm-getraw ${NRPAGES} /dev/full
     restore_shm_sysctl

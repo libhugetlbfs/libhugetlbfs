@@ -111,8 +111,9 @@ static void parse_phdrs(Elf_Ehdr *ehdr)
 		if (phdr[i].p_flags & PF_X)
 			prot |= PROT_EXEC;
 
-		DEBUG("Hugepage segment %d (phdr %d): %lx-%lx  (filesz=%lx)\n",
-		      htlb_num_segs, i, vaddr, vaddr+memsz, filesz);
+		DEBUG("Hugepage segment %d "
+			"(phdr %d): %lx-%lx  (filesz=%lx) (prot = %x)\n",
+			htlb_num_segs, i, vaddr, vaddr+memsz, filesz, prot);
 
 		htlb_seg_table[htlb_num_segs].vaddr = (void *)vaddr;
 		htlb_seg_table[htlb_num_segs].filesz = filesz;
@@ -122,50 +123,38 @@ static void parse_phdrs(Elf_Ehdr *ehdr)
 	}
 }
 
-static int prepare_segments(struct seg_info *seg, int num)
+static int prepare_segment(struct seg_info *seg)
 {
 	int hpage_size = gethugepagesize();
-	int i;
 	void *p;
-	
-	/* Prepare the hugetlbfs files */
-	for (i = 0; i < num; i++) {
-		int fd;
-		unsigned long copysize;
-		unsigned long size = ALIGN(seg[i].memsz, hpage_size);
-		
-		/* Subtle, copying only filesz bytes of the segment
-		 * allows for much better performance than copying all of
-		 * memsz but it requires that all data (such as the plt)
-		 * must be contained in the filesz portion of the segment.
-		 */
-		if (minimal_copy)
-			copysize = seg[i].filesz;
-		else
-			copysize = seg[i].memsz;
+	unsigned long copysize;
+	unsigned long size = ALIGN(seg->memsz, hpage_size);
 
-		fd = hugetlbfs_unlinked_fd();
-		if (fd < 0) {
-			ERROR("Couldn't open file for segment %d: %s\n",
-			      i, strerror(errno));
-			return -1;
-		}
+	/* Prepare the hugetlbfs file */
 
-		seg[i].fd = fd;
+	/* Subtle, copying only filesz bytes of the segment
+	 * allows for much better performance than copying all of
+	 * memsz but it requires that all data (such as the plt)
+	 * be contained in the filesz portion of the segment.
+	 */
+	if (minimal_copy)
+		copysize = seg->filesz;
+	else
+		copysize = seg->memsz;
 
-		p = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-		if (p == MAP_FAILED) {
-			ERROR("Couldn't map hugepage segment to copy data\n");
-			return -1;
-		}
-		
-		DEBUG("Mapped hugeseg %d at %p. Copying %ld bytes from %p...",
-		      i, p, copysize, seg[i].vaddr);
-		memcpy(p, seg[i].vaddr, copysize);
-		DEBUG_CONT("done\n");
-
-		munmap(p, size);
+	p = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, seg->fd, 0);
+	if (p == MAP_FAILED) {
+		ERROR("Couldn't map hugepage segment to copy data: %s\n",
+			strerror(errno));
+		return -1;
 	}
+		
+	DEBUG("Mapped hugeseg at %p. Copying %ld bytes from %p...\n",
+	      p, copysize, seg->vaddr);
+	memcpy(p, seg->vaddr, copysize);
+	DEBUG_CONT("done\n");
+
+	munmap(p, size);
 
 	return 0;
 }
@@ -270,6 +259,16 @@ void remap_segments(struct seg_info *seg, int num)
 	int i;
 	void *p;
 
+	/* XXX: The bogus call to mmap below was inserted to force ld.so
+	 * to resolve the mmap symbol before we unmap the plt in the data
+	 * segment below.  This was believed to be needed only in the case
+	 * where sharing is enabled and the hugetlbfs files have already been
+	 * prepared by another process.  I don't think it's needed anymore,
+	 * so it's commented out. (aglitke)
+	 *
+	 * p = mmap(0, 0, 0, 0, 0, 0);
+	 */
+
 	/* This is the hairy bit, between unmap and remap we enter a
 	 * black hole.  We can't call anything which uses static data
 	 * (ie. essentially any library function...)
@@ -277,7 +276,7 @@ void remap_segments(struct seg_info *seg, int num)
 	for (i = 0; i < num; i++)
 		munmap(seg[i].vaddr, seg[i].memsz);
 
-	/* Step 3.  Rebuild the address space with hugetlb mappings */
+	/* Step 4.  Rebuild the address space with hugetlb mappings */
 	/* NB: we can't do the remap as hugepages within the main loop
 	 * because of PowerPC: we may need to unmap all the normal
 	 * segments before the MMU segment is ok for hugepages */
@@ -300,12 +299,54 @@ void remap_segments(struct seg_info *seg, int num)
 	 */
 }
 
+int maybe_prepare(int fd_state, struct seg_info *seg)
+{
+	int ret, reply = 0;
+
+	switch (fd_state) {
+		case 0:
+			DEBUG("Got populated shared fd -- Not preparing\n");
+			return 0;
+
+		case 1:
+			DEBUG("Got unpopulated shared fd -- Preparing\n");
+			reply = 1;
+			break;
+		case 2:
+			DEBUG("Got unshared fd, wanted shared -- Preparing\n");
+			break;
+		case 3:
+			DEBUG("Got unshared fd as expected -- Preparing\n");
+			break;
+		
+		default:
+			ERROR("Unexpected fd state: %d in maybe_prepare\n",
+				fd_state);
+			return -1;
+	}
+	
+	ret = prepare_segment(seg);
+	if (ret < 0) {
+		/* notify daemon of failed prepare */
+		DEBUG("Failed to prepare segment\n");
+		finished_prepare(seg, -1);
+		return -1;
+	}
+	DEBUG("Prepare succeeded\n");
+	if (reply)
+		ret = finished_prepare(seg, 0);
+	if (ret < 0)
+		DEBUG("Failed to communicate successful "
+			"prepare to hugetlbd\n");
+	return 0;
+}
 
 static void __attribute__ ((constructor)) setup_elflink(void)
 {
 	extern Elf_Ehdr __executable_start __attribute__((weak));
 	Elf_Ehdr *ehdr = &__executable_start;
 	char *env;
+	int ret, i;
 
 	env = getenv("HUGETLB_ELFMAP");
 	if (env && (strcasecmp(env, "no") == 0)) {
@@ -334,12 +375,21 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 		return;
 	}
 
+	/* Step 1.  Get access to the files we're going to mmap for the
+	 * segments */
+	for (i = 0; i < htlb_num_segs; i++) {
+		ret = hugetlbfs_set_fd(&htlb_seg_table[i]);
+		if (ret < 0) {
+			DEBUG("Failed to setup hugetlbfs file\n");
+			return;
+		}
 
-	/* Step 1.  Map the hugetlbfs files anywhere to copy data */
-	if (prepare_segments(htlb_seg_table, htlb_num_segs) != 0)
-		return;
+		/* Step 2.  Map the hugetlbfs files anywhere to copy data, if we
+		 * need to prepare at all */
+		maybe_prepare(ret, &htlb_seg_table[i]);
+	}
 
-	/* Step 2.  Unmap the old segments, map in the new ones */
+	/* Step 3.  Unmap the old segments, map in the new ones */
 	remap_segments(htlb_seg_table, htlb_num_segs);
 }
 
