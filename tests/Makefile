@@ -1,3 +1,5 @@
+PREFIX = /usr/local
+
 LIB_TESTS = gethugepagesize test_root find_path unlinked_fd \
 	readback truncate shared private empty_mounts meminfo_nohuge \
 	ptrace-write-hugepage icache-hygeine slbpacaflush \
@@ -14,6 +16,7 @@ CPPFLAGS = -I..
 LDLIBS = -ldl -lpthread
 LDFLAGS32 = -L../obj32
 LDFLAGS64 = -L../obj64
+INSTALL = install
 
 TESTS = $(LIB_TESTS) $(NOLIB_TESTS) $(LDSCRIPT_TESTS) $(HUGELINK_TESTS) \
 	$(HUGELINK_TESTS:%=xB.%) $(HUGELINK_TESTS:%=xBDT.%) \
@@ -25,6 +28,10 @@ SCRIPTS=../ldscripts
 SCRIPTS32 = $(SCRIPTS)/$(ELF32)
 SCRIPTS64 = $(SCRIPTS)/$(ELF64)
 HUGETLBFS_LD=../ld.hugetlbfs
+LIBDIR32 = $(DESTDIR)$(PREFIX)/$(LIB32)
+LIBDIR64 = $(DESTDIR)$(PREFIX)/$(LIB64)
+INST_TESTSDIR32 = $(LIBDIR32)/libhugetlbfs/tests
+INST_TESTSDIR64 = $(LIBDIR64)/libhugetlbfs/tests
 
 ifdef V
 VECHO = :
@@ -127,3 +134,19 @@ clean:
 	@$(CC) $(CPPFLAGS) -MM -MT "$(foreach DIR,$(OBJDIRS),$(DIR)/$*.o) $@" $< > $@
 
 -include $(DEPFILES)
+
+obj32/install:
+	@$(VECHO) INSTALL32 $(INST_TESTSDIR32)
+	$(INSTALL) -d $(INST_TESTSDIR32)
+	$(INSTALL) -d $(INST_TESTSDIR32)/obj32
+	$(INSTALL) -m 755 $(TESTS:%=obj32/%) $(INST_TESTSDIR32)/obj32
+	$(INSTALL) -m 755 run_tests.sh $(INST_TESTSDIR32)
+
+obj64/install:
+	@$(VECHO) INSTALL64 $(INST_TESTSDIR64)
+	$(INSTALL) -d $(INST_TESTSDIR64)
+	$(INSTALL) -d $(INST_TESTSDIR64)/obj64
+	$(INSTALL) -m 755 $(TESTS:%=obj64/%) $(INST_TESTSDIR64)/obj64
+	$(INSTALL) -m 755 run_tests.sh $(INST_TESTSDIR64)
+
+install: $(OBJDIRS:%=%/install)

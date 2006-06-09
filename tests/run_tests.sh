@@ -1,7 +1,5 @@
 #! /bin/sh
 
-cd tests
-
 export QUIET_TEST=1
 export HUGETLB_VERBOSE=2
 unset HUGETLB_ELF

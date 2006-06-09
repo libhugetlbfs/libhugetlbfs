@@ -87,22 +87,22 @@ tests/%:
 	$(MAKE) -C tests OBJDIRS="$(OBJDIRS)" CC32="$(CC32)" CC64="$(CC64)" ELF32="$(ELF32)" ELF64="$(ELF64)" $*
 
 check:	all
-	./run_tests.sh
+	cd tests; ./run_tests.sh
 
 checkv:	all
-	./run_tests.sh -vV
+	cd tests; ./run_tests.sh -vV
 
 func:	all
-	./run_tests.sh -t func
+	cd tests; ./run_tests.sh -t func
 
 funcv:	all
-	./run_tests.sh -t func -vV
+	cd tests; ./run_tests.sh -t func -vV
 
 stress:	all
-	./run_tests.sh -t stress
+	cd tests; ./run_tests.sh -t stress
 
 stressv: all
-	./run_tests.sh -t stress -vV
+	cd tests; ./run_tests.sh -t stress -vV
 
 # Don't want to remake objects just 'cos the directory timestamp changes
 $(OBJDIRS): %:
@@ -184,3 +184,6 @@ install: all $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	for x in $(INSTALL_OBJSCRIPT); do \
 		$(INSTALL) -m 755 objscript.$$x $(BINDIR)/$$x; done
 	for x in $(EXTRA_DIST); do $(INSTALL) -m 755 $$x $(DOCDIR)/$$x; done
+
+installtests: install	# Force make to install the library first
+	${MAKE} -C tests install DESTDIR=$(DESTDIR) OBJDIRS="$(OBJDIRS)" LIB32=$(LIB32) LIB64=$(LIB64)
