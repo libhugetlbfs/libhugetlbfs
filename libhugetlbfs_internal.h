@@ -30,6 +30,8 @@
 
 extern int __hugetlbfs_verbose;
 
+extern int sharing;
+
 #define ERROR(...) \
 	if (__hugetlbfs_verbose >= 1) \
 		fprintf(stderr, "libhugetlbfs: ERROR: " __VA_ARGS__)
@@ -54,6 +56,9 @@ struct seg_info {
 	int prot;
 	int fd;
 };
+
+int finished_prepare(struct seg_info *htlb_seg_info, int success);
+int hugetlbfs_set_fd(struct seg_info *htlb_seg_info);
 
 #if defined(__powerpc64__) && !defined(__LP64__)
 /* Older binutils fail to provide this symbol */

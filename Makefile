@@ -1,6 +1,7 @@
 PREFIX = /usr/local
 
 LIBOBJS = hugeutils.o elflink.o morecore.o debug.o
+BINOBJS = hugetlbd
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
 LDSCRIPT_TYPES = B BDT
 INSTALL_OBJSCRIPT = ld.hugetlbfs
@@ -74,13 +75,14 @@ endif
 
 DEPFILES = $(LIBOBJS:%.o=%.d)
 
-all:	libs tests
+all:	libs bin tests
 
 .PHONY:	tests libs
 
 libs:	$(foreach file,$(INSTALL_OBJ_LIBS),$(OBJDIRS:%=%/$(file)))
+bin:	$(foreach file,$(BINOBJS),obj32/$(file))
 
-tests:	libs	# Force make to build the library first
+tests:	libs bin	# Force make to build the library first
 tests:	tests/all
 
 tests/%:
@@ -149,11 +151,16 @@ obj64/%.s:	%.c
 	@$(VECHO) CC64 -S $@
 	$(CC64) $(CPPFLAGS) $(CFLAGS) -o $@ -S $<
 
+obj32/hugetlbd:	hugetlbd.c $(LIBOBJS:%=obj32/%)
+	@$(VECHO) CC32 $@
+	$(CC32) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS32) -o $@ $^
+
 clean:
 	@$(VECHO) CLEAN
 	rm -f *~ *.o *.so *.a *.d *.i core a.out
 	rm -rf obj*
 	rm -f ldscripts/*~
+	rm -f libhugetlbfs-sock
 	$(MAKE) -C tests clean
 
 %.d: %.c
@@ -184,6 +191,7 @@ install: all $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	for x in $(INSTALL_OBJSCRIPT); do \
 		$(INSTALL) -m 755 objscript.$$x $(BINDIR)/$$x; done
 	for x in $(EXTRA_DIST); do $(INSTALL) -m 755 $$x $(DOCDIR)/$$x; done
+	for x in $(BINOBJS); do $(INSTALL) obj32/$$x $(BINDIR)/$$x; done
 
 installtests: install	# Force make to install the library first
 	${MAKE} -C tests install DESTDIR=$(DESTDIR) OBJDIRS="$(OBJDIRS)" LIB32=$(LIB32) LIB64=$(LIB64)

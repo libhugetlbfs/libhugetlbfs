@@ -27,9 +27,11 @@
 #include <errno.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/types.h>
 #include <sys/vfs.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/stat.h>
 
 #include "hugetests.h"
 
@@ -149,6 +151,33 @@ int test_addr_huge(void *p)
 		return -1;
 
 	return (sb.f_type == HUGETLBFS_MAGIC);
+}
+
+ino_t get_addr_inode(void *p)
+{
+	char name[256];
+	int ret;
+	struct stat sb;
+
+	ret = read_maps((unsigned long)p, name);
+	if (ret < 0)
+		return ret;
+	if (ret == 0) {
+		ERROR("Couldn't find address %p in /proc/self/maps\n", p);
+		return -1;
+	}
+
+	/* looks like a filename? */
+	if (name[0] != '/')
+		return 0;
+
+	/* Truncate the filename portion */
+
+	ret = stat(name, &sb);
+	if (ret < 0)
+		return -1;
+
+	return sb.st_ino;
 }
 
 int remove_shmid(int shmid)

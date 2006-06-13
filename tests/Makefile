@@ -8,7 +8,7 @@ LIB_TESTS_64 = straddle_4GB huge_at_4GB_normal_below \
 	huge_below_4GB_normal_above
 NOLIB_TESTS = malloc malloc_manysmall dummy
 LDSCRIPT_TESTS = zero_filesize_segment
-HUGELINK_TESTS = linkhuge linkhuge_nofd
+HUGELINK_TESTS = linkhuge linkhuge_nofd linkshare
 STRESS_TESTS = mmap-gettest mmap-cow shm-gettest shm-getraw shm-fork
 
 CFLAGS = -O2 -Wall -g
