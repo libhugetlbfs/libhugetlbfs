@@ -259,15 +259,14 @@ void remap_segments(struct seg_info *seg, int num)
 	int i;
 	void *p;
 
-	/* XXX: The bogus call to mmap below was inserted to force ld.so
-	 * to resolve the mmap symbol before we unmap the plt in the data
-	 * segment below.  This was believed to be needed only in the case
-	 * where sharing is enabled and the hugetlbfs files have already been
-	 * prepared by another process.  I don't think it's needed anymore,
-	 * so it's commented out. (aglitke)
-	 *
-	 * p = mmap(0, 0, 0, 0, 0, 0);
+	/*
+	 * XXX: The bogus call to mmap below forces ld.so to resolve the
+	 * mmap symbol before we unmap the plt in the data segment
+	 * below.  This might only be needed in the case where sharing
+	 * is enabled and the hugetlbfs files have already been prepared
+	 * by another process.
 	 */
+	 p = mmap(0, 0, 0, 0, 0, 0);
 
 	/* This is the hairy bit, between unmap and remap we enter a
 	 * black hole.  We can't call anything which uses static data
