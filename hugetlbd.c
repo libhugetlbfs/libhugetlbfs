@@ -107,7 +107,7 @@ static void reap_files(int quitting)
 /**
  * kill_daemon - exit the daemon process
  * @ret: if 0, expected quit
- * 	   -1, unexpected quit
+ * 	   1, unexpected quit
  * 	   also functions as return value to exit with
  *
  * no return value
@@ -668,7 +668,7 @@ failed_close_and_die:
 close_and_die:
 	close(local_sock);
 die:
-	kill_daemon(-1);
+	kill_daemon(1);
 
-	return -1;
+	return 1;
 }
