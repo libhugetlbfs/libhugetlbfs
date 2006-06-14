@@ -153,7 +153,7 @@ obj64/%.s:	%.c
 
 obj32/hugetlbd:	hugetlbd.c $(LIBOBJS:%=obj32/%)
 	@$(VECHO) CC32 $@
-	$(CC32) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS32) -o $@ $^
+	$(CC32) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS32) -o $@ obj32/debug.o obj32/hugeutils.o $<
 
 clean:
 	@$(VECHO) CLEAN
