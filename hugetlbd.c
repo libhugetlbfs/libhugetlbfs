@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <errno.h>
+#include <getopt.h>
 #include <signal.h>
 #include <time.h>
 #include <unistd.h>
@@ -42,9 +43,9 @@
 #define QUEUE_LENGTH	SOMAXCONN
 #define HUGETLBD_PORT	60046	/* some random number */
 /* how often to reap due to idleness */
-#define POLL_TIMEOUT	600000	/* milliseconds */
+#define DEFAULT_POLL_TIMEOUT	600000	/* milliseconds */
 /* how long ago does a share need to have occurred to reap? */
-#define SHARE_TIMEOUT	600	/* seconds */
+#define DEFAULT_SHARE_TIMEOUT	600	/* seconds */
 
 struct shared_mapping {
 	/* unique identifier */
@@ -68,6 +69,16 @@ static int timeout;
 /* visible for error handling */
 static int shared_fd;
 static FILE *logfd;
+static unsigned int share_timeout;
+static unsigned int poll_timeout;
+
+static void usage()
+{
+        printf("Usage: hugetlbd [-v] [-p timeout1] [-s timeout2]\n"
+                "\t-v: print out this usage statement\n"
+		"\t-p: specify how long to wait before unlinking files in the hugetlbfs mountpoint (seconds) [default=600]\n"
+		"\t-s: specify how long ago a file needs to been shared for it to be unlinked (seconds) [default=600]\n");
+}
 
 /**
  * reap_files - unlink all shared files
@@ -88,7 +99,7 @@ static void reap_files(int quitting)
 		 * Iterate through list until we get to an old enough
 		 * sharing
 		 */
-		if (!quitting && (now - smptr->timestamp < SHARE_TIMEOUT)) {
+		if (!quitting && (now - smptr->timestamp < share_timeout)) {
 			smptr = smptr->next;
 			continue;
 		}
@@ -315,7 +326,55 @@ share_mapping:
 	return prevsmptr;
 }
 
-void daemonize()
+static int parse_args(int argc, char *argv[]) {
+	int opt;
+	int ret = 0;
+        while (1) {
+                opt = getopt(argc, argv, ":p:s:dv");
+                if (opt == -1)
+                        break;
+
+                switch (opt) {
+                        case 'p':
+                                /* needs to be in milliseconds */
+                                poll_timeout = 1000*atoi(optarg);
+                                break;
+                        case 's':
+                                share_timeout = atoi(optarg);
+                                break;
+			case 'd':
+				/* do not daemonize */
+				ret = 1;
+				break;
+                        case 'v':
+                                usage();
+                                return -1;
+			case ':':
+				printf("getopt: missing parameter for option %c\n", optopt);
+				usage();
+				return -1;
+                        case '?':
+                                printf("getopt: unknown option: %c\n", optopt);
+                                usage();
+                                return -1;
+                        default:
+                                printf("getopt: returned character code 0%o\n", opt);
+                                usage();
+                                return -1;
+                }
+        }
+
+        if (poll_timeout == 0) {
+                poll_timeout = DEFAULT_POLL_TIMEOUT;
+        }
+        if (share_timeout == 0) {
+                share_timeout = DEFAULT_SHARE_TIMEOUT;
+        }
+
+	return ret;
+}
+
+static void daemonize()
 {
 	pid_t pid, sid;
 
@@ -387,10 +446,12 @@ int main(int argc, char *argv[])
 	struct shared_mapping *smptr;
 	mode_t mode;
 
-	/* Perform all the steps to become a real daemon */
-	daemonize();
-	
-	my_uid = getuid();
+	ret = parse_args(argc, argv);
+	if (ret < 0)
+		exit(1);
+	if (ret == 0)
+		/* Perform all the steps to become a real daemon */
+		daemonize();
 
 	sigemptyset(&(sigact.sa_mask));
 
@@ -446,7 +507,7 @@ int main(int argc, char *argv[])
 		sigaction(SIGINT, &sigact, &prevact);
 
 do_poll:
-		ret = poll(&ufds, 1, POLL_TIMEOUT);
+		ret = poll(&ufds, 1, poll_timeout);
 		if (ret < 0) {
 			/* catch calls to SIGHUP as non-fail case */
 			if (errno == EINTR)
