@@ -332,12 +332,13 @@ int maybe_prepare(int fd_state, struct seg_info *seg)
 		return -1;
 	}
 	DEBUG("Prepare succeeded\n");
-	if (reply)
+	if (reply) {
 		ret = finished_prepare(seg, 0);
-	if (ret < 0)
-		DEBUG("Failed to communicate successful "
-			"prepare to hugetlbd\n");
-	return 0;
+		if (ret < 0)
+			DEBUG("Failed to communicate successful "
+				"prepare to hugetlbd\n");
+	}
+	return ret;
 }
 
 static void __attribute__ ((constructor)) setup_elflink(void)
@@ -385,7 +386,11 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 
 		/* Step 2.  Map the hugetlbfs files anywhere to copy data, if we
 		 * need to prepare at all */
-		maybe_prepare(ret, &htlb_seg_table[i]);
+		ret = maybe_prepare(ret, &htlb_seg_table[i]);
+		if (ret < 0) {
+			DEBUG("Failed to prepare hugetlbfs file\n");
+			return;
+		}
 	}
 
 	/* Step 3.  Unmap the old segments, map in the new ones */
