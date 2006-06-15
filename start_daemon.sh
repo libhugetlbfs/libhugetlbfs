@@ -6,8 +6,6 @@ while getopts "d" opt; do
 	esac
 done
 
-export PATH=${PATH}:./obj32/:./obj64/
-
 killall -INT hugetlbd
 
 exec hugetlbd
