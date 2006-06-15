@@ -412,6 +412,138 @@ static void daemonize()
 }
 
 /**
+ * read_client_request - receive request from client
+ * @local_sock: socket to read from
+ * @cresp: pointer to store request in
+ *
+ * Wait for client's request for sharing
+ *
+ * returns 0, on success
+ * 	   negative values, on failure
+ */
+static int read_client_request(int local_sock, struct client_request
+								*creq)
+{
+	int ret;
+	alarm(60);
+	ret = read(local_sock, creq, sizeof(*creq));
+	/* cancel any alarms */
+	alarm(0);
+	if (ret < 0) {
+		/* timeout == 1 means that the SIGALRM handler ran */
+		if (timeout) {
+			DEBUG("read timed out\n");
+			return -1;
+		}
+		ERROR("read failed: %s\n", strerror(errno));
+		return -2;
+	}
+	if (ret != sizeof(*creq)) {
+		/*
+		 * This should never happen, but is useful for
+		 * debugging size issues with mixed environments
+		 */
+		DEBUG("short first read (got %d, should have been "
+						"%zu\n", ret, sizeof(*creq));
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * write_daemon_response - respond to client
+ * @local_sock: socket to write to
+ * @cresp: pointer to response
+ *
+ * Acknowledge a client's request with a filename and whether the caller
+ * needs to prepare
+ *
+ * returns 0, on success
+ * 	   negative values, on failure
+ */
+static int write_daemon_response(int local_sock, struct daemon_response
+								*dresp)
+{
+	int ret;
+	alarm(60);
+	ret = write(local_sock, dresp, sizeof(*dresp));
+	alarm(0);
+	/*
+	 * If dresp.need_to_prepare is set, then we know we
+	 * dynamically allocated an element (which is pointed to
+	 * by smptr). We need to backout any changes it made to
+	 * the system state (open file, memory consumption) on
+	 * errors.
+	 */
+	if (ret < 0) {
+		if (timeout) {
+			DEBUG("write timed out\n");
+			if (dresp->need_to_prepare)
+				return -1;
+			return -2;
+		}
+		ERROR("write failed: %s\n", strerror(errno));
+		if (dresp->need_to_prepare)
+			return -3;
+		return -4;
+	}
+	if (ret != sizeof(*dresp)) {
+		DEBUG("short write (got %d, should have been %zu\n",
+							ret, sizeof(*dresp));
+		if (dresp->need_to_prepare)
+			return -1;
+		return -2;
+	} /* else successfully wrote */
+	return 0;
+}
+
+/**
+ * read_client_response - wait for a client's ACK
+ * @local_sock: socket to read from
+ * @dresp: pointer to daemon's previous reponse
+ * @cresp: pointer to store response in
+ *
+ * Wait for notification that file is prepared and segments have been
+ * remapped. We need @dresp so that we can backout on errors
+ * appropriately.
+ *
+ * returns 0, on success
+ * 	   negative values, on failure
+ */
+static int read_client_response(int local_sock, struct daemon_response
+					*dresp, struct client_response *cresp)
+{
+	int ret;
+	DEBUG("waiting for client's response\n");
+	/* this may be unnecessarily long */
+	alarm(300);
+	/*
+	 */
+	ret = read(local_sock, cresp, sizeof(*cresp));
+	alarm(0);
+	if (ret < 0) {
+		if (timeout) {
+			DEBUG("read timed out\n");
+			if (dresp->need_to_prepare)
+				return -1;
+			return -2;
+		}
+		ERROR("read failed: %s\n", strerror(errno));
+		if (dresp->need_to_prepare)
+			return -3;
+		return -4;
+	}
+	if (ret != sizeof(*cresp)) {
+		DEBUG("short second read (got %d, should have been "
+						"%zu\n", ret, sizeof(*cresp));
+		if (dresp->need_to_prepare)
+			return -1;
+		return -2;
+	}
+	return 0;
+}
+
+/**
  * sharing_control_loop - main event loop for sharing
  * @sock: socket to wait on for connections
  *
@@ -532,26 +664,14 @@ do_poll:
 		sigaction(SIGHUP, &prevact, NULL);
 		sigaction(SIGALRM, &sigact, NULL);
 
-		alarm(60);
-		ret = read(local_sock, &creq, sizeof(creq));
-		/* cancel any alarms */
-		alarm(0);
-		if (ret < 0) {
-			/* timeout == 1 means that the SIGALRM handler ran */
-			if (timeout) {
-				DEBUG("read timed out\n");
+		ret = read_client_request(local_sock, &creq);
+		switch (ret) {
+			case 0:
+				break;
+			case -1:
 				goto next;
-			}
-			ERROR("read failed: %s\n", strerror(errno));
-			goto close_and_die;
-		}
-		if (ret != sizeof(creq)) {
-			/*
-			 * This should never happen, but is useful for
-			 * debugging size issues with mixed environments
-			 */
-			DEBUG("short first read (got %d, should have been %zu\n", ret, sizeof(creq));
-			goto next;
+			case -2:
+				goto close_and_die;
 		}
 
 		/* Use the request to figure out the mapping ... */
@@ -573,65 +693,32 @@ do_poll:
 			goto next;
 		}
 
-		/*
-		 * ... and acknowledge it with a filename and whether
-		 * the caller needs to prepare
-		 */
-		alarm(60);
-		ret = write(local_sock, &dresp, sizeof(dresp));
-		alarm(0);
-		/*
-		 * If dresp.need_to_prepare is set, then we know we
-		 * dynamically allocated an element (which is pointed to
-		 * by smptr). We need to backout any changes it made to
-		 * the system state (open file, memory consumption) on
-		 * errors.
-		 */
-		if (ret < 0) {
-			if (timeout) {
-				DEBUG("write timed out\n");
-				if (dresp.need_to_prepare)
-					goto failed_next;
-				goto next;
-			}
-			ERROR("write failed: %s\n", strerror(errno));
-			if (dresp.need_to_prepare)
-				goto failed_close_and_die;
-			goto close_and_die;
-		}
-		if (ret != sizeof(dresp)) {
-			DEBUG("short write (got %d, should have been %zu\n", ret, sizeof(dresp));
-			if (dresp.need_to_prepare)
+		ret = write_daemon_response(local_sock, &dresp);
+		switch (ret) {
+			case 0:
+				break;
+			case -1:
 				goto failed_next;
-			goto next;
-		} /* else successfully wrote */
+			case -2:
+				goto next;
+			case -3:
+				goto failed_close_and_die;
+			case -4:
+				goto failed_next;
+		}
 
-		DEBUG("waiting for client's response\n");
-		/* this may be unnecessarily long */
-		alarm(300);
-		/*
-		 * Wait for notification that file is prepared and
-		 * segments have been remapped
-		 */
-		ret = read(local_sock, &cresp, sizeof(cresp));
-		alarm(0);
-		if (ret < 0) {
-			if (timeout) {
-				DEBUG("read timed out\n");
-				if (dresp.need_to_prepare)
-					goto failed_next;
-				goto next;
-			}
-			ERROR("read failed: %s\n", strerror(errno));
-			if (dresp.need_to_prepare)
-				goto failed_close_and_die;
-			goto close_and_die;
-		}
-		if (ret != sizeof(cresp)) {
-			DEBUG("short second read (got %d, should have been %zu\n", ret, sizeof(cresp));
-			if (dresp.need_to_prepare)
+		ret = read_client_response(local_sock, &dresp, &cresp);
+		switch (ret) {
+			case 0:
+				break;
+			case -1:
 				goto failed_next;
-			goto next;
+			case -2:
+				goto next;
+			case -3:
+				goto failed_close_and_die;
+			case -4:
+				goto failed_next;
 		}
 
 		/*
