@@ -412,29 +412,19 @@ static void daemonize()
 }
 
 /**
- * main - central event loop for daemon
- * @argc: ignored
- * @argv: ignored
+ * sharing_control_loop - main event loop for sharing
+ * @sock: socket to wait on for connections
  *
- * returns:	0, on success
- * 		-1, on failure
+ * This is expected to be an infinite loop. If we we ever return, it is
+ * a fail case.
+ *
+ * returns 1
  */
-int main(int argc, char *argv[])
+static int sharing_control_loop(int sock)
 {
 	int ret;
-	uid_t my_uid;
-	/* local socket structures */
-	struct sockaddr_un sun, from;
+	struct sockaddr_un from;
 	socklen_t len = (socklen_t)sizeof(from);
-	int local_sock;
-	/* used to allow for handling SIGALRM and SIGHUP */
-	struct sigaction sigact = {
-		.sa_handler	= signal_handler,
-		.sa_flags	= 0,
-	};
-	struct sigaction prevact;
-	/* needed for poll */
-	struct pollfd ufds;
 	/*
 	 * Needed for socket messages -- could switch to dynamic
 	 * allocation
@@ -442,57 +432,27 @@ int main(int argc, char *argv[])
 	struct client_request creq;
 	struct daemon_response dresp;
 	struct client_response cresp;
+	int local_sock;
 	/* handle on some state that may need to be freed */
 	struct shared_mapping *smptr;
 	mode_t mode;
-
-	ret = parse_args(argc, argv);
-	if (ret < 0)
-		exit(1);
-	if (ret == 0)
-		/* Perform all the steps to become a real daemon */
-		daemonize();
+	/* needed for poll */
+	struct pollfd ufds;
+	/* used to allow for handling SIGALRM and SIGHUP */
+	struct sigaction sigact = {
+		.sa_handler	= signal_handler,
+		.sa_flags	= 0,
+	};
+	struct sigaction prevact;
 
 	sigemptyset(&(sigact.sa_mask));
-
-	/*
-	 * Probably want to do this if we actually are going to run as a
-	 * daemon -- send all output to a file somewhere, maybe?
-	 * close(stdin);
-	 * close(stdout);
-	 * close(stderr);
-	 */
-
-	sock = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (sock < 0) {
-		ERROR("socket() failed: %s\n", strerror(errno));
-		return -1;
-	}
-
-	sun.sun_family = AF_UNIX;
-	/* clear out any previous socket */
-	unlink("/tmp/libhugetlbfs-sock");
-	strcpy(sun.sun_path, "/tmp/libhugetlbfs-sock");
-	ret = bind(sock, (struct sockaddr *)(&sun), sizeof(sun));
-	if (ret < 0) {
-		ERROR("bind() failed: %s\n", strerror(errno));
-		goto die;
-	}
-
-	chmod("/tmp/libhugetlbfs-sock", 0666);
-
-	ret = listen(sock, QUEUE_LENGTH);
-	if (ret < 0) {
-		ERROR("listen() failed: %s\n", strerror(errno));
-		goto die;
-	}
 
 	/* We will poll on sock for any incoming connections */
 	ufds.fd	= sock;
 	ufds.events = POLLIN;
 
 	/* install our custom signal-handler */
-	sigaction(SIGHUP, &sigact, NULL);
+	sigaction(SIGINT, &sigact, NULL);
 
 	for (;;) {
 		/* gets set by SIGALRM handler */
@@ -504,12 +464,15 @@ int main(int argc, char *argv[])
 		/* reset mode of shared file */
 		mode = 0;
 
-		sigaction(SIGINT, &sigact, &prevact);
+		sigaction(SIGHUP, &sigact, &prevact);
 
 do_poll:
 		ret = poll(&ufds, 1, poll_timeout);
 		if (ret < 0) {
-			/* catch calls to SIGHUP as non-fail case */
+			/*
+			 * catch SIGHUP as non-fail case
+			 * SIGINT will have made us exit already
+			 */
 			if (errno == EINTR)
 				goto do_poll;
 			ERROR("poll() failed: %s\n", strerror(errno));
@@ -552,11 +515,21 @@ do_poll:
 				DEBUG("accept() returned connection aborted\n");
 				continue;
 			}
+			/*
+			 * Don't fail on a SIGHUP
+			 */
+			if (errno == EINTR)
+				goto do_poll;
 			ERROR("accept() failed: %s\n", strerror(errno));
 			goto die;
 		}
 
-		sigaction(SIGINT, &prevact, NULL);
+		/*
+		 * Disable the races due to removing files that may be
+		 * sent to clients for sharing by just not handling
+		 * SIGHUP for a bit
+		 */
+		sigaction(SIGHUP, &prevact, NULL);
 		sigaction(SIGALRM, &sigact, NULL);
 
 		alarm(60);
@@ -660,6 +633,7 @@ do_poll:
 				goto failed_next;
 			goto next;
 		}
+
 		/*
 		 * Determine if the segments were prepared/remapped as
 		 * expected.
@@ -731,5 +705,60 @@ close_and_die:
 die:
 	kill_daemon(1);
 
+	/* indicate failure if we ever get this far */
+	return 1;
+}
+
+/**
+ * main - set up socket and enter central control loop
+ * @argc: number of command line arguments
+ * @argv: command line arguments
+ *
+ * returns:	0, on success
+ * 		-1, on failure
+ */
+int main(int argc, char *argv[])
+{
+	int ret;
+	/* local socket structures */
+	struct sockaddr_un sun;
+
+	ret = parse_args(argc, argv);
+	if (ret < 0)
+		exit(1);
+	if (ret == 0)
+		/* Perform all the steps to become a real daemon */
+		daemonize();
+
+	sock = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sock < 0) {
+		ERROR("socket() failed: %s\n", strerror(errno));
+		return -1;
+	}
+
+	sun.sun_family = AF_UNIX;
+	/* clear out any previous socket */
+	unlink("/tmp/libhugetlbfs-sock");
+	strcpy(sun.sun_path, "/tmp/libhugetlbfs-sock");
+	ret = bind(sock, (struct sockaddr *)(&sun), sizeof(sun));
+	if (ret < 0) {
+		ERROR("bind() failed: %s\n", strerror(errno));
+		goto die;
+	}
+
+	chmod("/tmp/libhugetlbfs-sock", 0666);
+
+	ret = listen(sock, QUEUE_LENGTH);
+	if (ret < 0) {
+		ERROR("listen() failed: %s\n", strerror(errno));
+		goto die;
+	}
+
+	return sharing_control_loop(sock);
+
+die:
+	kill_daemon(1);
+
+	/* indicate failure if we ever get this far */
 	return 1;
 }
