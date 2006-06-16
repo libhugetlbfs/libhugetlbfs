@@ -53,7 +53,6 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 {
 	void *p;
 	long newsize = 0;
-	int ret;
 
 	DEBUG("hugetlbfs_morecore(%ld) = ...\n", (long)increment);
 
