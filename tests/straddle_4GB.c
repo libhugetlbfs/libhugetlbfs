@@ -60,14 +60,14 @@ int main(int argc, char *argv[])
 
 		if (test_addr_huge(p) != 1)
 			FAIL("Mapped address is not hugepage");
-		
+
 		if (test_addr_huge(p + hpage_size) != 1)
 			FAIL("Mapped address is not hugepage");
 
 		verbose_printf("Clearing below 4GB...");
 		memset(p, 0, hpage_size);
 		verbose_printf("done\n");
-	
+
 		verbose_printf("Clearing above 4GB...");
 		memset(p + hpage_size, 0, hpage_size);
 		verbose_printf("done\n");
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 	verbose_printf("Clearing below 4GB...");
 	memset(p, 0, hpage_size);
 	verbose_printf("done\n");
-	
+
 	verbose_printf("Clearing above 4GB...");
 	memset(p + hpage_size, 0, hpage_size);
 	verbose_printf("done\n");
@@ -105,4 +105,3 @@ int main(int argc, char *argv[])
 
 	PASS();
 }
-

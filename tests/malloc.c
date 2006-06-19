@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 	char *p;
 
 	test_init(argc, argv);
-	
+
 	env = getenv("HUGETLB_MORECORE");
 	verbose_printf("HUGETLB_MORECORE=%s\n", env);
 	if (env)
@@ -60,10 +60,9 @@ int main(int argc, char *argv[])
 			FAIL("Address is not hugepage");
 		if (!expect_hugepage && (test_addr_huge(p) == 1))
 			FAIL("Address is unexpectedly huge");
-		
+
 		free(p);
 	}
 
 	PASS();
 }
-

@@ -617,7 +617,7 @@ int set_sysctl(char *file, int val)
 	char buf[BUF_SZ];
 
 	snprintf(buf, BUF_SZ*sizeof(char), "%i", val);
-	return set_sysctl_str(file, buf);	
+	return set_sysctl_str(file, buf);
 }
 
 int mount_hugetlbfs(char *mountpoint, size_t strsz)
@@ -636,8 +636,8 @@ int mount_hugetlbfs(char *mountpoint, size_t strsz)
 //	snprintf(mountpoint, strsz, "/tmp/hugetlbfs");
 
 	mkdir(mountpoint, 0777);
-	
-	snprintf(cmd, cmdsz, "mount -t hugetlbfs hugetlbfs %s", mountpoint); 
+
+	snprintf(cmd, cmdsz, "mount -t hugetlbfs hugetlbfs %s", mountpoint);
 	return (system(cmd));
 }
 
@@ -686,7 +686,7 @@ int shmem_setup(int nr_hugepages)
 	char buf[BUF_SZ];
 	int hpage_size = get_hugepage_size();
 	unsigned long bytes = nr_hugepages * hpage_size * 1024;
-	
+
 	snprintf(buf, sizeof(char)*BUF_SZ, "%lu", bytes);
 
 	if (get_sysctl("/proc/sys/kernel/shmall") < bytes)

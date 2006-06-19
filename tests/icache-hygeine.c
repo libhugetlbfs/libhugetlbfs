@@ -21,7 +21,7 @@
  *
  * Older ppc64 kernels don't properly flush dcache to icache before
  * giving a cleared page to userspace.  With some exceedingly hairy
- * code, this attempts to test for this bug.  
+ * code, this attempts to test for this bug.
  *
  * This test will never trigger (obviously) on machines with coherent
  * icache and dcache (including x86 and POWER5).  On any given run,
@@ -168,4 +168,3 @@ int main(int argc, char *argv[])
 
 	PASS();
 }
-

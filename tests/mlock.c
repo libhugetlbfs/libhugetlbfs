@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 
 	tot_pages = atoi(argv[1]);
 	size = tot_pages * gethugepagesize();
-	
+
 	test_simple_mlock(size, MAP_PRIVATE);
 	test_simple_mlock(size, MAP_SHARED);
 	test_simple_mlock(size, MAP_PRIVATE|MAP_LOCKED);

@@ -164,7 +164,7 @@ int main(int argc, char ** argv)
 			FAIL("waitpid(): %s", strerror(errno));
 		if (WEXITSTATUS(status) != 0)
 			FAIL("Thread %d (pid=%d) failed", i, wait_list[i]);
-		
+
 		if (WIFSIGNALED(status))
 			FAIL("Thread %d (pid=%d) received unhandled signal", i,
 			     wait_list[i]);

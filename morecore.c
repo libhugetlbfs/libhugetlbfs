@@ -125,7 +125,7 @@ static void __attribute__((constructor)) setup_morecore(void)
 		ERROR("Hugepages unavailable\n");
 		return;
 	}
-		
+
 	heap_fd = hugetlbfs_unlinked_fd();
 	if (heap_fd < 0) {
 		ERROR("Couldn't open hugetlbfs file for morecore\n");
@@ -146,7 +146,7 @@ static void __attribute__((constructor)) setup_morecore(void)
 	}
 
 	DEBUG("setup_morecore(): heapaddr = 0x%lx\n", heapaddr);
-		
+
 	heaptop = heapbase = (void *)heapaddr;
 	__morecore = &hugetlbfs_morecore;
 

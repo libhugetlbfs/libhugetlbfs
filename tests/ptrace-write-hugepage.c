@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 	err = sigaction(SIGCHLD, &sa, &old_sa);
 	if (err)
 		FAIL("Can't install SIGCHLD handler");
-	
+
 	err = pipe(pipefd);
 	if (err)
 		FAIL("pipe()");
@@ -155,6 +155,6 @@ int main(int argc, char *argv[])
 		FAIL("Clearing SIGCHLD handler");
 
 	ptrace(PTRACE_KILL, cpid, NULL, NULL);
-	
+
 	PASS();
 }

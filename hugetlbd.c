@@ -387,7 +387,7 @@ static void daemonize()
 		exit(0);
 
 	umask(0);
-	
+
 	sid = setsid();
 	if (sid < 0) {
 		ERROR("daemonize: Failed to set session ID\n");

@@ -42,7 +42,6 @@ static inline void barrier(void)
 			     : : :"memory");
 }
 
-
 static void sig_handler(int signum, siginfo_t *si, void *uc)
 {
 	if (signum == SIGSEGV) {
@@ -173,7 +172,7 @@ static void test_mprotect(int fd, char *testname,
 
 	if (len2 < len1)
 		test_prot(p + len2, prot1);
-	
+
 	munmap(p, len1);
 }
 
@@ -224,4 +223,3 @@ int main(int argc, char *argv[])
 
 	PASS();
 }
-

@@ -92,11 +92,11 @@ static int read_maps(unsigned long addr, char *buf)
 	while (1) {
 		unsigned long start, end, off, ino;
 		int ret;
-		
+
 		tmp = fgets(line, MAPS_BUF_SZ, f);
 		if (!tmp)
 			break;
-		
+
 		ret = sscanf(line, "%lx-%lx %*s %lx %*s %ld %255s",
 			     &start, &end, &off, &ino,
 			     buf);

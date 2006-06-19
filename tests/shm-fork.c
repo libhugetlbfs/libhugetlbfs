@@ -68,7 +68,7 @@ void do_child(int thread, unsigned long size)
 		if (shmaddr == MAP_FAILED)
 			CHILD_FAIL(thread, "shmat() failed: %s",
 				   strerror(errno));
-		
+
 		for (k=0;k<size;k++)
 			shmaddr[k] = (char) (k);
 		for (k=0;k<size;k++)
@@ -81,7 +81,7 @@ void do_child(int thread, unsigned long size)
 	}
 	exit(0);
 }
-	
+
 int main(int argc, char ** argv)
 {
 	unsigned long size;
@@ -100,7 +100,7 @@ int main(int argc, char ** argv)
 
 	if (numprocs > MAX_PROCS)
 		CONFIG("Cannot spawn more than %d processes", MAX_PROCS);
-	
+
 	hpage_size = gethugepagesize();
         size = hpage_size * nr_hugepages;
 	verbose_printf("Requesting %lu bytes\n", size);
@@ -108,7 +108,7 @@ int main(int argc, char ** argv)
 		FAIL("shmget(): %s", strerror(errno));
 
 	verbose_printf("shmid: %d\n", shmid);
-			
+
 	verbose_printf("Spawning children:\n");
 	for (i=0; i<numprocs; i++) {
 		if ((pid = fork()) < 0)
@@ -132,4 +132,3 @@ int main(int argc, char ** argv)
 
 	PASS();
 }
-

@@ -47,4 +47,3 @@ static void __attribute__ ((constructor)) setup_debug(void)
 {
 	__hugetlbfs_init_debug();
 }
-

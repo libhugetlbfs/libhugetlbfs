@@ -29,4 +29,3 @@ int main(int argc, char *argv[])
 	/* If we're even able to load, that's enough */
 	PASS();
 }
-

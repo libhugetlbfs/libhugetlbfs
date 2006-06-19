@@ -79,4 +79,3 @@ int main(int argc, char *argv[])
 	/* Should have SIGBUSed above */
 	FAIL("Didn't SIGBUS");
 }
-

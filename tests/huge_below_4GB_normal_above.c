@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 	verbose_printf("done\n");
 
 	memset(p, 0, hpage_size);
-	
+
 	err = test_addr_huge(p);
 	if (err != 1)
 		FAIL("Mapped address is not hugepage");
@@ -105,4 +105,3 @@ int main(int argc, char *argv[])
 
 	PASS();
 }
-

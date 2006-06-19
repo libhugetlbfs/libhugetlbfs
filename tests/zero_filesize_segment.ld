@@ -22,4 +22,3 @@ SECTIONS
 INPUT( dummy.o );
 INPUT( testutils.o );
 INPUT( -lc );
-

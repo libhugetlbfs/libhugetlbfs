@@ -108,7 +108,7 @@ void run_race(void *syncarea)
 	if (p == MAP_FAILED)
 		FAIL("mmap(): %s", strerror(errno));
 	verbose_printf("%p\n", p);
-	
+
 	child1 = fork();
 	if (child1 < 0)
 		FAIL("fork(): %s", strerror(errno));
@@ -193,4 +193,3 @@ int main(int argc, char *argv[])
 
 	PASS();
 }
-

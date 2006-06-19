@@ -148,7 +148,7 @@ static int prepare_segment(struct seg_info *seg)
 			strerror(errno));
 		return -1;
 	}
-		
+
 	DEBUG("Mapped hugeseg at %p. Copying %ld bytes from %p...\n",
 	      p, copysize, seg->vaddr);
 	memcpy(p, seg->vaddr, copysize);
@@ -317,13 +317,13 @@ int maybe_prepare(int fd_state, struct seg_info *seg)
 		case 3:
 			DEBUG("Got unshared fd as expected -- Preparing\n");
 			break;
-		
+
 		default:
 			ERROR("Unexpected fd state: %d in maybe_prepare\n",
 				fd_state);
 			return -1;
 	}
-	
+
 	ret = prepare_segment(seg);
 	if (ret < 0) {
 		/* notify daemon of failed prepare */
@@ -360,7 +360,7 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 		      "not attempting to remap segments\n");
 		return;
 	}
-	
+
 	env = getenv("HUGETLB_MINIMAL_COPY");
 	if (env && (strcasecmp(env, "no") == 0)) {
 		DEBUG("HUGETLB_MINIMAL_COPY=%s, disabling filesz copy "
@@ -396,4 +396,3 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 	/* Step 3.  Unmap the old segments, map in the new ones */
 	remap_segments(htlb_seg_table, htlb_num_segs);
 }
-
