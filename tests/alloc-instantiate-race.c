@@ -47,8 +47,8 @@
 
 #include "hugetests.h"
 
-int hpage_size;
-pid_t child1, child2;
+static int hpage_size;
+static pid_t child1, child2;
 
 void cleanup(void)
 {
@@ -59,7 +59,7 @@ void cleanup(void)
 }
 
 
-void one_racer(void *p, int cpu,
+static void one_racer(void *p, int cpu,
 	       volatile int *mytrigger, volatile int *othertrigger)
 {
 	volatile int *pi = p;
@@ -86,7 +86,7 @@ void one_racer(void *p, int cpu,
 	exit(0);
 }
 
-void run_race(void *syncarea)
+static void run_race(void *syncarea)
 {
 	volatile int *trigger1, *trigger2;
 	int fd;

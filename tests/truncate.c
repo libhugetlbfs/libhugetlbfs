@@ -28,7 +28,7 @@
 
 #define RANDOM_CONSTANT	0x1234ABCD
 
-void sigbus_handler(int signum, siginfo_t *si, void *uc)
+static void sigbus_handler(int signum, siginfo_t *si, void *uc)
 {
 	PASS();
 }

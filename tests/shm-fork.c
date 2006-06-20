@@ -38,9 +38,9 @@
 extern int errno;
 
 /* Global Configuration */
-int nr_hugepages;
-int numprocs;
-int shmid = -1;
+static int nr_hugepages;
+static int numprocs;
+static int shmid = -1;
 
 #define MAX_PROCS 200
 #define BUF_SZ 256
@@ -57,7 +57,7 @@ void cleanup(void)
 	remove_shmid(shmid);
 }
 
-void do_child(int thread, unsigned long size)
+static void do_child(int thread, unsigned long size)
 {
 	volatile char *shmaddr;
 	int j, k;

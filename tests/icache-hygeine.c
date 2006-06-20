@@ -45,7 +45,7 @@
 #define COPY_SIZE	128
 #define NUM_REPETITIONS	64	/* Seems to be enough to trigger reliably */
 
-void cacheflush(void *p)
+static void cacheflush(void *p)
 {
 #ifdef __powerpc__
 	asm volatile("dcbst 0,%0; sync; icbi 0,%0; isync" : : "r"(p));
@@ -53,7 +53,7 @@ void cacheflush(void *p)
 }
 
 
-void jumpfunc(int copy, void *p)
+static void jumpfunc(int copy, void *p)
 {
 	/* gcc bug workaround: if there is exactly one &&label
 	 * construct in the function, gcc assumes the computed goto
@@ -75,8 +75,8 @@ void jumpfunc(int copy, void *p)
 	return;
 }
 
-sigjmp_buf sig_escape;
-void *sig_expected;
+static sigjmp_buf sig_escape;
+static void *sig_expected;
 
 static void sig_handler(int signum, siginfo_t *si, void *uc)
 {
@@ -100,7 +100,7 @@ static void sig_handler(int signum, siginfo_t *si, void *uc)
 	}
 }
 
-void test_once(int fd)
+static void test_once(int fd)
 {
 	int hpage_size = gethugepagesize();
 	void *p, *q;

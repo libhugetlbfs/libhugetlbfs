@@ -39,8 +39,8 @@ extern int errno;
 	"* into a large page backed shared memory segment.  The specified  *\n"\
 	"* device will be read into a shared memory segment.               *"
 
-int nr_hugepages;
-int shmid = -1;
+static int nr_hugepages;
+static int shmid = -1;
 
 void cleanup(void)
 {

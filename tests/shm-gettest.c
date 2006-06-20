@@ -37,17 +37,17 @@ extern int errno;
 	"* shared memory segments.  A segment is created, written,         *\n"\
 	"* verified, and detached a specified number of times.             *"
 
-unsigned int iter;
-int nr_hugepages;
-int shmid = -1;
-size_t hpage_size;
+static unsigned int iter;
+static int nr_hugepages;
+static int shmid = -1;
+static size_t hpage_size;
 
 void cleanup(void)
 {
 	remove_shmid(shmid);
 }
 
-void do_one(size_t size) {
+static void do_one(size_t size) {
 	size_t i,j;
 	char pattern;
 	char *shmaddr;

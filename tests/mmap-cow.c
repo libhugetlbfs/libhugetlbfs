@@ -55,10 +55,10 @@ extern int errno;
 	} while (0)
 
 /* Setup Configuration */
-int nr_hugepages;		/* Number of huge pages to allocate */
-unsigned int threads;		/* Number of threads to run */
+static int nr_hugepages;	/* Number of huge pages to allocate */
+static unsigned int threads;	/* Number of threads to run */
 
-int mmap_file(int fd, char **addr, size_t size, int type)
+static int mmap_file(int fd, char **addr, size_t size, int type)
 {
 	int flags = 0;
 
@@ -69,7 +69,7 @@ int mmap_file(int fd, char **addr, size_t size, int type)
 	return 0;
 }
 
-void do_work(int thread, size_t size, int fd)
+static void do_work(int thread, size_t size, int fd)
 {
 	char *addr;
 	size_t i;

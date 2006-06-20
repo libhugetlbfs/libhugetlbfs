@@ -32,9 +32,9 @@
 
 #include "hugetests.h"
 
-sigjmp_buf sig_escape;
-void *sig_expected = MAP_FAILED;
-int hpage_size;
+static sigjmp_buf sig_escape;
+static void *sig_expected = MAP_FAILED;
+static int hpage_size;
 
 static inline void barrier(void)
 {

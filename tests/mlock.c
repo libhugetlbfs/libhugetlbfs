@@ -29,7 +29,7 @@
 #include <hugetlbfs.h>
 #include "hugetests.h"
 
-void test_simple_mlock(unsigned long size, unsigned long map_flags)
+static void test_simple_mlock(unsigned long size, unsigned long map_flags)
 {
 	char *a;
 	int ret;

@@ -59,7 +59,7 @@ int global_func(int x)
 	return x;
 }
 
-struct test_entry {
+static struct test_entry {
 	const char *name;
 	void *data;
 	int size;

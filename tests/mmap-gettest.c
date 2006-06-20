@@ -44,12 +44,12 @@ extern int errno;
 
 /* Global test configuration */
 #define HTLB_FILE "mmap-gettest"
-char hugetlb_mount[BUF_SZ];
-unsigned int iter;
-int nr_hugepages;
-size_t hpage_size;
+static char hugetlb_mount[BUF_SZ];
+static unsigned int iter;
+static int nr_hugepages;
+static size_t hpage_size;
 
-int do_one(char *mountpoint, size_t size) {
+static int do_one(char *mountpoint, size_t size) {
 	char *ma;
 	int fha;
 	size_t i,j;
