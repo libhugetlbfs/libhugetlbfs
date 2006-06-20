@@ -164,7 +164,8 @@ int main(int argc, char *argv[], char *envp[])
 			env = getenv("HUGETLB_SHARE");
 			if (env)
 				sharing = atoi(env);
-			verbose_printf("Segment remapping enabled, sharing = %d\n", sharing);
+			verbose_printf("Segment remapping enabled, "
+						"sharing = %d\n", sharing);
 		}
 
 		num_sharings = atoi(argv[1]);
@@ -175,7 +176,9 @@ int main(int argc, char *argv[], char *envp[])
 		if (!children)
 			FAIL("malloc failed: %s", strerror(errno));
 
-		shmid = shmget(SHM_KEY, num_sharings * NUM_TESTS * sizeof(ino_t), IPC_CREAT | IPC_EXCL | 0666);
+		shmid = shmget(SHM_KEY, num_sharings * NUM_TESTS *
+					sizeof(ino_t), IPC_CREAT | IPC_EXCL |
+					0666);
 		if (shmid < 0)
 			FAIL("Parent's shmget failed: %s", strerror(errno));
 
@@ -196,15 +199,18 @@ int main(int argc, char *argv[], char *envp[])
 			ret = fork();
 			if (ret) {
 				if (ret < 0)
-					FAIL("fork failed: %s", strerror(errno));
+					FAIL("fork failed: %s",
+							strerror(errno));
 				children[i] = ret;
 			} else {
-				ret = execlp(argv[0], argv[0], execarg1, execarg2, NULL);
+				ret = execlp(argv[0], argv[0], execarg1,
+								execarg2, NULL);
 				if (ret) {
 					shmctl(shmid, IPC_RMID, NULL);
 					shmdt(shm);
 					FAIL("execl(%s, %s, %s, %s failed: %s",
-						argv[0], argv[0], execarg1, execarg2, strerror(errno));
+						argv[0], argv[0], execarg1,
+						execarg2, strerror(errno));
 				}
 			}
 		}
@@ -221,23 +227,47 @@ int main(int argc, char *argv[], char *envp[])
 			for (j = 1; j < num_sharings; j++) {
 				ino_t comp = shm[j * NUM_TESTS + i];
 				if (base != comp) {
-					/* we care if we mismatch if either
- 					 * sharing all segments or sharing only read-only segments and this is one */
-					if ((sharing == 2) || 
-							((sharing == 1) && (testtab[i].writable == 0))) {
+					/*
+					 * we care if we mismatch if
+					 * a) sharing all segments or
+					 * b) sharing only read-only
+					 * segments and this is one
+					 */
+					if ((sharing == 2) ||
+					    ((sharing == 1) &&
+					     (testtab[i].writable == 0))) {
 						shmctl(shmid, IPC_RMID, NULL);
 						shmdt(shm);
-						FAIL("Inodes do not match (%u != %u)", (int)base, (int)comp);
+						FAIL("Inodes do not match "
+							"(%u != %u)",
+							(int)base, (int)comp);
 					}
 				} else {
-					/* we care if we match if either
- 					 * not remapping or not sharing or sharing only read-only segments and this is not one */
-					if ((elfmap_off == 1) || (sharing == 0) || ((sharing == 1) && (testtab[i].writable == 1) && (base == -1))) {
+					/*
+					 * we care if we match if
+					 * a) not remapping or
+					 * b) not sharing or
+					 * c) sharing only read-only
+					 * segments and this is not one
+					 */
+					if ((elfmap_off == 1) ||
+					    (sharing == 0) ||
+					    ((sharing == 1) &&
+					     (testtab[i].writable == 1) &&
+					     (base == -1))) {
 						shmctl(shmid, IPC_RMID, NULL);
 						shmdt(shm);
-						if ((sharing == 1) && (testtab[i].writable == 1))
-							verbose_printf("sharing a writable segment...\n");
-						FAIL("Inodes match, but we should not be sharing this segment (%d == %d)", (int)base, (int)comp);
+						if ((sharing == 1) &&
+						    (testtab[i].writable == 1))
+							verbose_printf(
+								"sharing a "
+								"writable "
+								"segment...\n");
+						FAIL("Inodes match, "
+							"but we should not be "
+							"sharing this segment "
+							"(%d == %d)",
+							(int)base, (int)comp);
 					}
 				}
 			}
@@ -259,7 +289,8 @@ int main(int argc, char *argv[], char *envp[])
 
 		get_link_string(argv[0]);
 
-		shmid = shmget(SHM_KEY, num_sharings * NUM_TESTS * sizeof(ino_t), 0666);
+		shmid = shmget(SHM_KEY, num_sharings * NUM_TESTS *
+							sizeof(ino_t), 0666);
 		if (shmid < 0)
 			FAIL("Child's shmget failed: %s", strerror(errno));
 
