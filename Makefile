@@ -58,7 +58,8 @@ DOCDIR = $(DESTDIR)$(PREFIX)/share/doc/libhugetlbfs
 
 EXTRA_DIST = \
 	README \
-	HOWTO
+	HOWTO \
+	LGPL-2.1
 
 INSTALL_LDSCRIPTS = $(foreach type,$(LDSCRIPT_TYPES),$(ELF32).x$(type))
 ifdef CC64
@@ -187,11 +188,13 @@ install: all $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	$(INSTALL) -d $(LDSCRIPTDIR)
 	$(INSTALL) $(INSTALL_LDSCRIPTS:%=ldscripts/%) $(LDSCRIPTDIR)
 	$(INSTALL) -d $(BINDIR)
-	$(INSTALL) -d $(DOCDIR)
 	for x in $(INSTALL_OBJSCRIPT); do \
 		$(INSTALL) -m 755 objscript.$$x $(BINDIR)/$$x; done
-	for x in $(EXTRA_DIST); do $(INSTALL) -m 755 $$x $(DOCDIR)/$$x; done
 	for x in $(BINOBJS); do $(INSTALL) obj32/$$x $(BINDIR)/$$x; done
 
-installtests: install	# Force make to install the library first
+install-docs:
+	$(INSTALL) -d $(DOCDIR)
+	for x in $(EXTRA_DIST); do $(INSTALL) -m 755 $$x $(DOCDIR)/$$x; done
+
+install-tests: install	# Force make to install the library first
 	${MAKE} -C tests install DESTDIR=$(DESTDIR) OBJDIRS="$(OBJDIRS)" LIB32=$(LIB32) LIB64=$(LIB64)
