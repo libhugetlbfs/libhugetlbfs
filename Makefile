@@ -36,8 +36,8 @@ CC32 = gcc -m32
 CC64 = gcc -m64
 ELF32 = elf_i386
 ELF64 = elf_x86_64
-LIB32 = lib32
-LIB64 = lib
+LIB32 = lib
+LIB64 = lib64
 endif
 endif
 endif
@@ -52,7 +52,7 @@ endif
 
 LIBDIR32 = $(DESTDIR)$(PREFIX)/$(LIB32)
 LIBDIR64 = $(DESTDIR)$(PREFIX)/$(LIB64)
-LDSCRIPTDIR = $(DESTDIR)$(PREFIX)/lib/ldscripts
+LDSCRIPTDIR = $(DESTDIR)$(PREFIX)/$(LIB32)/ldscripts
 BINDIR = $(DESTDIR)$(PREFIX)/bin
 DOCDIR = $(DESTDIR)$(PREFIX)/share/doc/libhugetlbfs
 
