@@ -124,14 +124,14 @@ functional_tests () {
     elflink_test linkhuge
 
 # Sharing tests
-# Want some way to automatically start sharing daemon
-    if [ -z "$QUIET_TEST" -o "$HUGETLB_VERBOSE" == "99" ]; then
-      PATH=../obj32:../obj64:$PATH  ../start_daemon.sh -d
-    else
-      PATH=../obj32:../obj64:$PATH ../start_daemon.sh
-    fi
-    sleep 5 # XXX: Wait for the daemon to start
+    # stop all running instances for clean testing
+    killall -INT hugetlbd
+    # start the daemon in the bg
+    PATH=../obj32:../obj64:$PATH hugetlbd
+    # XXX: Wait for daemon to start
+    sleep 5
     elfshare_test linkshare
+    # stop our instance of the daemon
     killall -INT hugetlbd
 
 # Accounting bug tests
