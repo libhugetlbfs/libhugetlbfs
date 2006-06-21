@@ -76,13 +76,13 @@ $(NOLIB_TESTS:%=obj64/%): %: %.o obj64/testutils.o
 	@$(VECHO) LD64 "(nolib test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS)
 
-$(LDSCRIPT_TESTS:%=obj32/%): obj32/%: %.ld
+$(LDSCRIPT_TESTS:%=obj32/%): obj32/%: %.ld obj32/dummy.o obj32/testutils.o
 	@$(VECHO) LD32 "(preload test)" $@
-	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ -Lobj32 $^ $(LDLIBS)
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ -Lobj32 $< $(LDLIBS)
 
-$(LDSCRIPT_TESTS:%=obj64/%): obj64/%: %.ld
+$(LDSCRIPT_TESTS:%=obj64/%): obj64/%: %.ld obj64/dummy.o obj64/testutils.o
 	@$(VECHO) LD64 "(preload test)" $@
-	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ -Lobj64 $^ $(LDLIBS)
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ -Lobj64 $< $(LDLIBS)
 
 $(HUGELINK_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 	@$(VECHO) LD32 "(hugelink test)" $@
