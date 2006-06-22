@@ -174,7 +174,7 @@ while getopts "vVdt:" ARG ; do
 	    unset QUIET_TEST=1
 	    ;;
 	"V")
-	    HUGETLB_VERBOSE=99
+	    export HUGETLB_VERBOSE=99
 	    ;;
 	"t")
 	    TESTSETS=$OPTARG
