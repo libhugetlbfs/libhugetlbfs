@@ -245,6 +245,8 @@ const char *hugetlbfs_find_path(void)
 			tmp++;
 	}
 
+	ERROR("Could not find hugetlbfs mount point in /proc/mounts. "
+							"Is it mounted?\n");
 	return NULL;
 }
 
