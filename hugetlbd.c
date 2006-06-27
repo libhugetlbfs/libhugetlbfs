@@ -72,12 +72,22 @@ static FILE *logfd;
 static unsigned int share_timeout;
 static unsigned int poll_timeout;
 
+int __hugetlbfs_verbose = 0;
+
 static void usage()
 {
-        printf("Usage: hugetlbd [-v] [-p timeout1] [-s timeout2]\n"
-                "\t-v: print out this usage statement\n"
-		"\t-p: specify how long to wait before unlinking files in the hugetlbfs mountpoint (seconds) [default=600]\n"
-		"\t-s: specify how long ago a file needs to been shared for it to be unlinked (seconds) [default=600]\n");
+        printf("Usage: hugetlbd [-v] [-V verbosity] [-p timeout1] [-s timeout2]\n"
+		"Start libhugetlbfs daemon for sharing program segments\n"
+		"  -v: display this help and exit\n"
+		"  -V: specify log level (1-3) [default=1]\n"
+		"      1: only log errors\n"
+		"      2: log errors and warnings\n"
+		"      3: log all output\n"
+		"  -p: specify how long to wait before unlinking files in the hugetlbfs\n"
+		"      mountpoint (seconds) [default=600]\n"
+		"  -s: specify when a file last needs to have been shared for it not to\n"
+		"      be unlinked (seconds) [default=600]\n"
+		"Report bugs to libhugetlbfs-devel@lists.sourceforge.net\n");
 }
 
 /**
@@ -331,7 +341,7 @@ static int parse_args(int argc, char *argv[]) {
 	int opt;
 	int ret = 0;
         while (1) {
-                opt = getopt(argc, argv, ":p:s:dv");
+                opt = getopt(argc, argv, ":p:s:dV:v");
                 if (opt == -1)
                         break;
 
@@ -346,6 +356,9 @@ static int parse_args(int argc, char *argv[]) {
 			case 'd':
 				/* do not daemonize */
 				ret = 1;
+				break;
+			case 'V':
+				__hugetlbfs_verbose = atoi(optarg);
 				break;
                         case 'v':
                                 usage();
