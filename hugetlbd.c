@@ -216,6 +216,7 @@ static void set_path_to_file(char *tgt, int size)
 
 	path = hugetlbfs_find_path();
 	if (!path) {
+		shared_fd = -1;
 		return;
 	}
 
@@ -678,7 +679,14 @@ do_poll:
 		smptr = do_shared_file(&creq, &dresp);
 		if (smptr == (struct shared_mapping *)-1) {
 			ERROR("do_shared_file failed\n");
-			goto close_and_die;
+			/*
+			 * Just because we didn't get a hugetlbfs file,
+			 * doesn't mean we should fail outright. For
+			 * instance, if mkstemp() failed for some reason
+			 * we should still continue sharing any
+			 * previously shared segments.
+			 */
+			goto next;
 		}
 
 		mode = S_IRUSR | S_IRGRP | S_IROTH;
