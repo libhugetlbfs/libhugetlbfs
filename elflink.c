@@ -112,8 +112,8 @@ static void parse_phdrs(Elf_Ehdr *ehdr)
 			prot |= PROT_EXEC;
 
 		DEBUG("Hugepage segment %d "
-			"(phdr %d): 0x%lx-0x%lx  (filesz=0x%lx) "
-			"(prot = 0x%x)\n",
+			"(phdr %d): %#0lx-%#0lx  (filesz=%#0lx) "
+			"(prot = %#0x)\n",
 			htlb_num_segs, i, vaddr, vaddr+memsz, filesz, prot);
 
 		htlb_seg_table[htlb_num_segs].vaddr = (void *)vaddr;
@@ -150,7 +150,7 @@ static int prepare_segment(struct seg_info *seg)
 		return -1;
 	}
 
-	DEBUG("Mapped hugeseg at %p. Copying 0x%lx bytes from %p...\n",
+	DEBUG("Mapped hugeseg at %p. Copying %#0lx bytes from %p...\n",
 	      p, copysize, seg->vaddr);
 	memcpy(p, seg->vaddr, copysize);
 	DEBUG_CONT("done\n");
