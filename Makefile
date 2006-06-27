@@ -1,7 +1,7 @@
 PREFIX = /usr/local
 
 LIBOBJS = hugeutils.o elflink.o morecore.o debug.o
-BINOBJS = hugetlbd
+SBINOBJS = hugetlbd
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
 LDSCRIPT_TYPES = B BDT
 INSTALL_OBJSCRIPT = ld.hugetlbfs
@@ -14,12 +14,14 @@ CPPFLAGS = -D__LIBHUGETLBFS__
 ARCH = $(shell uname -m | sed -e s/i.86/i386/)
 
 ifeq ($(ARCH),ppc64)
-CC32 = gcc
 CC64 = gcc -m64
-ELF32 = elf32ppclinux
 ELF64 = elf64ppc
-LIB32 = lib
 LIB64 = lib64
+LIB32 = lib
+ifneq ($(BUILDTYPE),NATIVEONLY)
+CC32 = gcc
+ELF32 = elf32ppclinux
+endif
 else
 ifeq ($(ARCH),ppc)
 CC32 = gcc
@@ -32,12 +34,14 @@ ELF32 = elf_i386
 LIB32 = lib
 else
 ifeq ($(ARCH),x86_64)
-CC32 = gcc -m32
 CC64 = gcc -m64
-ELF32 = elf_i386
 ELF64 = elf_x86_64
-LIB32 = lib
 LIB64 = lib64
+LIB32 = lib
+ifneq ($(BUILDTYPE),NATIVEONLY)
+CC32 = gcc -m32
+ELF32 = elf_i386
+endif
 endif
 endif
 endif
@@ -54,6 +58,7 @@ LIBDIR32 = $(DESTDIR)$(PREFIX)/$(LIB32)
 LIBDIR64 = $(DESTDIR)$(PREFIX)/$(LIB64)
 LDSCRIPTDIR = $(DESTDIR)$(PREFIX)/$(LIB32)/ldscripts
 BINDIR = $(DESTDIR)$(PREFIX)/bin
+SBINDIR = $(DESTDIR)$(PREFIX)/sbin
 DOCDIR = $(DESTDIR)$(PREFIX)/share/doc/libhugetlbfs
 
 EXTRA_DIST = \
@@ -61,7 +66,9 @@ EXTRA_DIST = \
 	HOWTO \
 	LGPL-2.1
 
+ifdef CC32
 INSTALL_LDSCRIPTS = $(foreach type,$(LDSCRIPT_TYPES),$(ELF32).x$(type))
+endif
 ifdef CC64
 INSTALL_LDSCRIPTS += $(foreach type,$(LDSCRIPT_TYPES),$(ELF64).x$(type))
 endif
@@ -76,14 +83,14 @@ endif
 
 DEPFILES = $(LIBOBJS:%.o=%.d)
 
-all:	libs bin tests
+all:	libs sbin tests
 
 .PHONY:	tests libs
 
 libs:	$(foreach file,$(INSTALL_OBJ_LIBS),$(OBJDIRS:%=%/$(file)))
-bin:	$(foreach file,$(BINOBJS),obj32/$(file))
+sbin:	$(foreach file,$(SBINOBJS),$(OBJDIRS:%=%/$(file)))
 
-tests:	libs bin	# Force make to build the library first
+tests:	libs sbin	# Force make to build the library first
 tests:	tests/all
 
 tests/%:
@@ -156,6 +163,10 @@ obj32/hugetlbd:	hugetlbd.c $(LIBOBJS:%=obj32/%)
 	@$(VECHO) CC32 $@
 	$(CC32) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS32) -o $@ obj32/debug.o obj32/hugeutils.o $<
 
+obj64/hugetlbd:	hugetlbd.c $(LIBOBJS:%=obj64/%)
+	@$(VECHO) CC64 $@
+	$(CC64) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS64) -o $@ obj64/debug.o obj64/hugeutils.o $<
+
 clean:
 	@$(VECHO) CLEAN
 	rm -f *~ *.o *.so *.a *.d *.i core a.out
@@ -173,11 +184,15 @@ obj32/install:
 	@$(VECHO) INSTALL32 $(LIBDIR32)
 	$(INSTALL) -d $(LIBDIR32)
 	$(INSTALL) $(INSTALL_OBJ_LIBS:%=obj32/%) $(LIBDIR32)
+	$(INSTALL) -d $(SBINDIR)
+	for x in $(SBINOBJS); do $(INSTALL) obj32/$$x $(SBINDIR)/$$x; done
 
 obj64/install:
 	@$(VECHO) INSTALL64 $(LIBDIR64)
 	$(INSTALL) -d $(LIBDIR64)
 	$(INSTALL) $(INSTALL_OBJ_LIBS:%=obj64/%) $(LIBDIR64)
+	$(INSTALL) -d $(SBINDIR)
+	for x in $(SBINOBJS); do $(INSTALL) obj64/$$x $(SBINDIR)/$$x; done
 
 objscript.%: %
 	@$(VECHO) OBJSCRIPT $*
@@ -190,7 +205,6 @@ install: all $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	$(INSTALL) -d $(BINDIR)
 	for x in $(INSTALL_OBJSCRIPT); do \
 		$(INSTALL) -m 755 objscript.$$x $(BINDIR)/$$x; done
-	for x in $(BINOBJS); do $(INSTALL) obj32/$$x $(BINDIR)/$$x; done
 
 install-docs:
 	$(INSTALL) -d $(DOCDIR)
