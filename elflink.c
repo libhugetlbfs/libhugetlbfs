@@ -43,8 +43,8 @@
 #define Elf_Phdr	Elf32_Phdr
 #endif
 
-#ifdef __i386__
 #ifdef __syscall_return
+#ifdef __i386__
 /* The normal i386 syscall macros don't work with -fPIC :( */
 #undef _syscall2
 #define _syscall2(type,name,type1,arg1,type2,arg2) \
@@ -67,99 +67,7 @@ __asm__ volatile ("push %%ebx; movl %2,%%ebx; int $0x80; pop %%ebx" \
                   "d" ((long)(arg3))); \
 __syscall_return(type,__res); \
 }
-#else /* __syscall_return */
-#warning __syscall_return macro not available. Some debugging will be \
-	disabled during executable remapping
-#endif /* __syscall_return */
 #endif /* __i386__ */
-
-#define MAX_HTLB_SEGS	2
-
-static struct seg_info htlb_seg_table[MAX_HTLB_SEGS];
-static int htlb_num_segs;
-static int minimal_copy = 1;
-
-static void parse_phdrs(Elf_Ehdr *ehdr)
-{
-	Elf_Phdr *phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
-	int i;
-
-	for (i = 0; i < ehdr->e_phnum; i++) {
-		unsigned long vaddr, filesz, memsz;
-		int prot = 0;
-
-		if (phdr[i].p_type != PT_LOAD)
-			continue;
-
-		if (! (phdr[i].p_flags & PF_LINUX_HUGETLB))
-			continue;
-
-		if (htlb_num_segs >= MAX_HTLB_SEGS) {
-			ERROR("Executable has too many segments marked for "
-			      "hugepage (max %d)\n", MAX_HTLB_SEGS);
-			htlb_num_segs = 0;
-			return;
-		}
-
-		vaddr = phdr[i].p_vaddr;
-		filesz = phdr[i].p_filesz;
-		memsz = phdr[i].p_memsz;
-		if (phdr[i].p_flags & PF_R)
-			prot |= PROT_READ;
-		if (phdr[i].p_flags & PF_W)
-			prot |= PROT_WRITE;
-		if (phdr[i].p_flags & PF_X)
-			prot |= PROT_EXEC;
-
-		DEBUG("Hugepage segment %d "
-			"(phdr %d): %#0lx-%#0lx  (filesz=%#0lx) "
-			"(prot = %#0x)\n",
-			htlb_num_segs, i, vaddr, vaddr+memsz, filesz, prot);
-
-		htlb_seg_table[htlb_num_segs].vaddr = (void *)vaddr;
-		htlb_seg_table[htlb_num_segs].filesz = filesz;
-		htlb_seg_table[htlb_num_segs].memsz = memsz;
-		htlb_seg_table[htlb_num_segs].prot = prot;
-		htlb_num_segs++;
-	}
-}
-
-static int prepare_segment(struct seg_info *seg)
-{
-	int hpage_size = gethugepagesize();
-	void *p;
-	unsigned long copysize;
-	unsigned long size = ALIGN(seg->memsz, hpage_size);
-
-	/* Prepare the hugetlbfs file */
-
-	/* Subtle, copying only filesz bytes of the segment
-	 * allows for much better performance than copying all of
-	 * memsz but it requires that all data (such as the plt)
-	 * be contained in the filesz portion of the segment.
-	 */
-	if (minimal_copy)
-		copysize = seg->filesz;
-	else
-		copysize = seg->memsz;
-
-	p = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, seg->fd, 0);
-	if (p == MAP_FAILED) {
-		ERROR("Couldn't map hugepage segment to copy data: %s\n",
-			strerror(errno));
-		return -1;
-	}
-
-	DEBUG("Mapped hugeseg at %p. Copying %#0lx bytes from %p...\n",
-	      p, copysize, seg->vaddr);
-	memcpy(p, seg->vaddr, copysize);
-	DEBUG_CONT("done\n");
-
-	munmap(p, size);
-
-	return 0;
-}
-
 /* This function prints an error message to stderr, then aborts.  It
  * is safe to call, even if the executable segments are presently
  * unmapped.
@@ -252,6 +160,100 @@ static void unmapped_abort(const char *fmt, ...)
 	va_end(ap);
 
 	sys_abort();
+}
+#else /* __syscall_return */
+#warning __syscall_return macro not available. Some debugging will be \
+	disabled during executable remapping
+static void unmapped_abort(const char *fmt, ...)
+{
+}
+#endif /* __syscall_return */
+
+#define MAX_HTLB_SEGS	2
+
+static struct seg_info htlb_seg_table[MAX_HTLB_SEGS];
+static int htlb_num_segs;
+static int minimal_copy = 1;
+
+static void parse_phdrs(Elf_Ehdr *ehdr)
+{
+	Elf_Phdr *phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
+	int i;
+
+	for (i = 0; i < ehdr->e_phnum; i++) {
+		unsigned long vaddr, filesz, memsz;
+		int prot = 0;
+
+		if (phdr[i].p_type != PT_LOAD)
+			continue;
+
+		if (! (phdr[i].p_flags & PF_LINUX_HUGETLB))
+			continue;
+
+		if (htlb_num_segs >= MAX_HTLB_SEGS) {
+			ERROR("Executable has too many segments marked for "
+			      "hugepage (max %d)\n", MAX_HTLB_SEGS);
+			htlb_num_segs = 0;
+			return;
+		}
+
+		vaddr = phdr[i].p_vaddr;
+		filesz = phdr[i].p_filesz;
+		memsz = phdr[i].p_memsz;
+		if (phdr[i].p_flags & PF_R)
+			prot |= PROT_READ;
+		if (phdr[i].p_flags & PF_W)
+			prot |= PROT_WRITE;
+		if (phdr[i].p_flags & PF_X)
+			prot |= PROT_EXEC;
+
+		DEBUG("Hugepage segment %d "
+			"(phdr %d): %#0lx-%#0lx  (filesz=%#0lx) "
+			"(prot = %#0x)\n",
+			htlb_num_segs, i, vaddr, vaddr+memsz, filesz, prot);
+
+		htlb_seg_table[htlb_num_segs].vaddr = (void *)vaddr;
+		htlb_seg_table[htlb_num_segs].filesz = filesz;
+		htlb_seg_table[htlb_num_segs].memsz = memsz;
+		htlb_seg_table[htlb_num_segs].prot = prot;
+		htlb_num_segs++;
+	}
+}
+
+static int prepare_segment(struct seg_info *seg)
+{
+	int hpage_size = gethugepagesize();
+	void *p;
+	unsigned long copysize;
+	unsigned long size = ALIGN(seg->memsz, hpage_size);
+
+	/* Prepare the hugetlbfs file */
+
+	/* Subtle, copying only filesz bytes of the segment
+	 * allows for much better performance than copying all of
+	 * memsz but it requires that all data (such as the plt)
+	 * be contained in the filesz portion of the segment.
+	 */
+	if (minimal_copy)
+		copysize = seg->filesz;
+	else
+		copysize = seg->memsz;
+
+	p = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, seg->fd, 0);
+	if (p == MAP_FAILED) {
+		ERROR("Couldn't map hugepage segment to copy data: %s\n",
+			strerror(errno));
+		return -1;
+	}
+
+	DEBUG("Mapped hugeseg at %p. Copying %#0lx bytes from %p...\n",
+	      p, copysize, seg->vaddr);
+	memcpy(p, seg->vaddr, copysize);
+	DEBUG_CONT("done\n");
+
+	munmap(p, size);
+
+	return 0;
 }
 
 void remap_segments(struct seg_info *seg, int num)
