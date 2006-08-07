@@ -147,6 +147,7 @@ obj64/install:
 	$(INSTALL) -d $(INST_TESTSDIR64)
 	$(INSTALL) -d $(INST_TESTSDIR64)/obj64
 	$(INSTALL) -m 755 $(TESTS:%=obj64/%) $(INST_TESTSDIR64)/obj64
+	$(INSTALL) -m 755 $(TESTS_64:%=obj64/%) $(INST_TESTSDIR64)/obj64
 	$(INSTALL) -m 755 run_tests.sh $(INST_TESTSDIR64)
 
 install: $(OBJDIRS:%=%/install)
