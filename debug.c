@@ -31,7 +31,7 @@ int __hugetlbfs_verbose = 1;
 
 static int initialized;
 
-void __hugetlbfs_init_debug(void)
+static void __hugetlbfs_init_debug(void)
 {
 	char *env;
 

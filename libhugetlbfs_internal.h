@@ -48,8 +48,6 @@ extern int sharing;
 	if (__hugetlbfs_verbose >= 3) \
 		fprintf(stderr, __VA_ARGS__)
 
-extern void __hugetlbfs_init_debug(void);
-
 struct seg_info {
 	void *vaddr;
 	unsigned long filesz, memsz;
