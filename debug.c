@@ -41,6 +41,8 @@ static void __hugetlbfs_init_debug(void)
 	env = getenv("HUGETLB_VERBOSE");
 	if (env)
 		__hugetlbfs_verbose = atoi(env);
+
+	initialized = 1;
 }
 
 static void __attribute__ ((constructor)) setup_debug(void)
