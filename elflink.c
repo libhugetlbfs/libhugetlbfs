@@ -256,7 +256,7 @@ static int prepare_segment(struct seg_info *seg)
 	return 0;
 }
 
-void remap_segments(struct seg_info *seg, int num)
+static void remap_segments(struct seg_info *seg, int num)
 {
 	int hpage_size = gethugepagesize();
 	int i;
@@ -301,7 +301,7 @@ void remap_segments(struct seg_info *seg, int num)
 	 */
 }
 
-int maybe_prepare(int fd_state, struct seg_info *seg)
+static int maybe_prepare(int fd_state, struct seg_info *seg)
 {
 	int ret, reply = 0;
 
