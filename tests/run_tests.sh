@@ -7,10 +7,14 @@ unset HUGETLB_MORECORE
 
 ENV=/usr/bin/env
 
+function free_hpages() {
+	H=$(grep 'HugePages_Free:' /proc/meminfo | cut -f2 -d:)
+	[ -z "$H" ] && H=0
+	echo "$H"
+}
+
 TOTAL_HPAGES=$(grep 'HugePages_Total:' /proc/meminfo | cut -f2 -d:)
 [ -z "$TOTAL_HPAGES" ] && TOTAL_HPAGES=0
-FREE_HPAGES=$(grep 'HugePages_Free:' /proc/meminfo | cut -f2 -d:)
-[ -z "$FREE_HPAGES" ] && FREE_HPAGES=0
 HPAGE_SIZE=$(grep 'Hugepagesize:' /proc/meminfo | awk '{print $2}')
 [ -z "$HPAGE_SIZE" ] && HPAGE_SIZE=0
 HPAGE_SIZE=$(( $HPAGE_SIZE * 1024 ))
@@ -104,7 +108,7 @@ functional_tests () {
     run_test truncate
     run_test shared
     run_test mprotect
-    run_test mlock $FREE_HPAGES
+    run_test mlock `free_hpages`
 
 # Specific kernel bug tests
     run_test ptrace-write-hugepage
@@ -139,15 +143,17 @@ functional_tests () {
 # alternatively, use
 # killall -HUP hugetlbd
 # to make the sharing daemon give up the files
-    FREE_HPAGES=$(grep 'HugePages_Free:' /proc/meminfo | cut -f2 -d:)
-    [ -z "$FREE_HPAGES" ] && FREE_HPAGES=0
-    run_test chunk-overcommit $FREE_HPAGES
-    run_test alloc-instantiate-race $FREE_HPAGES
+    run_test chunk-overcommit `free_hpages`
+    run_test alloc-instantiate-race `free_hpages`
 }
 
 stress_tests () {
     ITERATIONS=10           # Number of iterations for looping tests
-    NRPAGES=$FREE_HPAGES
+
+    # Don't update NRPAGES every time like above because we want to catch the
+    # failures that happen when the kernel doesn't release all of the huge pages
+    # after a stress test terminates
+    NRPAGES=`free_hpages`
 
     run_test mmap-gettest ${ITERATIONS} ${NRPAGES}
 
