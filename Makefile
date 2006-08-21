@@ -8,6 +8,7 @@ INSTALL_OBJSCRIPT = ld.hugetlbfs
 
 INSTALL = install
 
+LDFLAGS = --no-undefined-version --version-script=VERSION
 CFLAGS = -O2 -Wall -fPIC -g
 CPPFLAGS = -D__LIBHUGETLBFS__
 
