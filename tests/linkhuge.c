@@ -28,8 +28,6 @@
 #define BLOCK_SIZE	16384
 #define CONST	0xdeadbeef
 
-#define barrier()	asm volatile ("" : : : "memory" )
-
 #define BIG_INIT	{ \
 	[0] = CONST, [17] = CONST, [BLOCK_SIZE-1] = CONST, \
 }

@@ -36,12 +36,6 @@ static sigjmp_buf sig_escape;
 static void *sig_expected = MAP_FAILED;
 static int hpage_size;
 
-static inline void barrier(void)
-{
-	__asm__ __volatile__(""
-			     : : :"memory");
-}
-
 static void sig_handler(int signum, siginfo_t *si, void *uc)
 {
 	if (signum == SIGSEGV) {

@@ -35,8 +35,6 @@
 #define CONST	0xdeadbeef
 #define SHM_KEY 0xdeadcab
 
-#define barrier()	asm volatile ("" : : : "memory" )
-
 #define BIG_INIT	{ \
 	[0] = CONST, [17] = CONST, [BLOCK_SIZE-1] = CONST, \
 }

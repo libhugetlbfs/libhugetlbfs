@@ -36,6 +36,14 @@ ino_t get_addr_inode(void *p);
 
 #define ALIGN(x, a)	(((x) + (a) - 1) & ~((a) - 1))
 
+#ifndef barrier
+# ifdef mb
+#   define barrier() mb()
+# else
+#   define barrier() __asm__ __volatile__ ("" : : : "memory")
+# endif
+#endif
+
 /* Each test case must define this function */
 void cleanup(void);
 
