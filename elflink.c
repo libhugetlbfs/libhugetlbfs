@@ -38,9 +38,17 @@
 #ifdef __LP64__
 #define Elf_Ehdr	Elf64_Ehdr
 #define Elf_Phdr	Elf64_Phdr
+#define Elf_Dyn		Elf64_Dyn
+#define Elf_Sym		Elf64_Sym
+#define ELF_ST_BIND(x)  ELF64_ST_BIND(x)
+#define ELF_ST_TYPE(x)  ELF64_ST_TYPE(x)
 #else
 #define Elf_Ehdr	Elf32_Ehdr
 #define Elf_Phdr	Elf32_Phdr
+#define Elf_Dyn		Elf32_Dyn
+#define Elf_Sym		Elf32_Sym
+#define ELF_ST_BIND(x)  ELF64_ST_BIND(x)
+#define ELF_ST_TYPE(x)  ELF64_ST_TYPE(x)
 #endif
 
 #ifdef __syscall_return
@@ -174,6 +182,8 @@ static void unmapped_abort(const char *fmt, ...)
 static struct seg_info htlb_seg_table[MAX_HTLB_SEGS];
 static int htlb_num_segs;
 static int minimal_copy = 1;
+int __debug = 0;
+static Elf_Ehdr *ehdr;
 
 static void parse_phdrs(Elf_Ehdr *ehdr)
 {
@@ -220,11 +230,148 @@ static void parse_phdrs(Elf_Ehdr *ehdr)
 	}
 }
 
+static void check_bss(unsigned long *start, unsigned long *end)
+{
+	unsigned long *addr;
+
+	for (addr = start; addr < end; addr++) {
+		if (*addr != 0)
+			WARNING("Non-zero BSS data @ %p: %lx\n", addr, *addr);
+	}
+}
+
+/* Subtle:  Since libhugetlbfs depends on glibc, we allow it
+ * it to be loaded before us.  As part of its init functions, it
+ * initializes stdin, stdout, and stderr in the bss.  We need to
+ * include these initialized variables in our copy.
+ */
+
+static void get_extracopy(struct seg_info *seg, void *p, 
+						 void **extra_start, void **extra_end)
+{
+	Elf_Dyn *dyntab;        /* dynamic segment table */
+	Elf_Phdr *phdr;         /* program header table */
+	Elf_Sym *symtab = NULL; /* dynamic symbol table */
+	Elf_Sym *sym;           /* a symbol */
+	char *strtab = NULL;    /* string table for dynamic symbols */
+	int i, found_sym = 0;
+	int numsyms;            /* number of symbols in dynamic symbol table */
+	void *start, *end, *start_orig, *end_orig;
+	void *sym_start, *sym_end;
+
+	end_orig = seg->vaddr + seg->memsz;
+	start_orig = seg->vaddr + seg->filesz;
+	if (seg->filesz == seg->memsz)
+		goto bail;
+	if (!minimal_copy)
+		goto bail;
+
+	/* Find dynamic section */
+	i = 1;
+	phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
+	while ((phdr[i].p_type != PT_DYNAMIC) && (i < ehdr->e_phnum)) {
+		++i;
+	}
+	if (phdr[i].p_type == PT_DYNAMIC) {
+		dyntab = (Elf_Dyn *)phdr[i].p_vaddr;
+	} else {
+		DEBUG("No dynamic segment found\n");
+		goto bail;
+	}
+
+	/* Find symbol and string tables */
+	i = 1;
+	while ((dyntab[i].d_tag != DT_NULL)) {
+		if (dyntab[i].d_tag == DT_SYMTAB)
+			symtab = (Elf_Sym *)dyntab[i].d_un.d_ptr;
+		else if (dyntab[i].d_tag == DT_STRTAB)
+			strtab = (char *)dyntab[i].d_un.d_ptr;
+		i++;
+	}
+			
+	if (!symtab) {
+		DEBUG("No symbol table found\n");
+		goto bail;
+	}
+	if (!strtab) {
+		DEBUG("No string table found\n");
+		goto bail;
+	}
+
+	/* WARNING - The symbol table size calculation does not follow the ELF
+	 *           standard, but rather exploits an assumption we enforce in
+	 *           our linker scripts that the string table follows
+	 *           immediately after the symbol table. The linker scripts
+	 *           must maintain this assumption or this code will break.
+	 */
+	if ((void *)strtab <= (void *)symtab) {
+		DEBUG("Could not calculate dynamic symbol table size\n");
+		goto bail;
+	}
+	numsyms = ((void *)strtab - (void *)symtab) / sizeof(Elf_Sym);
+
+	/* We must ensure any returns done hereafter have sane start and end 
+	   values, as the criss-cross apple sauce algorithm is beginning */
+	start = end_orig;
+	end = start_orig;
+
+	/* To reduce the size of the extra copy window, we can eliminate certain
+	 * symbols based on information in the dynamic section.  The following
+	 * characteristics apply to symbols which may require copying:
+	 * - Within the BSS
+	 * - Global scope
+	 * - Object type (variable)
+	 * - Non-zero size (zero size means the symbol is just a marker with no
+	 *   data)
+	 */
+	for (sym = symtab; sym < symtab + numsyms; sym++) {
+		if (((void *)sym->st_value < start_orig) || 
+			((void *)sym->st_value > end_orig) ||
+			(ELF_ST_BIND(sym->st_info) != STB_GLOBAL) ||
+			(ELF_ST_TYPE(sym->st_info) != STT_OBJECT) ||
+			(sym->st_size == 0))
+			continue;
+		/* TODO - add filtering so that we only look at symbols from glibc 
+		   (@@GLIBC_*) */
+
+		/* These are the droids we are looking for */
+		found_sym = 1;
+		sym_start = (void *)sym->st_value;
+		sym_end = (void *)(sym->st_value + sym->st_size);
+		if (sym_start < start)
+			start = sym_start;
+		if (sym_end > end)
+			end = sym_end;
+	}
+
+	if (__debug)
+		check_bss(end, end_orig);
+
+	if (found_sym) {
+		/* Return the copy window */
+		*extra_start = start;
+		*extra_end = end;
+		return;
+	} else {
+		/* No need to copy anything */
+		*extra_start = start_orig;
+		*extra_end = start_orig;
+		goto bail2;
+	}
+
+bail:
+	*extra_start = start_orig;
+	*extra_end = end_orig;
+bail2:
+	DEBUG("Minimal copy was not performed\n");
+	return;
+}
+
 static int prepare_segment(struct seg_info *seg)
 {
 	int hpage_size = gethugepagesize();
-	void *p;
-	unsigned long copysize;
+	void *p, *extra_start, *extra_end;
+	unsigned long gap;
 	unsigned long size = ALIGN(seg->memsz, hpage_size);
 
 	/* Prepare the hugetlbfs file */
@@ -234,10 +381,6 @@ static int prepare_segment(struct seg_info *seg)
 	 * memsz but it requires that all data (such as the plt)
 	 * be contained in the filesz portion of the segment.
 	 */
-	if (minimal_copy)
-		copysize = seg->filesz;
-	else
-		copysize = seg->memsz;
 
 	p = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, seg->fd, 0);
 	if (p == MAP_FAILED) {
@@ -247,9 +390,18 @@ static int prepare_segment(struct seg_info *seg)
 	}
 
 	DEBUG("Mapped hugeseg at %p. Copying %#0lx bytes from %p...\n",
-	      p, copysize, seg->vaddr);
-	memcpy(p, seg->vaddr, copysize);
+	      p, seg->filesz, seg->vaddr);
+	memcpy(p, seg->vaddr, seg->filesz);
 	DEBUG_CONT("done\n");
+
+	get_extracopy(seg, p, &extra_start, &extra_end);
+	if (extra_end > extra_start) {
+		DEBUG("Copying extra %#0lx bytes from %p...\n", 
+			(unsigned long)(extra_end - extra_start), extra_start);
+		gap = extra_start - (seg->vaddr + seg->filesz);
+		memcpy((p + seg->filesz + gap), extra_start, (extra_end - extra_start));
+		DEBUG_CONT("done\n");
+	}
 
 	munmap(p, size);
 
@@ -347,7 +499,7 @@ static int maybe_prepare(int fd_state, struct seg_info *seg)
 static void __attribute__ ((constructor)) setup_elflink(void)
 {
 	extern Elf_Ehdr __executable_start __attribute__((weak));
-	Elf_Ehdr *ehdr = &__executable_start;
+	ehdr = &__executable_start;
 	char *env;
 	int ret, i;
 
@@ -369,6 +521,12 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 		DEBUG("HUGETLB_MINIMAL_COPY=%s, disabling filesz copy "
 			"optimization\n", env);
 		minimal_copy = 0;
+	}
+
+	env = getenv("HUGETLB_DEBUG");
+	if (env) {
+		DEBUG("HUGETLB_DEBUG=%s, enabling extra checking\n", env);
+		__debug = 1;
 	}
 
 	parse_phdrs(ehdr);
