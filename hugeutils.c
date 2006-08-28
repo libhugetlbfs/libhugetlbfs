@@ -230,7 +230,7 @@ int hugetlbfs_unlinked_fd(void)
 
 	name[sizeof(name)-1] = '\0';
 
-	strcpy(name, hugetlbfs_find_path());
+	strcpy(name, path);
 	strncat(name, "/libhugetlbfs.tmp.XXXXXX", sizeof(name)-1);
 	/* FIXME: deal with overflows */
 
