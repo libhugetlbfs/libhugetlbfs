@@ -160,6 +160,10 @@ environment variables:
   This tells the dynamic linker to load the libhugetlbfs shared
   library, even though the program wasn't originally linked against it.
 
+  Note: If the program is linked against libhugetlbfs, preloading the
+        library may lead to application crashes. You should skip this
+        step in that case.
+
 2. Set LD_LIBRARY_PATH to the directory containing libhugetlbfs.so
   This is only necessary if you haven't installed libhugetlbfs.so to a
   system default path.  If you set LD_LIBRARY_PATH, make sure the
