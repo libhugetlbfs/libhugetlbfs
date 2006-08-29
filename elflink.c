@@ -496,24 +496,22 @@ static int maybe_prepare(int fd_state, struct seg_info *seg)
 	return ret;
 }
 
-static void __attribute__ ((constructor)) setup_elflink(void)
+static int check_env(void)
 {
-	extern Elf_Ehdr __executable_start __attribute__((weak));
-	ehdr = &__executable_start;
 	char *env;
-	int ret, i;
 
 	env = getenv("HUGETLB_ELFMAP");
 	if (env && (strcasecmp(env, "no") == 0)) {
 		DEBUG("HUGETLB_ELFMAP=%s, not attempting to remap program "
 		      "segments\n", env);
-		return;
+		return -1;
 	}
 
-	if (! ehdr) {
-		DEBUG("Couldn't locate __executable_start, "
-		      "not attempting to remap segments\n");
-		return;
+	env = getenv("LD_PRELOAD");
+	if (env && strstr(env, "libhugetlbfs")) {
+		ERROR("LD_PRELOAD is incompatible with segment remapping\n");
+		ERROR("Segment remapping has been DISABLED\n");
+		return -1;
 	}
 
 	env = getenv("HUGETLB_MINIMAL_COPY");
@@ -528,6 +526,24 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 		DEBUG("HUGETLB_DEBUG=%s, enabling extra checking\n", env);
 		__debug = 1;
 	}
+
+	return 0;
+}
+
+static void __attribute__ ((constructor)) setup_elflink(void)
+{
+	extern Elf_Ehdr __executable_start __attribute__((weak));
+	ehdr = &__executable_start;
+	int ret, i;
+
+	if (! ehdr) {
+		DEBUG("Couldn't locate __executable_start, "
+		      "not attempting to remap segments\n");
+		return;
+	}
+
+	if (check_env())
+		return;
 
 	parse_phdrs(ehdr);
 
