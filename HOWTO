@@ -221,13 +221,21 @@ specially link your application.
 To link an application for hugepages, you should use the the
 ld.hugetlbfs script included with libhugetlbfs in place of your normal
 linker.  Without any special options this will simply invoke GNU ld
-with the same parameters.  To link a program for hugepages, one of the
-following options:
+with the same parameters.  
+
+To link a program for hugepages, one of the following options should
+be specified:
+
 	--hugetlbfs-link=B
-Will link the application to store BSS data (only) into hugepages
+
+will link the application to store BSS data (only) into hugepages
+
 	--hugetlbfs-link=BDT
-Will link the application to store text, initialized data and BSS data
+
+will link the application to store text, initialized data and BSS data
 into hugepages.
+
+These are the only supported linking options.
 
 The ld.hugetlbfs script will invoke the system linker with all the
 necessary options to link for hugepages, in particular selecting the
