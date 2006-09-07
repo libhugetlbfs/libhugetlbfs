@@ -56,16 +56,26 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 
 	DEBUG("hugetlbfs_morecore(%ld) = ...\n", (long)increment);
 
+	/*
+	 * how much to grow the heap by =
+	 * 	(size of heap) + malloc request - mmap'd space
+	 */
 	newsize = (heaptop-heapbase) + increment - mapsize;
 
 	DEBUG("heapbase = %p, heaptop = %p, mapsize = %lx, newsize=%ld\n",
 	      heapbase, heaptop, mapsize, newsize);
 
+	/* growing the heap */
 	if (newsize > 0) {
+		/*
+		 * convert our request to a multiple of hugepages
+		 * we will have more space allocated then used, basically
+		 */
 		newsize = ALIGN(newsize, blocksize);
 
 		DEBUG("Attempting to map %ld bytes\n", newsize);
 
+		/* map in (extend) more of the file at the end of our last map */
 		p = mmap(heapbase + mapsize, newsize, PROT_READ|PROT_WRITE,
 			 MAP_PRIVATE, heap_fd, mapsize);
 		if (p == MAP_FAILED) {
@@ -73,10 +83,12 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			return NULL;
 		}
 
+		/* if this is the first map */
 		if (! mapsize) {
 			if (heapbase && (heapbase != p))
 				WARNING("Heap originates at %p instead of %p\n",
 					p, heapbase);
+			/* then setup the heap variables */
 			heapbase = heaptop = p;
 		} else if (p != (heapbase + mapsize)) {
 			/* Couldn't get the mapping where we wanted */
@@ -101,10 +113,13 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 		munlock(p, newsize);
 #endif
 
+		/* we now have mmap'd further */
 		mapsize += newsize;
 	}
 
+	/* heap is continuous */
 	p = heaptop;
+	/* and we now have added this much more space to the heap */
 	heaptop = heaptop + increment;
 
 	DEBUG("... = %p\n", p);
