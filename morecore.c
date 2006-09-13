@@ -26,6 +26,7 @@
 #include <sys/mman.h>
 #include <errno.h>
 #include <dlfcn.h>
+#include <string.h>
 
 #include "hugetlbfs.h"
 
@@ -134,6 +135,11 @@ static void __attribute__((constructor)) setup_morecore(void)
 	env = getenv("HUGETLB_MORECORE");
 	if (! env)
 		return;
+	if (strcasecmp(env, "no") == 0) {
+		DEBUG("HUGETLB_MORECORE=%s, not setting up morecore\n",
+								env);
+		return;
+	}
 
 	blocksize = gethugepagesize();
 	if (! blocksize) {
