@@ -1,10 +1,12 @@
 PREFIX = /usr/local
 
-LIBOBJS = hugeutils.o elflink.o morecore.o debug.o
+BASEOBJS = hugeutils.o version.o
+LIBOBJS = $(BASEOBJS) elflink.o morecore.o debug.o
 SBINOBJS = hugetlbd
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
 LDSCRIPT_TYPES = B BDT
 INSTALL_OBJSCRIPT = ld.hugetlbfs
+VERSION=version.h
 
 INSTALL = install
 
@@ -119,6 +121,14 @@ stressv: all
 $(OBJDIRS): %:
 	@mkdir -p $@
 
+# <Version handling>
+$(VERSION): always
+	@$(VECHO) VERSION
+	./localversion version $(SOURCE)
+always:
+# </Version handling>
+
+snapshot: $(VERSION)
 
 .SECONDARY:
 
@@ -160,23 +170,23 @@ obj64/%.s:	%.c
 	@$(VECHO) CC64 -S $@
 	$(CC64) $(CPPFLAGS) $(CFLAGS) -o $@ -S $<
 
-obj32/hugetlbd:	hugetlbd.c $(LIBOBJS:%=obj32/%)
+obj32/hugetlbd:	hugetlbd.c $(BASEOBJS:%=obj32/%)
 	@$(VECHO) CC32 $@
-	$(CC32) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS32) -o $@ obj32/hugeutils.o $<
+	$(CC32) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS32) -o $@ $^
 
-obj64/hugetlbd:	hugetlbd.c $(LIBOBJS:%=obj64/%)
+obj64/hugetlbd:	hugetlbd.c $(BASEOBJS:%=obj64/%)
 	@$(VECHO) CC64 $@
-	$(CC64) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS64) -o $@ obj64/hugeutils.o $<
+	$(CC64) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS64) -o $@ $^
 
 clean:
 	@$(VECHO) CLEAN
-	rm -f *~ *.o *.so *.a *.d *.i core a.out
+	rm -f *~ *.o *.so *.a *.d *.i core a.out $(VERSION)
 	rm -rf obj*
 	rm -f ldscripts/*~
 	rm -f libhugetlbfs-sock
 	$(MAKE) -C tests clean
 
-%.d: %.c
+%.d: %.c $(VERSION)
 	@$(CC) $(CPPFLAGS) -MM -MT "$(foreach DIR,$(OBJDIRS),$(DIR)/$*.o) $@" $< > $@
 
 -include $(DEPFILES)
