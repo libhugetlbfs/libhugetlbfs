@@ -172,7 +172,17 @@ static void __attribute__((constructor)) setup_morecore(void)
 	__morecore = &hugetlbfs_morecore;
 
 	/* Set some allocator options more appropriate for hugepages */
-	mallopt(M_TRIM_THRESHOLD, blocksize / 2);
+	
+	/* XXX: This morecore implementation does not support trimming!
+	 * If we are forced to change the heapaddr from the original brk()
+	 * value we have violated brk semantics (which we are not supposed to
+	 * do).  This shouldn't pose a problem until glibc tries to trim the
+	 * heap to an address lower than what we aligned heapaddr to.  At that
+	 * point the alignment "gap" causes heap corruption.
+	 *
+	 * So, for now, disable heap trimming.
+	 */
+	mallopt(M_TRIM_THRESHOLD, -1);
 	mallopt(M_TOP_PAD, blocksize / 2);
 	/* we always want to use our morecore, not ordinary mmap().
 	 * This doesn't appear to prohibit malloc() from falling back
