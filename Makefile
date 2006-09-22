@@ -7,6 +7,9 @@ INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
 LDSCRIPT_TYPES = B BDT
 INSTALL_OBJSCRIPT = ld.hugetlbfs
 VERSION=version.h
+SOURCE = $(shell find . -maxdepth 1 ! -name version.h -a -name '*.[h]')
+SOURCE += *.c *.lds Makefile
+NODEPTARGETS=<version.h> <clean>
 
 INSTALL = install
 
@@ -189,7 +192,13 @@ clean:
 %.d: %.c $(VERSION)
 	@$(CC) $(CPPFLAGS) -MM -MT "$(foreach DIR,$(OBJDIRS),$(DIR)/$*.o) $@" $< > $@
 
+# Workaround: Don't build dependencies for certain targets
+#    When the include below is executed, make will use the %.d target above to
+# generate missing files.  For certain targets (clean, version.h, etc) we don't
+# need or want these dependency files, so don't include them in this case.
+ifeq (,$(findstring <$(MAKECMDGOALS)>,$(NODEPTARGETS)))
 -include $(DEPFILES)
+endif
 
 obj32/install:
 	@$(VECHO) INSTALL32 $(LIBDIR32)
