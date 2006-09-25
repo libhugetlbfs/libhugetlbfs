@@ -25,7 +25,7 @@ run_test_bits () {
 
     if [ -d obj$BITS ]; then
 	echo -n "$@ ($BITS):	"
-	PATH="obj$BITS" LD_LIBRARY_PATH="../obj$BITS" $ENV "$@"
+	PATH="obj$BITS:$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH:../obj$BITS" $ENV "$@"
     fi
 }
 
