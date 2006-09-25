@@ -62,8 +62,8 @@ endif
 
 LIBDIR32 = $(DESTDIR)$(PREFIX)/$(LIB32)
 LIBDIR64 = $(DESTDIR)$(PREFIX)/$(LIB64)
-LDSCRIPTDIR = $(PREFIX)/$(LIB32)/ldscripts
-BINDIR = $(DESTDIR)$(PREFIX)/bin
+LDSCRIPTDIR = $(PREFIX)/share/libhugetlbfs/ldscripts
+BINDIR = $(DESTDIR)$(PREFIX)/share/libhugetlbfs
 SBINDIR = $(DESTDIR)$(PREFIX)/sbin
 DOCDIR = $(DESTDIR)$(PREFIX)/share/doc/libhugetlbfs
 
@@ -225,6 +225,7 @@ install: all $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	$(INSTALL) -d $(BINDIR)
 	for x in $(INSTALL_OBJSCRIPT); do \
 		$(INSTALL) -m 755 objscript.$$x $(BINDIR)/$$x; done
+	cd $(BINDIR) && ln -s ld.hugetlbfs ld
 
 install-docs:
 	$(INSTALL) -d $(DOCDIR)

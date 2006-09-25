@@ -2,7 +2,7 @@ libhugetlbfs HOWTO
 ==================
 
 Author: David Gibson <dwg@au1.ibm.com>, Adam Litke <agl@us.ibm.com>, and others
-Last updated: Wednesday, 1st March 2006
+Last updated: Monday, September 25th 2006
 
 Introduction
 ============
@@ -260,27 +260,23 @@ convince gcc to invoke the ld.hugetlbfs script instead of the system
 linker, rather than modifying your build procedure to invoke the
 ld.hugetlbfs directly; the compilers may often add special libraries
 or other linker options which can be fiddly to reproduce by hand.
+To make this easier, 'make install' will install ld.hugetlbfs into 
+$PREFIX/share/libhugetlbfs and create an 'ld' symlink to it.
 
-To do this with gcc, you will need a copy of the ld.hugetlbfs script
-(or a symbolic link to it) with the name 'ld' - gcc always expects the
-linker to be called "ld".  If you do this in a directory in your path
-you will effectively replace your normal ld with the ld.hugetlbfs
-script for all links (this is safe, because ld.hugetlbfs just invokes
-the linker normally if it's not given the --hugetblfs-link option).
+Then with gcc, you invoke it as a linker with two options:
 
-Once you have a suitable copy of the ld.hugetlbfs script, invoke gcc
-as a linker with two options:
-	-B /path/to/renamed/ld.hugetlbfs/script
-This option tells gcc to look in a nonstandard location for the
-linker, thus finding your renamed script rather than the normal
-linker.  If you put your renamed linker in the PATH, you can skip this
-option.
+	-B $PREFIX/share/libhugetlbfs
+
+This option tells gcc to look in a non-standard location for the
+linker, thus finding our script rather than the normal linker. This
+can optionally be set in the CFLAGS environment variable.
 
 	-Wl,--hugetlbfs-link=B
 OR	-Wl,--hugetlbfs-link=BDT
+
 This option instructs gcc to pass the --hugetblfs-link option down to
 the linker, thus invoking the special behaviour of the ld.hugetblfs
-script.
+script. This can optionally be set in the LDFLAGS environment variable.
 
 If you use a compiler other than gcc, you will need to consult its
 documentation to see how to convince it to invoke ld.hugetlbfs in
