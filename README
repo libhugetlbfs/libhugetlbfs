@@ -1,12 +1,31 @@
-NOTICE: libhugetlbfs is a technology preview
+10/03/2006 -- libhugetlbfs-1.0 Released
 
-The libhugetlbfs project is a preview of providing applications with
-transparent access to system huge pages.   While the library will provide an
-application with easy access to huge pages when sufficient huge pages have been
-previously allocated on the system, additional development and testing is
-required to provide a stable transition to normal pages in a production
-environment.
+After roughly one year in development, version 1.0 of libhugetlbfs is here.
+It can be downloaded from SourceForge or the OzLabs mirror:
 
-Use of this library may introduce instability under certain circumstances.
-Proper configuration of the system huge pages is required and thorough testing
-is highly recommended.
+	http://sourceforge.net/project/showfiles.php?group_id=156936
+	http://libhugetlbfs.ozlabs.org/snapshots/
+
+After a series of preview releases, we have tested a huge array of the
+supported usage scenarios using benchmarks and real HPC applications.
+Usability and reliability have greatly improved.  But... due to the
+incredible diversity of applications that exist, there is bound to be a few
+that will not work correctly.  
+
+If you experience problems:
+
+ * Read the full HOWTO document.  It is full of hints, notes, warnings, and
+   caveats that we have found over time.  This is the best starting point
+   for a quick resolution to your issue.
+
+ * Make sure you have enough huge pages allocated.  Even if you think you
+   have enough, try increasing it to a number you know you will not use.
+
+ * Set HUGETLB_VERBOSE=99 and HUGETLB_DEBUG=yes.  These options increase
+   the verbosity of the library and enable extra checking to help diagnose
+   the problem.
+
+If the above steps do not help, send as much information about the problem
+(including all libhugetlbfs debug output) to
+libhugetlbfs-devel@lists.sourceforge.net and we'll help out as much as we
+can.

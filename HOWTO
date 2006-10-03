@@ -25,7 +25,7 @@ linked) application binary without modification.
 	* hugepage text/data/BSS
 libhugetlbfs, in conjunction with included special linker scripts can
 be used to make an application which will store its executable text,
-it's initialized or BSS or all of the above in hugepages.  This
+its initialized data or BSS, or all of the above in hugepages.  This
 requires relinking an application, but does not require source-level
 modifications.
 
@@ -179,7 +179,7 @@ environment variables:
 Usually it's preferable to set these environment variables on the
 command line of the program you wish to run, rather than using
 "export", because you'll only want to enable the hugepage malloc() for
-particular programs not everything.
+particular programs, not everything.
 
 Examples:
 
@@ -196,9 +196,9 @@ it yet, the following would work for a 64-bit program:
 Under some circumstances, you might want to specify the address where
 the hugepage heap is located.  You can do this by setting the
 HUGETLB_MORECORE_HEAPBASE environment variable to the heap address in
-hexadecimal.  (NOTE: this will not be work on PowerPC systems with old
-kernels which don't respect the hugepage hint address; see Kernel
-Prerequisites above).
+hexadecimal.  (NOTE: this will not work on PowerPC systems with old kernels
+which don't respect the hugepage hint address; see Kernel Prerequisites
+above).
 
 By default, the hugepage heap begins at roughly the same place a
 normal page heap would, rounded up by an amount determined by your
@@ -290,7 +290,7 @@ you might need to set the LD_LIBRARY_PATH environment variable so the
 application can locate libhugetlbfs.so.  Other than that, after you
 link the application with the correct script, it should only be
 necessary to run it normally to activate the text, data, or BSS
-hugepage feature.  Upon initialisation, libhugetlbfs will detect the
+hugepage feature.  Upon initialization, libhugetlbfs will detect the
 special flags placed in the application's ELF header by the linker,
 and remap the requested program segments into hugepages.
 
@@ -326,10 +326,10 @@ libhugetlbfs:
 Sharing of program segments among processes is a two-fold process.
 
 First, a system-wide daemon must be started, hugetlbd. The executable
-(which will be installed into /usr/sbin by make install) should be run
-as root and will automatically spawn a child process to wait for segment
-sharing into the background. The process will log any output requested
-to /tmp/hugetlbd.log. The complete usage for hugetlbd is:
+(which will be installed into $PREFIX/sbin by make install) should be
+run as root and will automatically spawn a child process to wait for
+segment sharing into the background. The process will log any output
+requested to /tmp/hugetlbd.log. The complete usage for hugetlbd is:
 
 hugetlbd [-v] [-V verbosity] [-p timeout1] [-s timeout2]
   -v: display this help and exit
@@ -392,17 +392,6 @@ environment variables, including LD_PRELOAD as described above.
 Troubleshooting
 ===============
 
-The library has some debugging code built in, which you can control
-with the HUGETLB_VERBOSE environment variable.  By default the debug
-level is 1, which means the library will only print relatively serious
-error messages.  Setting HUGETLB_VERBOSE=2 or higher will enable more
-debug messages (2 is the highest debug level, thus far).  Setting
-HUGETLB_VERBOSE=0 will silence the library completely, even in the
-case of errors; the only exception is in cases where the library has
-to abort(), which can happen if something goes wrong in the middle of
-unmapping and remapping segments for the text, data, or BSS feature.
-
-
 The library has a certain amount of debugging code built in, which can
 be controlled with the environment variable HUGETLB_VERBOSE.  By
 default the debug level is "1" which means the library will only print
@@ -413,6 +402,7 @@ silence the library completely, even in the case of errors - the only
 exception is in cases where the library has to abort(), which can
 happen if something goes wrong in the middle of unmapping and
 remapping segments for the text/data/bss feature.
+
 Trademarks
 ==========
 
