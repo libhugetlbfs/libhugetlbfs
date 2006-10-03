@@ -225,7 +225,7 @@ install: all $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	$(INSTALL) -d $(BINDIR)
 	for x in $(INSTALL_OBJSCRIPT); do \
 		$(INSTALL) -m 755 objscript.$$x $(BINDIR)/$$x; done
-	cd $(BINDIR) && ln -s ld.hugetlbfs ld
+	cd $(BINDIR) && ln -sf ld.hugetlbfs ld
 
 install-docs:
 	$(INSTALL) -d $(DOCDIR)
