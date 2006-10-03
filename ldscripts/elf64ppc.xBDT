@@ -187,15 +187,17 @@ SECTIONS
    *(.dynbss)
    *(.bss .bss.* .gnu.linkonce.b.*)
    *(COMMON)
-   /* Align here to ensure that the .bss section occupies space up to
-      _end.  Align after .bss to ensure correct alignment even if the
-      .bss section disappears because there are no input sections.
-      FIXME: Why do we need it? When there is no .bss section, we don't
-      pad the .data section.  */
-   . = ALIGN(. != 0 ? 64 / 8 : 1);
+   /* 
+    * Align here to ensure that the .bss section occupies space up to
+    * _end. Additionally (for huge pages) align to a segment boundary.
+    * This ensures that no normal page mappings will be created in this
+    * segment (after the bss) which could interfere with remapping.
+    *
+    * XXX: This ALIGN will need to be extended to handle the case where
+    *      ends above 1T -- in which case the alignment should be 1T.
+    */
+   . = ALIGN(256*1024*1024);
   } :hdata
-  . = ALIGN(64 / 8);
-  . = ALIGN(64 / 8);
   _end = .;
   PROVIDE (end = .);
 /*. = DATA_SEGMENT_END (.);*/
