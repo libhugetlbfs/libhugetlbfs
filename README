@@ -12,11 +12,21 @@ Usability and reliability have greatly improved.  But... due to the
 incredible diversity of applications that exist, there is bound to be a few
 that will not work correctly.  
 
+If using libhugetlbfs makes your application slower:
+
+ * Play around with the different combinations of hugetlb malloc and the
+   two different supported link types to see which combination works best.
+
+ * Keep in mind that huge pages are a niche performance tweak and are not
+   suitable for every type of application.  They are specifically known to
+   hurt performance in certain situations.
+
 If you experience problems:
 
- * Read the full HOWTO document.  It is full of hints, notes, warnings, and
-   caveats that we have found over time.  This is the best starting point
-   for a quick resolution to your issue.
+ * You've already read the HOWTO document, but read through it again.  It
+   is full of hints, notes, warnings, and caveats that we have found over
+   time.  This is the best starting point for a quick resolution to your
+   issue.
 
  * Make sure you have enough huge pages allocated.  Even if you think you
    have enough, try increasing it to a number you know you will not use.
@@ -28,4 +38,5 @@ If you experience problems:
 If the above steps do not help, send as much information about the problem
 (including all libhugetlbfs debug output) to
 libhugetlbfs-devel@lists.sourceforge.net and we'll help out as much as we
-can.
+can.  We will probably ask you to collect things like: straces,
+/proc/pid/maps and gdb back traces.
