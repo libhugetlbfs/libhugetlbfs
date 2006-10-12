@@ -30,7 +30,7 @@ run_test_bits () {
 }
 
 run_test () {
-    for bits in 32 64; do
+    for bits in $WORDSIZES; do
 	run_test_bits $bits "$@"
     done
 }
@@ -174,7 +174,7 @@ stress_tests () {
     restore_shm_sysctl
 }
 
-while getopts "vVdt:" ARG ; do
+while getopts "vVdt:b:" ARG ; do
     case $ARG in
 	"v")
 	    unset QUIET_TEST=1
@@ -185,11 +185,18 @@ while getopts "vVdt:" ARG ; do
 	"t")
 	    TESTSETS=$OPTARG
 	    ;;
+	"b")
+	    WORDSIZES=$OPTARG
+	    ;;
     esac
 done
 
 if [ -z "$TESTSETS" ]; then
     TESTSETS="func stress"
+fi
+
+if [ -z "$WORDSIZES" ]; then
+    WORDSIZES="32 64"
 fi
 
 for set in $TESTSETS; do
