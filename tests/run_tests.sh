@@ -99,7 +99,7 @@ functional_tests () {
 
 # Library tests requiring kernel hugepage support
     run_test gethugepagesize
-    run_test empty_mounts
+    run_test HUGETLB_VERBOSE=1 empty_mounts
 
 # Tests requiring an active and usable hugepage mount
     run_test find_path
