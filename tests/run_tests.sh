@@ -178,7 +178,7 @@ stress_tests () {
 while getopts "vVdt:b:" ARG ; do
     case $ARG in
 	"v")
-	    unset QUIET_TEST=1
+	    unset QUIET_TEST
 	    ;;
 	"V")
 	    export HUGETLB_VERBOSE=99
