@@ -168,7 +168,10 @@ int main(int argc, char *argv[], char *envp[])
 
 		num_sharings = atoi(argv[1]);
 		if (num_sharings > 99999)
-			FAIL("Too many sharings requested (max = 99999)");
+			CONFIG("Too many sharings requested (max = 99999)");
+		if (num_sharings <= 0)
+			CONFIG("Number of sharings requested must be greater "
+							"than or equal to 0");
 
 		children = (pid_t *)malloc(num_sharings * sizeof(pid_t));
 		if (!children)

@@ -64,14 +64,15 @@ elfshare_test () {
     baseprog="${args[$N]}"
     unset args[$N]
     set -- "${args[@]}"
+    NUM_THREADS=$((`free_hpages` / 15 - 1))
     killall -HUP hugetlbd
-    run_test HUGETLB_SHARE=2 "$@" "xB.$baseprog" 10
+    run_test HUGETLB_SHARE=2 "$@" "xB.$baseprog" $NUM_THREADS
     killall -HUP hugetlbd
-    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog" 10
+    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog" $NUM_THREADS
     killall -HUP hugetlbd
-    run_test HUGETLB_SHARE=2 "$@" "xBDT.$baseprog" 10
+    run_test HUGETLB_SHARE=2 "$@" "xBDT.$baseprog" $NUM_THREADS
     killall -HUP hugetlbd
-    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog" 10
+    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog" $NUM_THREADS
 }
 
 setup_shm_sysctl() {
