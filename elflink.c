@@ -256,8 +256,8 @@ static void check_bss(unsigned long *start, unsigned long *end)
  * include these initialized variables in our copy.
  */
 
-static void get_extracopy(struct seg_info *seg, void *p, 
-						 void **extra_start, void **extra_end)
+static void get_extracopy(struct seg_info *seg, void **extra_start, 
+							void **extra_end)
 {
 	Elf_Dyn *dyntab;        /* dynamic segment table */
 	Elf_Phdr *phdr;         /* program header table */
@@ -416,7 +416,7 @@ static int prepare_segment(struct seg_info *seg)
 	memcpy(p, seg->vaddr, seg->filesz);
 	DEBUG_CONT("done\n");
 
-	get_extracopy(seg, p, &extra_start, &extra_end);
+	get_extracopy(seg, &extra_start, &extra_end);
 	if (extra_end > extra_start) {
 		DEBUG("Copying extra %#0lx bytes from %p...\n", 
 			(unsigned long)(extra_end - extra_start), extra_start);
