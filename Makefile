@@ -60,12 +60,12 @@ ifdef CC64
 OBJDIRS +=  obj64
 endif
 
-LIBDIR32 = $(DESTDIR)$(PREFIX)/$(LIB32)
-LIBDIR64 = $(DESTDIR)$(PREFIX)/$(LIB64)
+LIBDIR32 = $(PREFIX)/$(LIB32)
+LIBDIR64 = $(PREFIX)/$(LIB64)
 LDSCRIPTDIR = $(PREFIX)/share/libhugetlbfs/ldscripts
-BINDIR = $(DESTDIR)$(PREFIX)/share/libhugetlbfs
-SBINDIR = $(DESTDIR)$(PREFIX)/sbin
-DOCDIR = $(DESTDIR)$(PREFIX)/share/doc/libhugetlbfs
+BINDIR = $(PREFIX)/share/libhugetlbfs
+SBINDIR = $(PREFIX)/sbin
+DOCDIR = $(PREFIX)/share/doc/libhugetlbfs
 
 EXTRA_DIST = \
 	README \
@@ -202,17 +202,17 @@ endif
 
 obj32/install:
 	@$(VECHO) INSTALL32 $(LIBDIR32)
-	$(INSTALL) -d $(LIBDIR32)
-	$(INSTALL) $(INSTALL_OBJ_LIBS:%=obj32/%) $(LIBDIR32)
-	$(INSTALL) -d $(SBINDIR)
-	for x in $(SBINOBJS); do $(INSTALL) obj32/$$x $(SBINDIR)/$$x; done
+	$(INSTALL) -d $(DESTDIR)$(LIBDIR32)
+	$(INSTALL) $(INSTALL_OBJ_LIBS:%=obj32/%) $(DESTDIR)$(LIBDIR32)
+	$(INSTALL) -d $(DESTDIR)$(SBINDIR)
+	for x in $(SBINOBJS); do $(INSTALL) obj32/$$x $(DESTDIR)$(SBINDIR)/$$x; done
 
 obj64/install:
 	@$(VECHO) INSTALL64 $(LIBDIR64)
-	$(INSTALL) -d $(LIBDIR64)
-	$(INSTALL) $(INSTALL_OBJ_LIBS:%=obj64/%) $(LIBDIR64)
-	$(INSTALL) -d $(SBINDIR)
-	for x in $(SBINOBJS); do $(INSTALL) obj64/$$x $(SBINDIR)/$$x; done
+	$(INSTALL) -d $(DESTDIR)$(LIBDIR64)
+	$(INSTALL) $(INSTALL_OBJ_LIBS:%=obj64/%) $(DESTDIR)$(LIBDIR64)
+	$(INSTALL) -d $(DESTDIR)$(SBINDIR)
+	for x in $(SBINOBJS); do $(INSTALL) obj64/$$x $(DESTDIR)$(SBINDIR)/$$x; done
 
 objscript.%: %
 	@$(VECHO) OBJSCRIPT $*
@@ -222,14 +222,14 @@ install: all $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	@$(VECHO) INSTALL
 	$(INSTALL) -d $(DESTDIR)$(LDSCRIPTDIR)
 	$(INSTALL) -m 644 $(INSTALL_LDSCRIPTS:%=ldscripts/%) $(DESTDIR)$(LDSCRIPTDIR)
-	$(INSTALL) -d $(BINDIR)
+	$(INSTALL) -d $(DESTDIR)$(BINDIR)
 	for x in $(INSTALL_OBJSCRIPT); do \
-		$(INSTALL) -m 755 objscript.$$x $(BINDIR)/$$x; done
-	cd $(BINDIR) && ln -sf ld.hugetlbfs ld
+		$(INSTALL) -m 755 objscript.$$x $(DESTDIR)$(BINDIR)/$$x; done
+	cd $(DESTDIR)$(BINDIR) && ln -sf ld.hugetlbfs ld
 
 install-docs:
-	$(INSTALL) -d $(DOCDIR)
-	for x in $(EXTRA_DIST); do $(INSTALL) -m 755 $$x $(DOCDIR)/$$x; done
+	$(INSTALL) -d $(DESTDIR)$(DOCDIR)
+	for x in $(EXTRA_DIST); do $(INSTALL) -m 755 $$x $(DESTDIR)$(DOCDIR)/$$x; done
 
 install-tests: install	# Force make to install the library first
 	${MAKE} -C tests install DESTDIR=$(DESTDIR) OBJDIRS="$(OBJDIRS)" LIB32=$(LIB32) LIB64=$(LIB64)
