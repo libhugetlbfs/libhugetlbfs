@@ -272,9 +272,9 @@ static void get_extracopy(struct seg_info *seg, void *p,
 	end_orig = seg->vaddr + seg->memsz;
 	start_orig = seg->vaddr + seg->filesz;
 	if (seg->filesz == seg->memsz)
-		goto bail;
+		goto bail2;
 	if (!minimal_copy)
-		goto bail;
+		goto bail2;
 
 	/* Find dynamic section */
 	i = 1;
@@ -370,14 +370,15 @@ static void get_extracopy(struct seg_info *seg, void *p,
 		/* No need to copy anything */
 		*extra_start = start_orig;
 		*extra_end = start_orig;
-		goto bail2;
+		goto bail3;
 	}
 
 bail:
+	DEBUG("Unable to perform minimal copy\n");
+bail2:
 	*extra_start = start_orig;
 	*extra_end = end_orig;
-bail2:
-	DEBUG("Minimal copy was not performed\n");
+bail3:
 	return;
 }
 
