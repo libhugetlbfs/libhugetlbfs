@@ -185,6 +185,11 @@ static int minimal_copy = 1;
 int __debug = 0;
 static Elf_Ehdr *ehdr;
 
+/*
+ * Parse an ELF header and record segment information for any segments
+ * which contain hugetlb information.
+ */
+
 static void parse_phdrs(Elf_Ehdr *ehdr)
 {
 	Elf_Phdr *phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
@@ -230,6 +235,10 @@ static void parse_phdrs(Elf_Ehdr *ehdr)
 	}
 }
 
+/* 
+ * Look for non-zero BSS data inside a range and print out any matches
+ */
+
 static void check_bss(unsigned long *start, unsigned long *end)
 {
 	unsigned long *addr;
@@ -240,7 +249,8 @@ static void check_bss(unsigned long *start, unsigned long *end)
 	}
 }
 
-/* Subtle:  Since libhugetlbfs depends on glibc, we allow it
+/* 
+ * Subtle:  Since libhugetlbfs depends on glibc, we allow it
  * it to be loaded before us.  As part of its init functions, it
  * initializes stdin, stdout, and stderr in the bss.  We need to
  * include these initialized variables in our copy.
@@ -298,7 +308,8 @@ static void get_extracopy(struct seg_info *seg, void *p,
 		goto bail;
 	}
 
-	/* WARNING - The symbol table size calculation does not follow the ELF
+	/*
+	 * WARNING - The symbol table size calculation does not follow the ELF
 	 *           standard, but rather exploits an assumption we enforce in
 	 *           our linker scripts that the string table follows
 	 *           immediately after the symbol table. The linker scripts
@@ -310,12 +321,15 @@ static void get_extracopy(struct seg_info *seg, void *p,
 	}
 	numsyms = ((void *)strtab - (void *)symtab) / sizeof(Elf_Sym);
 
-	/* We must ensure any returns done hereafter have sane start and end 
-	   values, as the criss-cross apple sauce algorithm is beginning */
+	/* 
+	 * We must ensure any returns done hereafter have sane start and end 
+	 * values, as the criss-cross apple sauce algorithm is beginning 
+	 */
 	start = end_orig;
 	end = start_orig;
 
-	/* To reduce the size of the extra copy window, we can eliminate certain
+	/* 
+	 * To reduce the size of the extra copy window, we can eliminate certain
 	 * symbols based on information in the dynamic section.  The following
 	 * characteristics apply to symbols which may require copying:
 	 * - Within the BSS
@@ -367,6 +381,12 @@ bail2:
 	return;
 }
 
+/*
+ * Copy a program segment into a huge page. If possible, try to copy the
+ * smallest amount of data possible, unless the user disables this 
+ * optimization via the HUGETLB_ELFMAP environment variable.
+ */
+
 static int prepare_segment(struct seg_info *seg)
 {
 	int hpage_size = gethugepagesize();
@@ -376,18 +396,19 @@ static int prepare_segment(struct seg_info *seg)
 
 	/* Prepare the hugetlbfs file */
 
-	/* Subtle, copying only filesz bytes of the segment
-	 * allows for much better performance than copying all of
-	 * memsz but it requires that all data (such as the plt)
-	 * be contained in the filesz portion of the segment.
-	 */
-
 	p = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, seg->fd, 0);
 	if (p == MAP_FAILED) {
 		ERROR("Couldn't map hugepage segment to copy data: %s\n",
 			strerror(errno));
 		return -1;
 	}
+
+	/* 
+	 * Subtle, copying only filesz bytes of the segment
+	 * allows for much better performance than copying all of
+	 * memsz but it requires that all data (such as the plt)
+	 * be contained in the filesz portion of the segment.
+	 */
 
 	DEBUG("Mapped hugeseg at %p. Copying %#0lx bytes from %p...\n",
 	      p, seg->filesz, seg->vaddr);
