@@ -319,6 +319,9 @@ libhugetlbfs:
 		Specify the path to the hugetlbfs mount point
 	HUGETLB_SHARE
 		Explained in "Sharing remapped segments"
+	HUGETLB_DEBUG
+		Set to 1 if an application segfaults. Gives very detailed output
+		and runs extra diagnostics.
 
 	Sharing remapped segments:
 	--------------------------
@@ -402,6 +405,10 @@ silence the library completely, even in the case of errors - the only
 exception is in cases where the library has to abort(), which can
 happen if something goes wrong in the middle of unmapping and
 remapping segments for the text/data/bss feature.
+
+If an application fails to run, set the environment variable HUGETLB_DEBUG
+to 1. This causes additional diagnostics to be run. This information should
+be included when sending bug reports to the libhugetlbfs team.
 
 Trademarks
 ==========
