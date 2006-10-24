@@ -5,6 +5,7 @@ LIBOBJS = $(BASEOBJS) elflink.o morecore.o debug.o
 SBINOBJS = hugetlbd
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
 LDSCRIPT_TYPES = B BDT
+LDSCRIPT_DIST_ELF = elf32ppclinux elf64ppc elf_i386 elf_x86_64
 INSTALL_OBJSCRIPT = ld.hugetlbfs
 VERSION=version.h
 SOURCE = $(shell find . -maxdepth 1 ! -name version.h -a -name '*.[h]')
@@ -72,13 +73,7 @@ EXTRA_DIST = \
 	HOWTO \
 	LGPL-2.1
 
-ifdef CC32
-INSTALL_LDSCRIPTS = $(foreach type,$(LDSCRIPT_TYPES),$(ELF32).x$(type))
-endif
-ifdef CC64
-INSTALL_LDSCRIPTS += $(foreach type,$(LDSCRIPT_TYPES),$(ELF64).x$(type))
-endif
-
+INSTALL_LDSCRIPTS = $(foreach type,$(LDSCRIPT_TYPES),$(LDSCRIPT_DIST_ELF:%=%.x$(type)))
 
 ifdef V
 VECHO = :
