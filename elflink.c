@@ -393,7 +393,15 @@ static int prepare_segment(struct seg_info *seg)
 	int hpage_size = gethugepagesize();
 	void *p, *extra_start, *extra_end;
 	unsigned long gap;
-	unsigned long size = ALIGN(seg->memsz, hpage_size);
+	unsigned long size;
+
+	/*
+	 * Calculate the BSS size that we must copy in order to minimize
+	 * the size of the shared mapping.
+	 */
+	get_extracopy(seg, &extra_start, &extra_end);
+	size = ALIGN((unsigned long)extra_end - (unsigned long)seg->vaddr,
+				hpage_size);
 
 	/* Prepare the hugetlbfs file */
 
@@ -416,7 +424,6 @@ static int prepare_segment(struct seg_info *seg)
 	memcpy(p, seg->vaddr, seg->filesz);
 	DEBUG_CONT("done\n");
 
-	get_extracopy(seg, &extra_start, &extra_end);
 	if (extra_end > extra_start) {
 		DEBUG("Copying extra %#0lx bytes from %p...\n", 
 			(unsigned long)(extra_end - extra_start), extra_start);
