@@ -29,46 +29,36 @@
 #include <hugetlbfs.h>
 #include "hugetests.h"
 
-static void test_simple_mlock(unsigned long size, unsigned long map_flags)
+static void test_simple_mlock(int flags)
 {
-	char *a;
-	int ret;
 	int fd = hugetlbfs_unlinked_fd();
+	void *p;
+	int ret;
 
-	a = mmap(0, size, PROT_READ|PROT_WRITE, map_flags, fd, 0);
-	if (a == MAP_FAILED)
-		FAIL("mmap() failed: %s", strerror(errno));
+	p = mmap(0, gethugepagesize(), PROT_READ|PROT_WRITE, flags, fd, 0);
+	if (p == MAP_FAILED)
+		FAIL("mmap() failed (flags=%x): %s", flags, strerror(errno));
 
-	if (map_flags & MAP_LOCKED) {
-		ret = mlock(a, size);
-		if (ret)
-			FAIL("mlock() failed: %s", strerror(errno));
-
-		ret = munlock(a, size);
-		if (ret)
-			 FAIL("munlock() failed: %s", strerror(errno));
-	}
-
-	ret = munmap(a, size);
+	ret = mlock(p, gethugepagesize());
 	if (ret)
-		FAIL("munmap() failed: %s", strerror(errno));
+		FAIL("mlock() failed (flags=%x): %s", flags, strerror(errno));
+
+	ret = munlock(p, gethugepagesize());
+	if (ret)
+		FAIL("munlock() failed (flags=%x): %s", flags, strerror(errno));
+
+	ret = munmap(p, gethugepagesize());
+	if (ret)
+		FAIL("munmap() failed (flags=%x): %s", flags, strerror(errno));
 
 	close(fd);
 }
 
 int main(int argc, char *argv[])
 {
-	unsigned long tot_pages, size;
-
-	if (argc != 2)
-		CONFIG("Usage: mlock <# total available hugepages>");
-
-	tot_pages = atoi(argv[1]);
-	size = tot_pages * gethugepagesize();
-
-	test_simple_mlock(size, MAP_PRIVATE);
-	test_simple_mlock(size, MAP_SHARED);
-	test_simple_mlock(size, MAP_PRIVATE|MAP_LOCKED);
-	test_simple_mlock(size, MAP_SHARED|MAP_LOCKED);
+	test_simple_mlock(MAP_PRIVATE);
+	test_simple_mlock(MAP_SHARED);
+	test_simple_mlock(MAP_PRIVATE|MAP_LOCKED);
+	test_simple_mlock(MAP_SHARED|MAP_LOCKED);
 	PASS();
 }

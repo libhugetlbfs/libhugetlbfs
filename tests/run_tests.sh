@@ -109,7 +109,7 @@ functional_tests () {
     run_test truncate
     run_test shared
     run_test mprotect
-    run_test mlock `free_hpages`
+    run_test mlock
 
 # Specific kernel bug tests
     run_test ptrace-write-hugepage
