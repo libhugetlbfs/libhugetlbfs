@@ -320,7 +320,7 @@ static int hugetlbfs_shared_file(struct seg_info *htlb_seg_info)
 	}
 
 	sun.sun_family = AF_UNIX;
-	strcpy(sun.sun_path, "/tmp/libhugetlbfs-sock");
+	strcpy(sun.sun_path, SOCKFILE);
 	ret = connect(sock, &sun, sizeof(sun));
 	if (ret < 0) {
 		ERROR("connect() failed: %s\n", strerror(errno));

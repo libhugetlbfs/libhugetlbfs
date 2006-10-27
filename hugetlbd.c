@@ -846,15 +846,15 @@ int main(int argc, char *argv[])
 
 	sun.sun_family = AF_UNIX;
 	/* clear out any previous socket */
-	unlink("/tmp/libhugetlbfs-sock");
-	strcpy(sun.sun_path, "/tmp/libhugetlbfs-sock");
+	unlink(SOCKFILE);
+	strcpy(sun.sun_path, SOCKFILE);
 	ret = bind(sock, (struct sockaddr *)(&sun), sizeof(sun));
 	if (ret < 0) {
 		ERROR("bind() failed: %s\n", strerror(errno));
 		goto die;
 	}
 
-	chmod("/tmp/libhugetlbfs-sock", 0666);
+	chmod(SOCKFILE, 0666);
 
 	ret = listen(sock, QUEUE_LENGTH);
 	if (ret < 0) {

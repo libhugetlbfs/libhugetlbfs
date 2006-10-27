@@ -26,6 +26,7 @@
 
 #define ID_KEY	0x56
 #define LOGFILE "/tmp/hugetlbd.log"
+#define SOCKFILE "/var/run/libhugetlbfs-sock"
 
 /*
  * Ideally, would like to deal with this better, so that a 32-bit daemon
