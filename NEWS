@@ -1,0 +1,29 @@
+libhugetlbfs 1.0.1 "Spicy Garlic"
+======================================================================
+
+This small maintenance release brings a security fix, a few minor bug
+fixes, plus some documentation and error message updates.
+
+Security
+
+* A section on security has been added to the README file
+* The hugetlbd daemon socket has been moved from /tmp to /var/run.
+  This will require the daemon to be run as root, which was previously
+  just a recommendation.
+
+Bug fixes
+
+* Reduce reserved huge pages needed for application start-up
+* PPC linker script fixes
+
+Trivial but notable changes
+
+* Always install linker scripts for all targets
+* Error message updates
+* Add documentation on HUGETLB_DEBUG
+* Testcase updates
+
+libhugetlbfs 1.0
+======================================================================
+
+* First stable release
