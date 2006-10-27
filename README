@@ -40,3 +40,14 @@ If the above steps do not help, send as much information about the problem
 libhugetlbfs-devel@lists.sourceforge.net and we'll help out as much as we
 can.  We will probably ask you to collect things like: straces,
 /proc/pid/maps and gdb back traces.
+
+Security Considerations
+-----------------------------------------------------------------------------
+When using the segment sharing feature, you must take extra steps to avoid
+exposing an application to rogue code insertion.  We recommend creating your
+hugetlbfs mount point with restricted permissions that allow only a specific
+user or group to access the files on the mount point.  Specifically, you should
+restrict directory access (x) permissions for the mount point to the selected
+user or group only.  The need to perform this manual lock-down will be
+unnecessary in a future release, though you may wish to continue the practice
+to restrict huge pages to certain users and/or processes.
