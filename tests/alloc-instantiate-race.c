@@ -42,13 +42,18 @@
 #include <sched.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <pthread.h>
+#include <linux/unistd.h>
 
 #include <hugetlbfs.h>
 
 #include "hugetests.h"
 
+_syscall0(pid_t, gettid);
+
 static int hpage_size;
 static pid_t child1, child2;
+static pthread_t thread1, thread2;
 
 void cleanup(void)
 {
@@ -58,9 +63,8 @@ void cleanup(void)
 		kill(child2, SIGKILL);
 }
 
-
-static void one_racer(void *p, int cpu,
-	       volatile int *mytrigger, volatile int *othertrigger)
+static int one_racer(void *p, int cpu,
+		     volatile int *mytrigger, volatile int *othertrigger)
 {
 	volatile int *pi = p;
 	cpu_set_t cpuset;
@@ -70,7 +74,7 @@ static void one_racer(void *p, int cpu,
 	CPU_ZERO(&cpuset);
 	CPU_SET(cpu, &cpuset);
 
-	err = sched_setaffinity(getpid(), CPU_SETSIZE/8, &cpuset);
+	err = sched_setaffinity(gettid(), CPU_SETSIZE/8, &cpuset);
 	if (err != 0)
 		CONFIG("sched_setaffinity(cpu%d): %s", cpu, strerror(errno));
 
@@ -83,16 +87,39 @@ static void one_racer(void *p, int cpu,
 	/* Instantiate! */
 	*pi = 1;
 
-	exit(0);
+	return 0;
 }
 
-static void run_race(void *syncarea)
+static void proc_racer(void *p, int cpu,
+		       volatile int *mytrigger, volatile int *othertrigger)
+{
+	exit(one_racer(p, cpu, mytrigger, othertrigger));
+}
+
+struct racer_info {
+	void *p; /* instantiation address */
+	int cpu;
+	int race_type;
+	volatile int *mytrigger;
+	volatile int *othertrigger;
+	int status;
+};
+
+static void *thread_racer(void *info)
+{
+	struct racer_info *ri = info;
+	int rc;
+
+	rc = one_racer(ri->p, ri->cpu, ri->mytrigger, ri->othertrigger);
+	return ri;
+}
+static void run_race(void *syncarea, int race_type)
 {
 	volatile int *trigger1, *trigger2;
 	int fd;
 	void *p;
 	int status1, status2;
-	pid_t ret;
+	int ret;
 
 	memset(syncarea, 0, sizeof(*trigger1) + sizeof(*trigger2));
 	trigger1 = syncarea;
@@ -104,47 +131,90 @@ static void run_race(void *syncarea)
 		FAIL("hugetlbfs_unlinked_fd()");
 
 	verbose_printf("Mapping final page.. ");
-	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, race_type, fd, 0);
 	if (p == MAP_FAILED)
 		FAIL("mmap(): %s", strerror(errno));
 	verbose_printf("%p\n", p);
 
-	child1 = fork();
-	if (child1 < 0)
-		FAIL("fork(): %s", strerror(errno));
-	if (child1 == 0)
-		one_racer(p, 0, trigger1, trigger2);
+	if (race_type == MAP_SHARED) {
+		child1 = fork();
+		if (child1 < 0)
+			FAIL("fork(): %s", strerror(errno));
+		if (child1 == 0)
+			proc_racer(p, 0, trigger1, trigger2);
 
-	child2 = fork();
-	if (child2 < 0)
-		FAIL("fork(): %s", strerror(errno));
-	if (child2 == 0)
-		one_racer(p, 1, trigger2, trigger1);
+		child2 = fork();
+		if (child2 < 0)
+			FAIL("fork(): %s", strerror(errno));
+		if (child2 == 0)
+			proc_racer(p, 1, trigger2, trigger1);
 
-	/* wait() calls */
-	ret = waitpid(child1, &status1, 0);
-	if (ret < 0)
-		FAIL("waitpid() child 1: %s", strerror(errno));
-	verbose_printf("Child 1 status: %x\n", status1);
+		/* wait() calls */
+		ret = waitpid(child1, &status1, 0);
+		if (ret < 0)
+			FAIL("waitpid() child 1: %s", strerror(errno));
+		verbose_printf("Child 1 status: %x\n", status1);
 
 
-	ret = waitpid(child2, &status2, 0);
-	if (ret < 0)
-		FAIL("waitpid() child 2: %s", strerror(errno));
-	verbose_printf("Child 2 status: %x\n", status2);
+		ret = waitpid(child2, &status2, 0);
+		if (ret < 0)
+			FAIL("waitpid() child 2: %s", strerror(errno));
+		verbose_printf("Child 2 status: %x\n", status2);
 
-	if (WIFSIGNALED(status1))
-		FAIL("Child 1 killed by signal %s",
-		     strsignal(WTERMSIG(status1)));
-	if (WIFSIGNALED(status2))
+		if (WIFSIGNALED(status1))
+			FAIL("Child 1 killed by signal %s",
+			     strsignal(WTERMSIG(status1)));
+		if (WIFSIGNALED(status2))
 		FAIL("Child 2 killed by signal %s",
 		     strsignal(WTERMSIG(status2)));
 
-	if (WEXITSTATUS(status1) != 0)
-		FAIL("Child 1 terminated with code %d", WEXITSTATUS(status1));
+		status1 = WEXITSTATUS(status1);
+		status2 = WEXITSTATUS(status2);
+	} else {
+		struct racer_info ri1 = {
+			.p = p,
+			.cpu = 0,
+			.mytrigger = trigger1,
+			.othertrigger = trigger2,
+		};
+		struct racer_info ri2 = {
+			.p = p,
+			.cpu = 1,
+			.mytrigger = trigger2,
+			.othertrigger = trigger1,
+		};
+		void *tret1, *tret2;
 
-	if (WEXITSTATUS(status2) != 0)
-		FAIL("Child 2 terminated with code %d", WEXITSTATUS(status2));
+		ret = pthread_create(&thread1, NULL, thread_racer, &ri1);
+		if (ret != 0)
+			FAIL("pthread_create() 1: %s\n", strerror(errno));
+
+		ret = pthread_create(&thread2, NULL, thread_racer, &ri2);
+		if (ret != 0)
+			FAIL("pthread_create() 2: %s\n", strerror(errno));
+
+		ret = pthread_join(thread1, &tret1);
+		if (ret != 0)
+			FAIL("pthread_join() 1: %s\n", strerror(errno));
+		if (tret1 != &ri1)
+			FAIL("Thread 1 returned %p not %p, killed?\n",
+			     tret1, &ri1);
+		ret = pthread_join(thread2, &tret2);
+		if (ret != 0)
+			FAIL("pthread_join() 2: %s\n", strerror(errno));
+		if (tret2 != &ri2)
+			FAIL("Thread 2 returned %p not %p, killed?\n",
+			     tret2, &ri2);
+
+		status1 = ri1.status;
+		status2 = ri2.status;
+	}
+
+	if (status1 != 0)
+		FAIL("Racer 1 terminated with code %d", status1);
+
+	if (status2 != 0)
+		FAIL("Racer 2 terminated with code %d", status2);
 }
 
 int main(int argc, char *argv[])
@@ -153,13 +223,24 @@ int main(int argc, char *argv[])
 	int fd;
 	void *p, *q;
 	unsigned long i;
+	int race_type;
 
 	test_init(argc, argv);
 
-	if (argc != 2)
-		CONFIG("Usage: alloc-instantiate-race <# total available hugepages>");
+	if (argc != 3)
+		CONFIG("Usage: alloc-instantiate-race"
+		       "<# total available hugepages> <private|shard>");
 
 	totpages = atoi(argv[1]);
+
+	if (strcmp(argv[2], "shared") == 0) {
+		race_type = MAP_SHARED;
+	} else if (strcmp(argv[2], "private") == 0) {
+		race_type = MAP_PRIVATE;
+	} else {
+		CONFIG("Usage: alloc-instantiate-race"
+		       "<# total available hugepages> <private|shard>");
+	}
 
 	hpage_size = gethugepagesize();
 	if (hpage_size < 0)
@@ -189,7 +270,7 @@ int main(int argc, char *argv[])
 		memset(p + (i * hpage_size), 0, sizeof(int));
 	verbose_printf("done\n");
 
-	run_race(q);
+	run_race(q, race_type);
 
 	PASS();
 }

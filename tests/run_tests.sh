@@ -145,7 +145,8 @@ functional_tests () {
 # killall -HUP hugetlbd
 # to make the sharing daemon give up the files
     run_test chunk-overcommit `free_hpages`
-    run_test alloc-instantiate-race `free_hpages`
+    run_test alloc-instantiate-race `free_hpages` shared
+    run_test alloc-instantiate-race `free_hpages` private
 }
 
 stress_tests () {
