@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 export QUIET_TEST=1
 export HUGETLB_VERBOSE=2
