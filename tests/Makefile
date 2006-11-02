@@ -36,7 +36,7 @@ INST_TESTSDIR64 = $(LIBDIR64)/libhugetlbfs/tests
 ifdef V
 VECHO = :
 else
-VECHO = echo -e "\t"
+VECHO = echo "	"
 .SILENT:
 endif
 

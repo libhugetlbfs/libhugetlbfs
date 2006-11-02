@@ -78,7 +78,7 @@ INSTALL_LDSCRIPTS = $(foreach type,$(LDSCRIPT_TYPES),$(LDSCRIPT_DIST_ELF:%=%.x$(
 ifdef V
 VECHO = :
 else
-VECHO = echo -e "\t"
+VECHO = echo "	"
 .SILENT:
 endif
 
