@@ -64,7 +64,7 @@ elfshare_test () {
     baseprog="${args[$N]}"
     unset args[$N]
     set -- "${args[@]}"
-    NUM_THREADS=$((`free_hpages` / 15 - 1))
+    NUM_THREADS=2
     killall -HUP hugetlbd
     run_test HUGETLB_SHARE=2 "$@" "xB.$baseprog" $NUM_THREADS
     killall -HUP hugetlbd
