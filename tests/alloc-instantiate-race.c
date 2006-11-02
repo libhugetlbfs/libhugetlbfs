@@ -49,7 +49,10 @@
 
 #include "hugetests.h"
 
-_syscall0(pid_t, gettid);
+pid_t gettid(void)
+{
+	return syscall(__NR_gettid);
+}
 
 static int hpage_size;
 static pid_t child1, child2;
