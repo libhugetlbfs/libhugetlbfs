@@ -143,6 +143,8 @@ functional_tests () {
     run_test chunk-overcommit `free_hpages`
     run_test alloc-instantiate-race `free_hpages` shared
     run_test alloc-instantiate-race `free_hpages` private
+    run_test truncate_reserve_wraparound
+    run_test truncate_sigbus_versus_oom `free_hpages`
 }
 
 stress_tests () {
