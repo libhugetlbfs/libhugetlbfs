@@ -326,42 +326,52 @@ libhugetlbfs:
 	Sharing remapped segments:
 	--------------------------
 
-Sharing of program segments among processes is a two-fold process.
+By default, when libhugetlbfs uses anonymous, unlinked hugetlbfs files
+to store remapped program segment data.  This means that if the same
+program is started multiple times using hugepage segments, multiple
+huge pages will be used to store the same program data.
 
-First, a system-wide daemon must be started, hugetlbd. The executable
-(which will be installed into $PREFIX/sbin by make install) should be
-run as root and will automatically spawn a child process to wait for
-segment sharing into the background. The process will log any output
-requested to /tmp/hugetlbd.log. The complete usage for hugetlbd is:
+The reduce this wastage, libugetlbfs can be instructed to allow
+sharing segments between multiple invocations of a program.  To do
+this, you must set the HUGETLB_SHARE variable must be set for all the
+processes in question.  This variable has three possible values:
+	0 (or unset): the default, indicates no segments should be shared
+	1: indicates that read-only segments (i.e. the program text,
+in most cases) should be shared, read-write segments (data and bss)
+will not be shared.
+	2: indicates that all segments should be shared.  Note that
+the segments will be mapped copy-on-write, so read-write segments may
+not remain shared for very long.
 
-hugetlbd [-v] [-V verbosity] [-p timeout1] [-s timeout2]
-  -v: display this help and exit
-  -V: specify log level (1-3) [default=1]
-      1: only log errors
-      2: log errors and warnings
-      3: log all output
-  -p: specify how long to wait before unlinking files in the hugetlbfs
-      mountpoint (seconds) [default=600]
-  -s: specify when a file last needs to have been shared for it not to be
-      unlinked (seconds) [default=600]
+If the HUGETLB_MINIMAL_COPY variable is set for any program using
+shared segments, it must be set to the same value for all invocations
+of that program.
 
-Second, in the applications that wish to share segments, the
-HUGETLB_SHARE environment variable must be set appropriately. The
-variable takes on three values: 0, the default, indicates no segments
-should be shared; 1 indicates that only read-only segments (text) should
-be shared; and 2 indicates that all segments should be shared. Note, as
-this is a per-process variable, it is important to keep its usage
-consistent with HUGETLB_MINIMAL_COPY. If MINIMAL_COPY is used by the
-first process to share a particular executable's segments, it should be
-used by all subsequent ones, to guarantee no failures while copying
-segments. Similarly, if MINIMAL_COPY is not used by the first process
-sharing, it should not be used by subsequent ones.
+Segment sharing is implemented by creating persistent files in a
+hugetlbfs containing the necessary segment data.  By default, these
+files are stored in a subdirectory of the first located hugetlbfs
+filesystem, named 'elflink-uid-XXX' where XXX is the uid of the
+process using sharing.  This directory must be owned by the uid in
+question, and have mode 0700.  If it doesn't exist, libhugetlbfs will
+create it automatically.  This means that (by default) separate
+invocations of the same program by different users will not share huge
+pages.
 
-Having taken these two steps, the same application run twice with the
-same environment variable settings will use the same file both times
-(reducing the overall hugetlbfs file usage). If, for any reason, segment
-sharing is requested but unavailable, the library will fallback to
-unlinked files.
+The location for storing the hugetlbfs page files can be changed by
+setting the HUGETLB_SHARE_PATH environment variable.  If set, this
+variable must contain the path of an accessible, already created
+directory located in a hugetlbfs filesystem.  The owner and mode of
+this directory are not checked, so this method can be used to allow
+processes of multiple uids to share huge pages.  IMPORTANT SECURITY
+NOTE: any process sharing hugepages can insert arbitrary executable
+code into any other process sharing hugepages in the same directory.
+Therefore, when using HUGETLB_SHARE_PATH, the directory created *must*
+allow access only to a set of uids who are mutually trusted.
+
+The files created in hugetlbfs for sharing are persistent, and must be
+manually deleted to free the hugepages in question.  Future versions
+of libhugetlbfs should include tools and scripts to automate this
+cleanup.
 
 Examples
 ========
