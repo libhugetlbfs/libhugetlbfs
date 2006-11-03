@@ -30,8 +30,6 @@
 
 extern int __hugetlbfs_verbose;
 
-extern int sharing;
-
 #define ERROR(...) \
 	if (__hugetlbfs_verbose >= 1) \
 		fprintf(stderr, "libhugetlbfs: ERROR: " __VA_ARGS__)
@@ -47,16 +45,6 @@ extern int sharing;
 #define DEBUG_CONT(...) \
 	if (__hugetlbfs_verbose >= 3) \
 		fprintf(stderr, __VA_ARGS__)
-
-struct seg_info {
-	void *vaddr;
-	unsigned long filesz, memsz;
-	int prot;
-	int fd;
-};
-
-int finished_prepare(struct seg_info *htlb_seg_info, int success);
-int hugetlbfs_set_fd(struct seg_info *htlb_seg_info);
 
 #if defined(__powerpc64__) && !defined(__LP64__)
 /* Older binutils fail to provide this symbol */

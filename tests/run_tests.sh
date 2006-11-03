@@ -13,6 +13,14 @@ function free_hpages() {
 	echo "$H"
 }
 
+function hugetlbfs_path() {
+    if [ -n "$HUGETLB_PATH" ]; then
+	echo "$HUGETLB_PATH"
+    else
+	grep hugetlbfs /proc/mounts | cut -f2 -d' '
+    fi
+}
+
 TOTAL_HPAGES=$(grep 'HugePages_Total:' /proc/meminfo | cut -f2 -d:)
 [ -z "$TOTAL_HPAGES" ] && TOTAL_HPAGES=0
 HPAGE_SIZE=$(grep 'Hugepagesize:' /proc/meminfo | awk '{print $2}')
@@ -64,14 +72,12 @@ elfshare_test () {
     baseprog="${args[$N]}"
     unset args[$N]
     set -- "${args[@]}"
+    # Run each elfshare test invocation independently - clean up the
+    # sharefiles before and after:
     NUM_THREADS=2
-    killall -HUP hugetlbd
     run_test HUGETLB_SHARE=2 "$@" "xB.$baseprog" $NUM_THREADS
-    killall -HUP hugetlbd
     run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog" $NUM_THREADS
-    killall -HUP hugetlbd
     run_test HUGETLB_SHARE=2 "$@" "xBDT.$baseprog" $NUM_THREADS
-    killall -HUP hugetlbd
     run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog" $NUM_THREADS
 }
 
@@ -118,6 +124,8 @@ functional_tests () {
     run_test_bits 64 straddle_4GB
     run_test_bits 64 huge_at_4GB_normal_below
     run_test_bits 64 huge_below_4GB_normal_above
+    run_test map_high_truncate_2
+    run_test truncate_above_4GB
 
 # Tests requiring an active mount and hugepage COW
     run_test private
@@ -129,24 +137,16 @@ functional_tests () {
     elflink_test linkhuge
 
 # Sharing tests
-    # stop all running instances for clean testing
-    killall -INT hugetlbd
-    # start the daemon in the bg
-    PATH=../obj32:../obj64:$PATH hugetlbd
-    # XXX: Wait for daemon to start
-    sleep 5
     elfshare_test linkshare
-    # stop our instance of the daemon
-    killall -INT hugetlbd
 
 # Accounting bug tests
 # reset free hpages because sharing will have held some
 # alternatively, use
-# killall -HUP hugetlbd
-# to make the sharing daemon give up the files
     run_test chunk-overcommit `free_hpages`
     run_test alloc-instantiate-race `free_hpages` shared
     run_test alloc-instantiate-race `free_hpages` private
+    run_test truncate_reserve_wraparound
+    run_test truncate_sigbus_versus_oom `free_hpages`
 }
 
 stress_tests () {

@@ -24,11 +24,15 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <sys/syscall.h>
+#include <sys/file.h>
 #include <linux/unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
+#include <limits.h>
 #include <elf.h>
 #include <dlfcn.h>
 
@@ -51,31 +55,6 @@
 #define ELF_ST_TYPE(x)  ELF64_ST_TYPE(x)
 #endif
 
-#ifdef __syscall_return
-#ifdef __i386__
-/* The normal i386 syscall macros don't work with -fPIC :( */
-#undef _syscall2
-#define _syscall2(type,name,type1,arg1,type2,arg2) \
-type name(type1 arg1,type2 arg2) \
-{ \
-long __res; \
-__asm__ volatile ("push %%ebx; movl %2,%%ebx; int $0x80; pop %%ebx" \
-        : "=a" (__res) \
-        : "0" (__NR_##name),"r" ((long)(arg1)),"c" ((long)(arg2))); \
-__syscall_return(type,__res); \
-}
-#undef _syscall3
-#define _syscall3(type,name,type1,arg1,type2,arg2,type3,arg3) \
-type name(type1 arg1,type2 arg2,type3 arg3) \
-{ \
-long __res; \
-__asm__ volatile ("push %%ebx; movl %2,%%ebx; int $0x80; pop %%ebx" \
-        : "=a" (__res) \
-        : "0" (__NR_##name),"r" ((long)(arg1)),"c" ((long)(arg2)), \
-                  "d" ((long)(arg3))); \
-__syscall_return(type,__res); \
-}
-#endif /* __i386__ */
 /* This function prints an error message to stderr, then aborts.  It
  * is safe to call, even if the executable segments are presently
  * unmapped.
@@ -86,21 +65,15 @@ __syscall_return(type,__res); \
  * FIXME: This works in practice, but I suspect it
  * is not guaranteed safe: the library functions we call could in
  * theory call other functions via the PLT which will blow up. */
-#define __NR_sys_write __NR_write
-#define __NR_sys_getpid __NR_getpid
-#define __NR_sys_kill __NR_kill
-static _syscall3(ssize_t,sys_write,int,fd,const void *,buf,size_t,count);
-static _syscall0(pid_t,sys_getpid);
-static _syscall2(int,sys_kill,pid_t,pid,int,sig);
 static void write_err(const char *start, int len)
 {
-	sys_write(2, start, len);
+	syscall(__NR_write, 2 /* stderr */, start, len);
 }
 static void sys_abort(void)
 {
-	pid_t pid = sys_getpid();
+	pid_t pid = syscall(__NR_getpid);
 
-	sys_kill(pid, SIGABRT);
+	syscall(__NR_kill, pid, SIGABRT);
 }
 static void write_err_base(unsigned long val, int base)
 {
@@ -169,21 +142,59 @@ static void unmapped_abort(const char *fmt, ...)
 
 	sys_abort();
 }
-#else /* __syscall_return */
-#warning __syscall_return macro not available. Some debugging will be \
-	disabled during executable remapping
-static void unmapped_abort(const char *fmt, ...)
-{
-}
-#endif /* __syscall_return */
+
+static char share_path[PATH_MAX+1];
+
+static char share_path[PATH_MAX+1];
 
 #define MAX_HTLB_SEGS	2
+
+struct seg_info {
+	void *vaddr;
+	unsigned long filesz, memsz;
+	int prot;
+	int fd;
+	int phdr;
+};
 
 static struct seg_info htlb_seg_table[MAX_HTLB_SEGS];
 static int htlb_num_segs;
 static int minimal_copy = 1;
+static int sharing; /* =0 */
 int __debug = 0;
 static Elf_Ehdr *ehdr;
+
+/**
+ * assemble_path - handy wrapper around snprintf() for building paths
+ * @dst: buffer of size PATH_MAX+1 to assemble string into
+ * @fmt: format string for path
+ * @...: printf() style parameters for path
+ *
+ * assemble_path() builds a path in the target buffer (which must have
+ * PATH_MAX+1 available bytes), similar to sprintf().  However, f the
+ * assembled path would exceed PATH_MAX characters in length,
+ * assemble_path() prints an error and abort()s, so there is no need
+ * to check the return value and backout.
+ */
+static void assemble_path(char *dst, const char *fmt, ...)
+{
+	va_list ap;
+	int len;
+
+	va_start(ap, fmt);
+	len = vsnprintf(dst, PATH_MAX+1, fmt, ap);
+	va_end(ap);
+
+	if (len < 0) {
+		ERROR("vsnprintf() error");
+		abort();
+	}
+
+	if (len > PATH_MAX) {
+		ERROR("Overflow assembling path");
+		abort();
+	}
+}
 
 /*
  * Parse an ELF header and record segment information for any segments
@@ -231,8 +242,75 @@ static void parse_phdrs(Elf_Ehdr *ehdr)
 		htlb_seg_table[htlb_num_segs].filesz = filesz;
 		htlb_seg_table[htlb_num_segs].memsz = memsz;
 		htlb_seg_table[htlb_num_segs].prot = prot;
+		htlb_seg_table[htlb_num_segs].phdr = i;
 		htlb_num_segs++;
 	}
+}
+
+/**
+ * find_or_create_share_path - obtain a directory to store the shared
+ * hugetlbfs files
+ *
+ * Checks environment and filesystem to locate a suitable directory
+ * for shared hugetlbfs files, creating a new directory if necessary.
+ * The determined path is stored in global variable share_path.
+ *
+ * returns:
+ *  -1, on error
+ *  0, on success
+ */
+static int find_or_create_share_path(void)
+{
+	char *env;
+	struct stat sb;
+	int ret;
+
+	env = getenv("HUGETLB_SHARE_PATH");
+	if (env) {
+		/* Given an explicit path */
+		if (hugetlbfs_test_path(env) != 0) {
+			ERROR("HUGETLB_SHARE_PATH %s is not on a hugetlbfs"
+			      " filesystem\n", share_path);
+			return -1;
+		}
+		assemble_path(share_path, "%s", env);
+		return 0;
+	}
+
+	assemble_path(share_path, "%s/elflink-uid-%d",
+		      hugetlbfs_find_path(), getuid());
+
+	ret = mkdir(share_path, 0700);
+	if ((ret != 0) && (errno != EEXIST)) {
+		ERROR("Error creating share directory %s", share_path);
+		return -1;
+	}
+
+	/* Check the share directory is sane */
+	ret = lstat(share_path, &sb);
+	if (ret != 0) {
+		ERROR("Couldn't stat() %s: %s\n", share_path, strerror(errno));
+		return -1;
+	}
+
+	if (! S_ISDIR(sb.st_mode)) {
+		ERROR("%s is not a directory", share_path);
+		return -1;
+	}
+
+	if (sb.st_uid != getuid()) {
+		ERROR("%s has wrong owner (uid=%d instead of %d)\n",
+		      share_path, sb.st_uid, getuid());
+		return -1;
+	}
+
+	if (sb.st_mode & (S_IWGRP | S_IWOTH)) {
+		ERROR("%s has bad permissions 0%03o\n",
+		      share_path, sb.st_mode);
+		return -1;
+	}
+
+	return 0;
 }
 
 /* 
@@ -247,6 +325,48 @@ static void check_bss(unsigned long *start, unsigned long *end)
 		if (*addr != 0)
 			WARNING("Non-zero BSS data @ %p: %lx\n", addr, *addr);
 	}
+}
+
+/**
+ * get_shared_file_name - create a shared file name from program name,
+ * segment number and current word size
+ * @htlb_seg_info: pointer to program's segment data
+ * @file_path: pointer to a PATH_MAX+1 array to store filename in
+ *
+ * The file name created is *not* intended to be unique, except when
+ * the name, gid or phdr number differ. The goal here is to have a
+ * standard means of accessing particular segments of particular
+ * executables.
+ *
+ * returns:
+ *   -1, on failure
+ *   0, on success
+ */
+static int get_shared_file_name(struct seg_info *htlb_seg_info, char *file_path)
+{
+	int ret;
+	char binary[PATH_MAX+1];
+	char *binary2;
+
+	memset(binary, 0, sizeof(binary));
+	ret = readlink("/proc/self/exe", binary, PATH_MAX);
+	if (ret < 0) {
+		ERROR("shared_file: readlink() on /proc/self/exe "
+		      "failed: %s\n", strerror(errno));
+		return -1;
+	}
+
+	binary2 = basename(binary);
+	if (!binary2) {
+		ERROR("shared_file: basename() on %s failed: %s\n",
+		      binary, strerror(errno));
+		return -1;
+	}
+
+	assemble_path(file_path, "%s/%s_%zd_%d", share_path, binary2,
+		      sizeof(unsigned long) * 8, htlb_seg_info->phdr);
+
+	return 0;
 }
 
 /* 
@@ -387,7 +507,6 @@ bail3:
  * smallest amount of data possible, unless the user disables this 
  * optimization via the HUGETLB_ELFMAP environment variable.
  */
-
 static int prepare_segment(struct seg_info *seg)
 {
 	int hpage_size = gethugepagesize();
@@ -437,6 +556,163 @@ static int prepare_segment(struct seg_info *seg)
 	return 0;
 }
 
+/**
+ * find_or_prepare_shared_file - get one shareable file
+ * @htlb_seg_info: pointer to program's segment data
+ *
+ * This function either locates a hugetlbfs file already containing
+ * data for a given program segment, or creates one if it doesn't
+ * already exist.
+ *
+ * We use the following algorithm to ensure that when processes race
+ * to instantiate the hugepage file, we will never obtain an
+ * incompletely prepared file or have multiple processes prepar
+ * separate copies of the file.
+ *	- first open 'filename.tmp' with O_EXCL (this acts as a lockfile)
+ *	- second open 'filename' with O_RDONLY (even if the first open
+ *	  succeeded).
+ * Then:
+ * 	- If both opens succeed, close the O_EXCL open, unlink
+ * filename.tmp and use the O_RDONLY fd.  (Somebody else has prepared
+ * the file already)
+ * 	- If only the O_RDONLY open suceeds, and the O_EXCL open
+ * fails with EEXIST, just used the O_RDONLY fd. (Somebody else has
+ * prepared the file already, but we raced with their rename()).
+ * 	- If only the O_EXCL open suceeds, and the O_RDONLY fails with
+ * ENOENT, prepare the the O_EXCL open, then rename() filename.tmp to
+ * filename. (We're the first in, we have to prepare the file).
+ * 	- If both opens fail, with EEXIST and ENOENT, respectively,
+ * wait for a little while, then try again from the beginning
+ * (Somebody else is preparing the file, but hasn't finished yet)
+ *
+ * returns:
+ *   -1, on failure
+ *   0, on success
+ */
+static int find_or_prepare_shared_file(struct seg_info *htlb_seg_info)
+{
+	int fdx, fds;
+	int errnox, errnos;
+	int ret;
+	char final_path[PATH_MAX+1];
+	char tmp_path[PATH_MAX+1];
+
+	ret = get_shared_file_name(htlb_seg_info, final_path);
+	if (ret < 0)
+		return -1;
+	assemble_path(tmp_path, "%s.tmp", final_path);
+
+	do {
+		/* NB: mode is modified by umask */
+		fdx = open(tmp_path, O_CREAT | O_EXCL | O_RDWR, 0666);
+		errnox = errno;
+		fds = open(final_path, O_RDONLY);
+		errnos = errno;
+
+		if (fds >= 0) {
+			/* Got an already-prepared file -> use it */
+			if (fdx > 0) {
+				/* Also got an exclusive file -> clean up */
+				ret = unlink(tmp_path);
+				if (ret != 0)
+					ERROR("shared_file: unable to clean up"
+					      " unneeded file %s: %s\n",
+					      tmp_path, strerror(errno));
+				close(fdx);
+			} else if (errnox != EEXIST) {
+				WARNING("shared_file: Unexpected failure on exclusive"
+					" open of %s: %s\n", tmp_path,
+					strerror(errnox));
+			}
+			htlb_seg_info->fd = fds;
+			return 0;
+		}
+
+		if (fdx >= 0) {
+			/* It's our job to prepare */
+			if (errnos != ENOENT)
+				WARNING("shared_file: Unexpected failure on"
+					" shared open of %s: %s\n", final_path,
+					strerror(errnos));
+
+			htlb_seg_info->fd = fdx;
+
+			DEBUG("Got unpopulated shared fd -- Preparing\n");
+			ret = prepare_segment(htlb_seg_info);
+			if (ret < 0)
+				goto fail;
+
+			DEBUG("Prepare succeeded\n");
+			/* move to permanent location */
+			ret = rename(tmp_path, final_path);
+			if (ret != 0) {
+				ERROR("shared_file: unable to rename %s"
+				      " to %s: %s\n", tmp_path, final_path,
+				      strerror(errno));
+				goto fail;
+			}
+
+			return 0;
+		}
+
+		/* Both opens failed, somebody else is still preparing */
+		/* Wait and try again */
+		sleep(1);
+		/* FIXME: should have a timeout */
+	} while (1);
+
+ fail:
+	if (fdx > 0) {
+		ret = unlink(tmp_path);
+		if (ret != 0)
+			ERROR("shared_file: Unable to clean up temp file %s on"
+			      " failure: %s\n", tmp_path, strerror(errno));
+		close(fdx);
+	}
+	if (fds > 0)
+		close(fds);
+
+	return -1;
+}
+
+/**
+ * obtain_prepared_file - multiplex callers depending on if
+ * sharing or not
+ * @htlb_seg_info: pointer to program's segment data
+ *
+ * returns:
+ *  -1, on error
+ *  0, on success
+ */
+static int obtain_prepared_file(struct seg_info *htlb_seg_info)
+{
+	int fd = -1;
+	int ret;
+
+	/* Either share all segments or share only read-only segments */
+	if ((sharing == 2) || ((sharing == 1) &&
+			       !(htlb_seg_info->prot & PROT_WRITE))) {
+		/* first, try to share */
+		ret = find_or_prepare_shared_file(htlb_seg_info);
+		if (ret == 0)
+			return 0;
+		/* but, fall through to unlinked files, if sharing fails */
+		DEBUG("Falling back to unlinked files\n");
+	}
+	fd = hugetlbfs_unlinked_fd();
+	if (fd < 0)
+		return -1;
+	htlb_seg_info->fd = fd;
+
+	ret = prepare_segment(htlb_seg_info);
+	if (ret < 0) {
+		DEBUG("Failed to prepare segment\n");
+		return -1;
+	}
+	DEBUG("Prepare succeeded\n");
+	return 0;
+}
+
 static void remap_segments(struct seg_info *seg, int num)
 {
 	int hpage_size = gethugepagesize();
@@ -482,49 +758,6 @@ static void remap_segments(struct seg_info *seg, int num)
 	 */
 }
 
-static int maybe_prepare(int fd_state, struct seg_info *seg)
-{
-	int ret, reply = 0;
-
-	switch (fd_state) {
-		case 0:
-			DEBUG("Got populated shared fd -- Not preparing\n");
-			return 0;
-
-		case 1:
-			DEBUG("Got unpopulated shared fd -- Preparing\n");
-			reply = 1;
-			break;
-		case 2:
-			DEBUG("Got unshared fd, wanted shared -- Preparing\n");
-			break;
-		case 3:
-			DEBUG("Got unshared fd as expected -- Preparing\n");
-			break;
-
-		default:
-			ERROR("Unexpected fd state: %d in maybe_prepare\n",
-				fd_state);
-			return -1;
-	}
-
-	ret = prepare_segment(seg);
-	if (ret < 0) {
-		/* notify daemon of failed prepare */
-		DEBUG("Failed to prepare segment\n");
-		finished_prepare(seg, -1);
-		return -1;
-	}
-	DEBUG("Prepare succeeded\n");
-	if (reply) {
-		ret = finished_prepare(seg, 0);
-		if (ret < 0)
-			DEBUG("Failed to communicate successful "
-				"prepare to hugetlbd\n");
-	}
-	return ret;
-}
-
 static int check_env(void)
 {
 	char *env;
@@ -548,6 +781,20 @@ static int check_env(void)
 		DEBUG("HUGETLB_MINIMAL_COPY=%s, disabling filesz copy "
 			"optimization\n", env);
 		minimal_copy = 0;
+	}
+
+	env = getenv("HUGETLB_SHARE");
+	if (env)
+		sharing = atoi(env);
+	DEBUG("HUGETLB_SHARE=%d, sharing ", sharing);
+	if (sharing == 2) {
+		DEBUG_CONT("enabled for all segments\n");
+	} else {
+		if (sharing == 1) {
+			DEBUG_CONT("enabled for only read-only segments\n");
+		} else {
+			DEBUG_CONT("disabled\n");
+		}
 	}
 
 	env = getenv("HUGETLB_DEBUG");
@@ -581,20 +828,18 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 		return;
 	}
 
-	/* Step 1.  Get access to the files we're going to mmap for the
-	 * segments */
+	/* Do we need to find a share directory */
+	if (sharing) {
+		ret = find_or_create_share_path();
+		if (ret != 0)
+			return;
+	}
+
+	/* Step 1.  Obtain hugepage files with our program data */
 	for (i = 0; i < htlb_num_segs; i++) {
-		ret = hugetlbfs_set_fd(&htlb_seg_table[i]);
+		ret = obtain_prepared_file(&htlb_seg_table[i]);
 		if (ret < 0) {
 			DEBUG("Failed to setup hugetlbfs file\n");
-			return;
-		}
-
-		/* Step 2.  Map the hugetlbfs files anywhere to copy data, if we
-		 * need to prepare at all */
-		ret = maybe_prepare(ret, &htlb_seg_table[i]);
-		if (ret < 0) {
-			DEBUG("Failed to prepare hugetlbfs file\n");
 			return;
 		}
 	}
