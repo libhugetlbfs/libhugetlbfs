@@ -231,7 +231,7 @@ int hugetlbfs_unlinked_fd(void)
 	strncat(name, "/libhugetlbfs.tmp.XXXXXX", sizeof(name)-1);
 	/* FIXME: deal with overflows */
 
-	fd = mkstemp(name);
+	fd = mkstemp64(name);
 
 	if (fd < 0) {
 		ERROR("mkstemp() failed: %s\n", strerror(errno));

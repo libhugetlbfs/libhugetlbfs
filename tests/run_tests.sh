@@ -124,6 +124,8 @@ functional_tests () {
     run_test_bits 64 straddle_4GB
     run_test_bits 64 huge_at_4GB_normal_below
     run_test_bits 64 huge_below_4GB_normal_above
+    run_test map_high_truncate_2
+    run_test truncate_above_4GB
 
 # Tests requiring an active mount and hugepage COW
     run_test private
