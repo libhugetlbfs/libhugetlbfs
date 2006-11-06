@@ -25,6 +25,8 @@ SECTIONS
   __executable_start = 0x1000000; . = 0x1000000 + SIZEOF_HEADERS;
   .interp         : { *(.interp) } :interp :text
   .hash           : { *(.hash) } :text
+  .note.SuSE      : { *(.note.SuSE) } :text :note
+  .note.ABI-tag   : { *(.note.ABI-tag) } :text :note
   .dynsym         : { *(.dynsym) } :text
   .dynstr         : { *(.dynstr) } :text
   .gnu.version    : { *(.gnu.version) } :text
