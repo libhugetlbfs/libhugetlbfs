@@ -1,7 +1,7 @@
 PREFIX = /usr/local
 
 BASEOBJS = hugeutils.o version.o
-LIBOBJS = $(BASEOBJS) elflink.o morecore.o debug.o syscall.o
+LIBOBJS = $(BASEOBJS) elflink.o morecore.o debug.o
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
 LDSCRIPT_TYPES = B BDT
 LDSCRIPT_DIST_ELF = elf32ppclinux elf64ppc elf_i386 elf_x86_64
@@ -127,16 +127,6 @@ always:
 snapshot: $(VERSION)
 
 .SECONDARY:
-
-# This trick forces a static copy of libc's syscall() function into
-# the library.  This is particularly useful for reporting errors from
-# elflink.c while our PLT is unmapped
-
-obj32/syscall.o:
-	$(CC32) -o $@ -Wl,-r -Wl,--undefined=syscall -nostdlib -lc
-
-obj64/syscall.o:
-	$(CC64) -o $@ -Wl,-r -Wl,--undefined=syscall -nostdlib -lc
 
 obj32/%.o: %.c
 	@$(VECHO) CC32 $@
