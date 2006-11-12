@@ -48,8 +48,10 @@ ino_t get_addr_inode(void *p);
 void cleanup(void);
 
 #define verbose_printf(...) \
-	if (verbose_test) \
-		printf(__VA_ARGS__)
+	if (verbose_test) { \
+		printf(__VA_ARGS__); \
+		fflush(stdout); \
+	}
 #define ERR	"ERR: "
 #define ERROR(fmt, args...)	fprintf(stderr, ERR fmt, ## args)
 

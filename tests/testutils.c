@@ -54,7 +54,8 @@ static void segv_handler(int signum, siginfo_t *si, void *uc)
 static void sigint_handler(int signum, siginfo_t *si, void *uc)
 {
 	cleanup();
-	fprintf(stderr, "%s (pid=%d)\n", strsignal(signum), getpid());
+	fprintf(stderr, "%s: %s (pid=%d)\n", test_name,
+		strsignal(signum), getpid());
 	exit(RC_BUG);
 }
 
@@ -73,6 +74,9 @@ void test_init(int argc, char *argv[])
 
 	if (getenv("QUIET_TEST"))
 		verbose_test = 0;
+
+	verbose_printf("Starting testcase \"%s\", pid %d\n",
+		       test_name, getpid());
 }
 
 #define MAPS_BUF_SZ 4096
