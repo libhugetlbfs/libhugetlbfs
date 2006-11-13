@@ -78,6 +78,7 @@ ifdef V
 VECHO = :
 else
 VECHO = echo "	"
+ARFLAGS = rc
 .SILENT:
 endif
 
