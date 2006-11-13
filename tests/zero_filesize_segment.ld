@@ -12,6 +12,8 @@ PHDRS
 SECTIONS
 {
 	.interp : { } :interp :text
+	.note.ABI-tag : { *(.note.ABI-tag) } :text
+	.note.SuSE    : { *(.note.SuSE) } :text
 	.hash : { } :text
 	.tdata : { } :data
 	.dynamic : { } :dynamic :data
