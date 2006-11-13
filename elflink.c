@@ -183,8 +183,6 @@ static void unmapped_abort(const char *fmt, ...)
 
 static char share_path[PATH_MAX+1];
 
-static char share_path[PATH_MAX+1];
-
 #define MAX_HTLB_SEGS	2
 
 struct seg_info {
