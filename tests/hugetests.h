@@ -35,6 +35,7 @@ int test_addr_huge(void *p);
 ino_t get_addr_inode(void *p);
 
 #define ALIGN(x, a)	(((x) + (a) - 1) & ~((a) - 1))
+#define PALIGN(p, a)	((void *)ALIGN((unsigned long)(p), (a)))
 
 #ifndef barrier
 # ifdef mb

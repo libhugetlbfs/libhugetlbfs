@@ -142,6 +142,7 @@ functional_tests () {
     run_test map_high_truncate_2
     run_test misaligned_offset
     run_test truncate_above_4GB
+    run_test brk_near_huge
 
 # Tests requiring an active mount and hugepage COW
     run_test private
