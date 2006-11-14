@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 {
 	int page_size;
 	int hpage_size;
-	long long buggy_offset;
+	long long buggy_offset, truncate_point;
 	int fd;
 	void *p, *q;
 	volatile unsigned int *pi, *qi;
@@ -79,11 +79,17 @@ int main(int argc, char *argv[])
 	if (fd < 0)
 		FAIL("hugetlbfs_unlinked_fd()");
 
+	truncate_point = FOURGIG;
+	buggy_offset = truncate_point / (hpage_size / page_size);
+	buggy_offset = ALIGN(buggy_offset, hpage_size);
+
+	verbose_printf("Mapping 3 hpages at offset 0x%llx...", truncate_point);
 	/* First get arena of three hpages size, at file offset 4GB */
 	q = mmap64(NULL, 3*hpage_size, PROT_READ|PROT_WRITE,
-		 MAP_PRIVATE, fd, FOURGIG);
+		 MAP_PRIVATE, fd, truncate_point);
 	if (q == MAP_FAILED)
 		FAIL("mmap() offset 4GB");
+	verbose_printf("mapped at %p\n", q);
 	qi = q;
 	/* Touch the high page */
 	*qi = 0;
@@ -95,28 +101,35 @@ int main(int argc, char *argv[])
 #if !defined(__powerpc__) && !defined(__powerpc64__)
 	/* Replace middle hpage by tinypage mapping to trigger
 	 * nr_ptes BUG */
+	verbose_printf("Replacing map at %p-%p...", q + hpage_size,
+		       q + hpage_size + hpage_size-1);
 	p = mmap64(q + hpage_size, hpage_size, PROT_READ|PROT_WRITE,
 		   MAP_FIXED|MAP_PRIVATE|MAP_ANON, -1, 0);
 	if (p != q + hpage_size)
 		FAIL("mmap() before low hpage");
+	verbose_printf("done\n");
 	pi = p;
 	/* Touch one page to allocate its page table */
 	*pi = 0;
 #endif
 
 	/* Replace top hpage by hpage mapping at confusing file offset */
-	buggy_offset = FOURGIG / (hpage_size / page_size);
+	verbose_printf("Replacing map at %p with map from offset 0x%llx...",
+		       q + 2*hpage_size, buggy_offset);
 	p = mmap64(q + 2*hpage_size, hpage_size, PROT_READ|PROT_WRITE,
 		 MAP_FIXED|MAP_PRIVATE, fd, buggy_offset);
 	if (p != q + 2*hpage_size)
 		FAIL("mmap() buggy offset 0x%llx", buggy_offset);
+	verbose_printf("done\n");
 	pi = p;
 	/* Touch the low page with something non-zero */
 	*pi = 1;
 
-	err = ftruncate64(fd, FOURGIG);
+	verbose_printf("Truncating at 0x%llx...", truncate_point);
+	err = ftruncate64(fd, truncate_point);
 	if (err)
 		FAIL("ftruncate(): %s", strerror(errno));
+	verbose_printf("done\n");
 
 	err = sigaction(SIGBUS, &sa_fail, NULL);
 	if (err)
