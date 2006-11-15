@@ -21,6 +21,10 @@ function hugetlbfs_path() {
     fi
 }
 
+function clear_hpages() {
+    rm -rf "`hugetlbfs_path`"/elflink-uid-`id -u`
+}
+
 TOTAL_HPAGES=$(grep 'HugePages_Total:' /proc/meminfo | cut -f2 -d:)
 [ -z "$TOTAL_HPAGES" ] && TOTAL_HPAGES=0
 HPAGE_SIZE=$(grep 'Hugepagesize:' /proc/meminfo | awk '{print $2}')
@@ -73,12 +77,23 @@ elfshare_test () {
     unset args[$N]
     set -- "${args[@]}"
     # Run each elfshare test invocation independently - clean up the
-    # sharefiles before and after:
+    # sharefiles before and after in the first set of runs, but leave
+    # them there in the second:
     NUM_THREADS=2
+    clear_hpages
+    run_test HUGETLB_SHARE=2 "$@" "xB.$baseprog" $NUM_THREADS
+    clear_hpages
+    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog" $NUM_THREADS
+    clear_hpages
+    run_test HUGETLB_SHARE=2 "$@" "xBDT.$baseprog" $NUM_THREADS
+    clear_hpages
+    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog" $NUM_THREADS
+    clear_hpages
     run_test HUGETLB_SHARE=2 "$@" "xB.$baseprog" $NUM_THREADS
     run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog" $NUM_THREADS
     run_test HUGETLB_SHARE=2 "$@" "xBDT.$baseprog" $NUM_THREADS
     run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog" $NUM_THREADS
+    clear_hpages
 }
 
 setup_shm_sysctl() {
