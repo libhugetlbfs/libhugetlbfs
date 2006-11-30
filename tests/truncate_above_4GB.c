@@ -37,6 +37,13 @@
  * At one stage, a misconversion of hugetlb_vmtruncate_list to a
  * prio_tree meant that on 32-bit machines, truncates at or above 4GB
  * could truncate lower pages, resulting in BUG_ON()s.
+ *
+ * WARNING: The offsets and addresses used within are specifically
+ * calculated to trigger the bug as it existed.  Don't mess with them
+ * unless you *really* know what you're doing.
+ *
+ * The kernel bug in question was fixed with commit
+ * 856fc29505556cf263f3dcda2533cf3766c14ab6.
  */
 #define FOURGIG ((off64_t)0x100000000ULL)
 

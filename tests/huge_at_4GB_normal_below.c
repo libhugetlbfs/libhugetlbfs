@@ -27,9 +27,17 @@
 
 #include "hugetests.h"
 
-/* Designed to pick up a bug on ppc64 where
+/*
+ * Test rationale:
+ *
+ * Designed to pick up a bug on ppc64 where
  * touches_hugepage_high_range() falsely reported true for ranges
- * reaching below 4GB */
+ * reaching below 4GB
+ *
+ * WARNING: The offsets and addresses used within are specifically
+ * calculated to trigger the bug as it existed.  Don't mess with them
+ * unless you *really* know what you're doing.
+ */
 
 int main(int argc, char *argv[])
 {

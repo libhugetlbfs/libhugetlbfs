@@ -35,6 +35,10 @@
  * i_size.  This bug means that attempting to instantiate a page
  * beyond the end of a hugepage file can result in an OOM and SIGKILL
  * instead of the correct SIGBUS.
+ *
+ * This bug was fixed with a band-aid (enough to pass this test) in
+ * commit ebed4bfc8da8df5b6b0bc4a5064a949f04683509.  A more complete
+ * fix still pending as of 3d4248885b9fca818e7fe6b66328e714876d36ad.
  */
 static void sigbus_handler(int signum, siginfo_t *si, void *uc)
 {

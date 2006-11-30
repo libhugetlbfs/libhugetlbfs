@@ -41,6 +41,13 @@
  *
  * Test adapted to the libhugetlbfs framework from an example by
  * Kenneth Chen <kenneth.w.chen@intel.com>
+ *
+ * WARNING: The offsets and addresses used within are specifically
+ * calculated to trigger the bug as it existed.  Don't mess with them
+ * unless you *really* know what you're doing.
+ *
+ * The kernel bug in question was fixed with commit
+ * 856fc29505556cf263f3dcda2533cf3766c14ab6.
  */
 #define MAP_LENGTH	(4 * hpage_size)
 #define TRUNCATE_POINT	0x60000000UL

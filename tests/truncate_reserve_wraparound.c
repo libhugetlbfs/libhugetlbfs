@@ -29,6 +29,18 @@
 
 #include "hugetests.h"
 
+/*
+ * Test rationale:
+ *
+ * At one stage, improper handling of tests against i_size could mess
+ * up accounting of reserved hugepages on certain truncate
+ * operations.
+ *
+ * This bug was fixed with a band-aid (enough to pass this test) in
+ * commit ebed4bfc8da8df5b6b0bc4a5064a949f04683509.  A more complete
+ * fix still pending as of 3d4248885b9fca818e7fe6b66328e714876d36ad.
+ */
+
 #define RANDOM_CONSTANT	0x1234ABCD
 
 static sigjmp_buf sig_escape;

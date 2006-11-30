@@ -27,9 +27,17 @@
 
 #include "hugetests.h"
 
-/* Designed to pick up a bug on ppc64 where
+/*
+ * Test rationale:
+ *
+ * Designed to pick up a bug on ppc64 where
  * touches_hugepage_low_range() could give false positives because of
- * the peculiar (undefined) behaviour of << for large shifts */
+ * the peculiar (undefined) behaviour of << for large shifts
+ *
+ * WARNING: The offsets and addresses used within are specifically
+ * calculated to trigger the bug as it existed.  Don't mess with them
+ * unless you *really* know what you're doing.
+ */
 
 int main(int argc, char *argv[])
 {
