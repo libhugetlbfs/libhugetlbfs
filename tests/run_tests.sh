@@ -13,16 +13,16 @@ function free_hpages() {
 	echo "$H"
 }
 
-function hugetlbfs_path() {
-    if [ -n "$HUGETLB_PATH" ]; then
-	echo "$HUGETLB_PATH"
-    else
-	grep hugetlbfs /proc/mounts | cut -f2 -d' '
-    fi
+function get_and_set_hugetlbfs_path() {
+	HUGETLB_PATH=$(PATH="obj32:obj64:$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH:../obj32:../obj64" get_hugetlbfs_path)
+    	if [ $? != 0 ]; then
+		echo "run_tests.sh: unable to find hugetlbfs mountpoint"
+		exit 1
+    	fi
 }
 
 function clear_hpages() {
-    rm -rf "`hugetlbfs_path`"/elflink-uid-`id -u`
+    rm -rf "$HUGETLB_PATH"/elflink-uid-`id -u`
 }
 
 TOTAL_HPAGES=$(grep 'HugePages_Total:' /proc/meminfo | cut -f2 -d:)
@@ -216,6 +216,8 @@ fi
 if [ -z "$WORDSIZES" ]; then
     WORDSIZES="32 64"
 fi
+
+get_and_set_hugetlbfs_path
 
 for set in $TESTSETS; do
     case $set in

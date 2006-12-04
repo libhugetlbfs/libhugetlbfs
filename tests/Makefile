@@ -13,6 +13,7 @@ NOLIB_TESTS = malloc malloc_manysmall dummy
 LDSCRIPT_TESTS = zero_filesize_segment
 HUGELINK_TESTS = linkhuge linkhuge_nofd linkshare
 STRESS_TESTS = mmap-gettest mmap-cow shm-gettest shm-getraw shm-fork
+HELPERS = get_hugetlbfs_path
 
 CFLAGS = -O2 -Wall -g
 CPPFLAGS = -I..
@@ -44,14 +45,15 @@ VECHO = echo "	"
 endif
 
 DEPFILES = $(LIB_TESTS:%=%.d) $(NOLIB_TESTS:%=%.d) $(HUGELINK_TESTS:%=%.d) \
-	testutils.d
+	$(HELPERS:%=%.d) testutils.d
 
 ALLTESTS = $(foreach DIR,$(OBJDIRS),$(TESTS:%=$(DIR)/%))
+ALLHELPERS = $(foreach DIR,$(OBJDIRS),$(HELPERS:%=$(DIR)/%))
 ifdef CC64
 ALLTESTS += $(TESTS_64:%=obj64/%)
 endif
 
-all:	$(ALLTESTS)
+all:	$(ALLTESTS) $(ALLHELPERS)
 
 obj32/%.o: %.c
 	@$(VECHO) CC32 $@
@@ -126,6 +128,14 @@ obj64/xBDT.%: $(SCRIPTS64).xBDT $(HUGETLBFS_LD) obj64/%.o obj64/testutils.o
 	@mkdir -p obj64
 	@ln -sf ../$(HUGETLBFS_LD) obj64/ld
 	$(CC64) -B./obj64 $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,--hugetlbfs-link=BDT $(filter %.o,$^)
+
+$(HELPERS:%=obj32/%): %: %.o
+	@$(VECHO) LD32 "(helper)" $@
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS) -lhugetlbfs 
+
+$(HELPERS:%=obj64/%): %: %.o
+	@$(VECHO) LD64 "(helper)" $@
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs 
 
 clean:
 	@$(VECHO) CLEAN "(tests)"
