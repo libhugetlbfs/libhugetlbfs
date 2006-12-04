@@ -171,15 +171,20 @@ ino_t get_addr_inode(void *p)
 		return -1;
 	}
 
-	/* looks like a filename? */
+	/* Don't care about non-filenames */
 	if (name[0] != '/')
 		return 0;
 
 	/* Truncate the filename portion */
 
 	ret = stat(name, &sb);
-	if (ret < 0)
+	if (ret < 0) {
+		/* Don't care about unlinked files */
+		if (errno == ENOENT)
+			return 0;
+		ERROR("stat failed: %s\n", strerror(errno));
 		return -1;
+	}
 
 	return sb.st_ino;
 }

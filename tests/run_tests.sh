@@ -79,20 +79,19 @@ elfshare_test () {
     # Run each elfshare test invocation independently - clean up the
     # sharefiles before and after in the first set of runs, but leave
     # them there in the second:
-    NUM_THREADS=2
     clear_hpages
-    run_test HUGETLB_SHARE=2 "$@" "xB.$baseprog" $NUM_THREADS
+    run_test HUGETLB_SHARE=2 "$@" "xB.$baseprog"
     clear_hpages
-    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog" $NUM_THREADS
+    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog"
     clear_hpages
-    run_test HUGETLB_SHARE=2 "$@" "xBDT.$baseprog" $NUM_THREADS
+    run_test HUGETLB_SHARE=2 "$@" "xBDT.$baseprog"
     clear_hpages
-    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog" $NUM_THREADS
+    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
     clear_hpages
-    run_test HUGETLB_SHARE=2 "$@" "xB.$baseprog" $NUM_THREADS
-    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog" $NUM_THREADS
-    run_test HUGETLB_SHARE=2 "$@" "xBDT.$baseprog" $NUM_THREADS
-    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog" $NUM_THREADS
+    run_test HUGETLB_SHARE=2 "$@" "xB.$baseprog"
+    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog"
+    run_test HUGETLB_SHARE=2 "$@" "xBDT.$baseprog"
+    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
     clear_hpages
 }
 

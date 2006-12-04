@@ -16,6 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,7 @@
 #include <time.h>
 #include <errno.h>
 #include <limits.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/shm.h>
@@ -34,6 +36,7 @@
 #define BLOCK_SIZE	16384
 #define CONST	0xdeadbeef
 #define SHM_KEY 0xdeadcab
+#define NUM_CHILDREN	2
 
 #define BIG_INIT	{ \
 	[0] = CONST, [17] = CONST, [BLOCK_SIZE-1] = CONST, \
@@ -80,6 +83,11 @@ static struct test_entry {
 
 #define NUM_TESTS	(sizeof(testtab) / sizeof(testtab[0]))
 
+static int sharing;
+static int elfmap_off;
+static int shmid;
+static ino_t *shm;
+
 static char link_string[32];
 
 static void get_link_string(const char *argv0)
@@ -115,14 +123,19 @@ static ino_t do_test(struct test_entry *te)
 
 		barrier();
 
-		for (i = 0; i < (te->size / sizeof(*p)); i++)
-			if (p[i] != (CONST ^ i))
-				FAIL("mismatch on %s", te->name);
+		for (i = 0; i < (te->size / sizeof(*p)); i++) {
+			if (p[i] != (CONST ^ i)) {
+				verbose_printf("mismatch on %s", te->name);
+				exit(RC_FAIL);
+			}
+		}
 	} else if (te->execable) {
 		int (*pf)(int) = te->data;
 
-		if ((*pf)(CONST) != CONST)
-			FAIL("%s returns incorrect results", te->name);
+		if ((*pf)(CONST) != CONST) {
+			verbose_printf("%s returns incorrect results", te->name);
+			exit(RC_FAIL);
+		}
 	} else {
 		/* Otherwise just read touch it */
 		for (i = 0; i < (te->size / sizeof(*p)); i++)
@@ -134,50 +147,178 @@ static ino_t do_test(struct test_entry *te)
 	return get_addr_inode(te->data);
 }
 
-int main(int argc, char *argv[], char *envp[])
+static void parse_env(void)
+{
+	char *env;
+
+	env = getenv("HUGETLB_ELFMAP");
+	if (env && (strcasecmp(env, "no") == 0)) {
+		verbose_printf("Segment remapping disabled\n");
+		elfmap_off = 1;
+	} else {
+		env = getenv("HUGETLB_SHARE");
+		if (env)
+			sharing = atoi(env);
+		verbose_printf("Segment remapping enabled, "
+				"sharing = %d\n", sharing);
+	}
+}
+
+static pid_t spawn_child(char *self, int index)
+{
+	int ret;
+	char execarg1[5];
+
+	ret = snprintf(execarg1, 5, "%d", index);
+	if (ret < 0)
+		FAIL("snprintf failed: %s", strerror(errno));
+
+	ret = fork();
+	if (ret) {
+		if (ret < 0) {
+			shmctl(shmid, IPC_RMID, NULL);
+			shmdt(shm);
+			FAIL("fork failed: %s",
+					strerror(errno));
+		}
+	} else {
+		ret = execlp(self, self, execarg1, NULL);
+		if (ret) {
+			shmctl(shmid, IPC_RMID, NULL);
+			shmdt(shm);
+			FAIL("execl(%s, %s, %s failed: %s",
+					self, self, execarg1,
+					strerror(errno));
+		}
+	}
+
+	return ret;
+}
+
+static int child_process(char *self, int index)
 {
 	int i;
-	int shmid;
-	ino_t *shm;
-	int num_sharings;
+	ino_t ino;
 
+	get_link_string(self);
+
+	shmid = shmget(SHM_KEY, NUM_CHILDREN * NUM_TESTS *
+						sizeof(ino_t), 0666);
+	if (shmid < 0) {
+		verbose_printf("Child's shmget failed: %s", strerror(errno));
+		exit(RC_FAIL);
+	}
+
+	shm = shmat(shmid, NULL, 0);
+	if (shm == (void *)-1) {
+		verbose_printf("Child's shmat failed: %s", strerror(errno));
+		exit(RC_FAIL);
+	}
+
+	for (i = 0; i < NUM_TESTS; i++) {
+		if (!test_addr_huge(testtab + i)) {
+			/* don't care about non-huge addresses */
+			shm[index * NUM_TESTS + i] = 0;
+		} else {
+			ino = do_test(testtab + i);
+			if ((int)ino < 0) {
+				shmdt(shm);
+				exit(RC_FAIL);
+			}
+			shm[index * NUM_TESTS + i] = ino;
+		}
+	}
+	shmdt(shm);
+	return 0;
+}
+
+static void verify_inodes()
+{
+	int i, j;
+
+	for (i = 0; i < NUM_TESTS; i++) {
+		ino_t base = shm[i];
+		for (j = 1; j < NUM_CHILDREN; j++) {
+			ino_t comp = shm[j * NUM_TESTS + i];
+			if (base != comp) {
+				/*
+				 * we care if we mismatch if
+				 * a) sharing all segments or
+				 * b) sharing only read-only
+				 * segments and this is one
+				 */
+				if (sharing == 2 ||
+				   (sharing == 1 && testtab[i].writable == 0)) {
+					shmctl(shmid, IPC_RMID, NULL);
+					shmdt(shm);
+					FAIL("Inodes do not match "
+							"(%u != %u)",
+							(int)base, (int)comp);
+				}
+			} else {
+				/*
+				 * we care if we match if
+				 * a) not remapping or
+				 * b) not sharing or
+				 * c) sharing only read-only
+				 * segments and this is not one
+				 * BUT only if the inode is not
+				 * 0 (don't care about the file)
+				 */
+				if (base == 0)
+					continue;
+
+				if (elfmap_off == 1 || sharing == 0 ||
+				   (sharing == 1 && testtab[i].writable == 1)) {
+					shmctl(shmid, IPC_RMID, NULL);
+					shmdt(shm);
+					if (sharing == 1 && testtab[i].writable == 1)
+						verbose_printf("Incorrectly sharing a writable segment...\n");
+					FAIL("Inodes match, but we should not be "
+						"sharing this segment (%d == %d)",
+						(int)base, (int)comp);
+				}
+			}
+		}
+	}
+}
+
+static void sigsegv_handler(int signum, siginfo_t *si, void *context)
+{
+	FAIL("Segmentation fault in parent at address %p", si->si_addr);
+}
+
+int main(int argc, char *argv[], char *envp[])
+{
 	test_init(argc, argv);
 
-	if (argc == 2) {
+	if (argc == 1) {
 		/*
 		 * first process
-		 * arg1 = num_sharings
 		 */
-		char *env;
-		pid_t *children;
-		int ret, j;
-		/* both default to 0 */
-		int sharing = 0, elfmap_off = 0;
+		pid_t children_pids[NUM_CHILDREN];
+		int ret, i;
+		int status;
+		/*
+		 * We catch children's segfaults via waitpid's status,
+		 * but this is to catch the parent itself segfaulting.
+		 * This can happen, for instance, if an old (bad)
+		 * segment file is left lying around in the hugetlbfs
+		 * mountpoint
+		 */
+		struct sigaction sa_seg = {
+			.sa_sigaction = sigsegv_handler,
+			.sa_flags = SA_SIGINFO,
+		};
 
-		env = getenv("HUGETLB_ELFMAP");
-		if (env && (strcasecmp(env, "no") == 0)) {
-			verbose_printf("Segment remapping disabled\n");
-			elfmap_off = 1;
-		} else {
-			env = getenv("HUGETLB_SHARE");
-			if (env)
-				sharing = atoi(env);
-			verbose_printf("Segment remapping enabled, "
-						"sharing = %d\n", sharing);
-		}
+		parse_env();
 
-		num_sharings = atoi(argv[1]);
-		if (num_sharings > 99999)
-			CONFIG("Too many sharings requested (max = 99999)");
-		if (num_sharings <= 0)
-			CONFIG("Number of sharings requested must be greater "
-							"than or equal to 0");
+		ret = sigaction(SIGSEGV, &sa_seg, NULL);
+		if (ret < 0)
+			FAIL("Installing SIGSEGV handler failed: %s",
+							strerror(errno));
 
-		children = (pid_t *)malloc(num_sharings * sizeof(pid_t));
-		if (!children)
-			FAIL("malloc failed: %s", strerror(errno));
-
-		shmid = shmget(SHM_KEY, num_sharings * NUM_TESTS *
+		shmid = shmget(SHM_KEY, NUM_CHILDREN * NUM_TESTS *
 					sizeof(ino_t), IPC_CREAT | IPC_EXCL |
 					0666);
 		if (shmid < 0)
@@ -185,128 +326,50 @@ int main(int argc, char *argv[], char *envp[])
 
 		shm = shmat(shmid, NULL, 0);
 		if (shm == (void *)-1)
-			FAIL("shmat failed: %s", strerror(errno));
+			FAIL("Parent's shmat failed: %s", strerror(errno));
 
-		for (i = 0; i < num_sharings; i++) {
-			char execarg1[5], execarg2[5];
-			ret = snprintf(execarg1, 5, "%d", num_sharings);
-			if (ret < 0)
-				FAIL("snprintf failed: %s", strerror(errno));
+		for (i = 0; i < NUM_CHILDREN; i++)
+			children_pids[i] = spawn_child(argv[0], i);
 
-			ret = snprintf(execarg2, 5, "%d", i);
-			if (ret < 0)
-				FAIL("snprintf failed: %s", strerror(errno));
-
-			ret = fork();
-			if (ret) {
-				if (ret < 0)
-					FAIL("fork failed: %s",
-							strerror(errno));
-				children[i] = ret;
-			} else {
-				ret = execlp(argv[0], argv[0], execarg1,
-								execarg2, NULL);
-				if (ret) {
-					shmctl(shmid, IPC_RMID, NULL);
-					shmdt(shm);
-					FAIL("execl(%s, %s, %s, %s failed: %s",
-						argv[0], argv[0], execarg1,
-						execarg2, strerror(errno));
-				}
-			}
-		}
-		for (i = 0; i < num_sharings; i++) {
-			ret = waitpid(children[i], NULL, 0);
+		for (i = 0; i < NUM_CHILDREN; i++) {
+			ret = waitpid(children_pids[i], &status, 0);
 			if (ret < 0) {
 				shmctl(shmid, IPC_RMID, NULL);
 				shmdt(shm);
 				FAIL("waitpid failed: %s", strerror(errno));
 			}
-		}
-		for (i = 0; i < NUM_TESTS; i++) {
-			ino_t base = shm[i];
-			for (j = 1; j < num_sharings; j++) {
-				ino_t comp = shm[j * NUM_TESTS + i];
-				if (base != comp) {
-					/*
-					 * we care if we mismatch if
-					 * a) sharing all segments or
-					 * b) sharing only read-only
-					 * segments and this is one
-					 */
-					if ((sharing == 2) ||
-					    ((sharing == 1) &&
-					     (testtab[i].writable == 0))) {
-						shmctl(shmid, IPC_RMID, NULL);
-						shmdt(shm);
-						FAIL("Inodes do not match "
-							"(%u != %u)",
-							(int)base, (int)comp);
-					}
-				} else {
-					/*
-					 * we care if we match if
-					 * a) not remapping or
-					 * b) not sharing or
-					 * c) sharing only read-only
-					 * segments and this is not one
-					 */
-					if ((elfmap_off == 1) ||
-					    (sharing == 0) ||
-					    ((sharing == 1) &&
-					     (testtab[i].writable == 1) &&
-					     (base == -1))) {
-						shmctl(shmid, IPC_RMID, NULL);
-						shmdt(shm);
-						if ((sharing == 1) &&
-						    (testtab[i].writable == 1))
-							verbose_printf(
-								"sharing a "
-								"writable "
-								"segment...\n");
-						FAIL("Inodes match, "
-							"but we should not be "
-							"sharing this segment "
-							"(%d == %d)",
-							(int)base, (int)comp);
-					}
-				}
+
+			if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+				shmctl(shmid, IPC_RMID, NULL);
+				shmdt(shm);
+				FAIL("Child %d exited with non-zero status: %d",
+							i + 1, WEXITSTATUS(status));
+			}
+
+			if (WIFSIGNALED(status)) {
+				shmctl(shmid, IPC_RMID, NULL);
+				shmdt(shm);
+				FAIL("Child %d killed by signal: %s", i + 1,
+							strsignal(WTERMSIG(status)));
 			}
 		}
+
+		verify_inodes();
+
 		shmctl(shmid, IPC_RMID, NULL);
 		shmdt(shm);
 		PASS();
-	} else if (argc == 3) {
-		/*
-		 * child process
-		 * arg1 = num_sharings
-		 * arg2 = index + 1 into shared memory array
-		 */
-		ino_t i1;
-		int index;
-
-		num_sharings = atoi(argv[1]);
-		index = atoi(argv[2]);
-
-		get_link_string(argv[0]);
-
-		shmid = shmget(SHM_KEY, num_sharings * NUM_TESTS *
-							sizeof(ino_t), 0666);
-		if (shmid < 0)
-			FAIL("Child's shmget failed: %s", strerror(errno));
-
-		shm = shmat(shmid, NULL, 0);
-		if (shm == (void *)-1)
-			FAIL("shmat failed: %s", strerror(errno));
-
-		for (i = 0; i < NUM_TESTS; i++) {
-			i1 = do_test(testtab + i);
-			if (((int)i1) < 0)
-				shmdt(shm);
-			shm[index * NUM_TESTS + i] = i1;
+	} else {
+		if (argc == 2) {
+			/*
+			 * child process
+			 * arg1 = index + 1 into shared memory array
+			 */
+			child_process(argv[0], atoi(argv[1]));
+		} else {
+			FAIL("Invalid arguments\n");
 		}
-		shmdt(shm);
-		exit(0);
-	} else
-		FAIL("Incorrect arguments\n");
+	}
+
+	return 0;
 }
