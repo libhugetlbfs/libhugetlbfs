@@ -405,23 +405,80 @@ static int get_shared_file_name(struct seg_info *htlb_seg_info, char *file_path)
 	return 0;
 }
 
-/* 
+/* Find the .dynamic program header */
+static int find_dynamic(Elf_Dyn **dyntab)
+{
+	Elf_Phdr *phdr;	/* program header table */
+	int i = 1;
+
+	phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
+	while ((phdr[i].p_type != PT_DYNAMIC) && (i < ehdr->e_phnum)) {
+		++i;
+	}
+	if (phdr[i].p_type == PT_DYNAMIC) {
+		*dyntab = (Elf_Dyn *)phdr[i].p_vaddr;
+		return 0;
+	} else {
+		DEBUG("No dynamic segment found\n");
+		return -1;
+	}
+}
+
+/* Find the dynamic string and symbol tables */
+static int find_tables(Elf_Dyn *dyntab, Elf_Sym **symtab, char **strtab)
+{
+	int i = 1;
+	while ((dyntab[i].d_tag != DT_NULL)) {
+		if (dyntab[i].d_tag == DT_SYMTAB)
+			*symtab = (Elf_Sym *)dyntab[i].d_un.d_ptr;
+		else if (dyntab[i].d_tag == DT_STRTAB)
+			*strtab = (char *)dyntab[i].d_un.d_ptr;
+		i++;
+	}
+
+	if (!*symtab) {
+		DEBUG("No symbol table found\n");
+		return -1;
+	}
+	if (!*strtab) {
+		DEBUG("No string table found\n");
+		return -1;
+	}
+	return 0;
+}
+
+/* Find the number of symbol table entries */
+static int find_numsyms(Elf_Sym *symtab, char *strtab)
+{
+	/*
+	 * WARNING - The symbol table size calculation does not follow the ELF
+	 *           standard, but rather exploits an assumption we enforce in
+	 *           our linker scripts that the string table follows
+	 *           immediately after the symbol table. The linker scripts
+	 *           must maintain this assumption or this code will break.
+	 */
+	if ((void *)strtab <= (void *)symtab) {
+		DEBUG("Could not calculate dynamic symbol table size\n");
+		return -1;
+	}
+	return ((void *)strtab - (void *)symtab) / sizeof(Elf_Sym);
+}
+
+/*
  * Subtle:  Since libhugetlbfs depends on glibc, we allow it
  * it to be loaded before us.  As part of its init functions, it
  * initializes stdin, stdout, and stderr in the bss.  We need to
  * include these initialized variables in our copy.
  */
 
-static void get_extracopy(struct seg_info *seg, void **extra_start, 
+static void get_extracopy(struct seg_info *seg, void **extra_start,
 							void **extra_end)
 {
 	Elf_Dyn *dyntab;        /* dynamic segment table */
-	Elf_Phdr *phdr;         /* program header table */
 	Elf_Sym *symtab = NULL; /* dynamic symbol table */
 	Elf_Sym *sym;           /* a symbol */
 	char *strtab = NULL;    /* string table for dynamic symbols */
-	int i, found_sym = 0;
-	int numsyms;            /* number of symbols in dynamic symbol table */
+	int ret, numsyms, found_sym = 0;
 	void *start, *end, *start_orig, *end_orig;
 	void *sym_start, *sym_end;
 
@@ -432,50 +489,19 @@ static void get_extracopy(struct seg_info *seg, void **extra_start,
 	if (!minimal_copy)
 		goto bail2;
 
-	/* Find dynamic section */
-	i = 1;
-	phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
-	while ((phdr[i].p_type != PT_DYNAMIC) && (i < ehdr->e_phnum)) {
-		++i;
-	}
-	if (phdr[i].p_type == PT_DYNAMIC) {
-		dyntab = (Elf_Dyn *)phdr[i].p_vaddr;
-	} else {
-		DEBUG("No dynamic segment found\n");
+	/* Find dynamic program header */
+	ret = find_dynamic(&dyntab);
+	if (ret < 0)
 		goto bail;
-	}
 
 	/* Find symbol and string tables */
-	i = 1;
-	while ((dyntab[i].d_tag != DT_NULL)) {
-		if (dyntab[i].d_tag == DT_SYMTAB)
-			symtab = (Elf_Sym *)dyntab[i].d_un.d_ptr;
-		else if (dyntab[i].d_tag == DT_STRTAB)
-			strtab = (char *)dyntab[i].d_un.d_ptr;
-		i++;
-	}
-			
-	if (!symtab) {
-		DEBUG("No symbol table found\n");
+	ret = find_tables(dyntab, &symtab, &strtab);
+	if (ret < 0)
 		goto bail;
-	}
-	if (!strtab) {
-		DEBUG("No string table found\n");
-		goto bail;
-	}
 
-	/*
-	 * WARNING - The symbol table size calculation does not follow the ELF
-	 *           standard, but rather exploits an assumption we enforce in
-	 *           our linker scripts that the string table follows
-	 *           immediately after the symbol table. The linker scripts
-	 *           must maintain this assumption or this code will break.
-	 */
-	if ((void *)strtab <= (void *)symtab) {
-		DEBUG("Could not calculate dynamic symbol table size\n");
+	numsyms = find_numsyms(symtab, strtab);
+	if (numsyms < 0)
 		goto bail;
-	}
-	numsyms = ((void *)strtab - (void *)symtab) / sizeof(Elf_Sym);
 
 	/* 
 	 * We must ensure any returns done hereafter have sane start and end 
