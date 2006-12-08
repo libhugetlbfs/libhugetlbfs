@@ -145,6 +145,7 @@ functional_tests () {
 
 # Tests requiring an active mount and hugepage COW
     run_test private
+    run_test direct
     run_test malloc
     preload_test HUGETLB_MORECORE=yes malloc
     run_test malloc_manysmall
