@@ -95,6 +95,29 @@ elfshare_test () {
     clear_hpages
 }
 
+elflink_and_share_test () {
+    args=("$@")
+    N="$[$#-1]"
+    baseprog="${args[$N]}"
+    unset args[$N]
+    set -- "${args[@]}"
+    # Run each elflink test pair independently - clean up the sharefiles
+    # before and after each pair
+    clear_hpages
+    run_test HUGETLB_SHARE=2 "$@" "xB.$baseprog"
+    run_test HUGETLB_SHARE=2 "$@" "xB.$baseprog"
+    clear_hpages
+    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog"
+    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog"
+    clear_hpages
+    run_test HUGETLB_SHARE=2 "$@" "xBDT.$baseprog"
+    run_test HUGETLB_SHARE=2 "$@" "xBDT.$baseprog"
+    clear_hpages
+    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
+    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
+    clear_hpages
+}
+
 setup_shm_sysctl() {
     SHMMAX=`cat /proc/sys/kernel/shmmax`
     SHMALL=`cat /proc/sys/kernel/shmall`
@@ -155,6 +178,7 @@ functional_tests () {
 
 # Sharing tests
     elfshare_test linkshare
+    elflink_and_share_test linkhuge
 
 # Accounting bug tests
 # reset free hpages because sharing will have held some
