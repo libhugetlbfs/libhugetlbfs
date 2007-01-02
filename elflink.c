@@ -222,12 +222,12 @@ static void assemble_path(char *dst, const char *fmt, ...)
 	va_end(ap);
 
 	if (len < 0) {
-		ERROR("vsnprintf() error");
+		ERROR("vsnprintf() error\n");
 		abort();
 	}
 
 	if (len > PATH_MAX) {
-		ERROR("Overflow assembling path");
+		ERROR("Overflow assembling path\n");
 		abort();
 	}
 }
@@ -318,7 +318,7 @@ static int find_or_create_share_path(void)
 
 	ret = mkdir(share_path, 0700);
 	if ((ret != 0) && (errno != EEXIST)) {
-		ERROR("Error creating share directory %s", share_path);
+		ERROR("Error creating share directory %s\n", share_path);
 		return -1;
 	}
 
@@ -330,7 +330,7 @@ static int find_or_create_share_path(void)
 	}
 
 	if (! S_ISDIR(sb.st_mode)) {
-		ERROR("%s is not a directory", share_path);
+		ERROR("%s is not a directory\n", share_path);
 		return -1;
 	}
 
