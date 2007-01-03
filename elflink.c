@@ -600,13 +600,13 @@ static int prepare_segment(struct seg_info *seg)
 	 * be contained in the filesz portion of the segment.
 	 */
 
-	DEBUG("Mapped hugeseg at %p. Copying %#0lx bytes from %p...\n",
+	DEBUG("Mapped hugeseg at %p. Copying %#0lx bytes from %p...",
 	      p, seg->filesz, seg->vaddr);
 	memcpy(p, seg->vaddr, seg->filesz);
 	DEBUG_CONT("done\n");
 
 	if (extra_end > extra_start) {
-		DEBUG("Copying extra %#0lx bytes from %p...\n", 
+		DEBUG("Copying extra %#0lx bytes from %p...",
 			(unsigned long)(extra_end - extra_start), extra_start);
 		gap = extra_start - (seg->vaddr + seg->filesz);
 		memcpy((p + seg->filesz + gap), extra_start, (extra_end - extra_start));

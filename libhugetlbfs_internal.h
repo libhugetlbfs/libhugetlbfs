@@ -31,20 +31,36 @@
 extern int __hugetlbfs_verbose;
 
 #define ERROR(...) \
-	if (__hugetlbfs_verbose >= 1) \
-		fprintf(stderr, "libhugetlbfs: ERROR: " __VA_ARGS__)
+	do { \
+		if (__hugetlbfs_verbose >= 1) { \
+			fprintf(stderr, "libhugetlbfs: ERROR: " __VA_ARGS__); \
+			fflush(stderr); \
+		} \
+	} while (0)
 
 #define WARNING(...) \
-	if (__hugetlbfs_verbose >= 2) \
-		fprintf(stderr, "libhugetlbfs: WARNING: " __VA_ARGS__)
+	do { \
+		if (__hugetlbfs_verbose >= 2) { \
+			fprintf(stderr, "libhugetlbfs: WARNING: " __VA_ARGS__); \
+			fflush(stderr); \
+		} \
+	} while (0)
 
 #define DEBUG(...) \
-	if (__hugetlbfs_verbose >= 3) \
-		fprintf(stderr, "libhugetlbfs: " __VA_ARGS__)
+	do { \
+		if (__hugetlbfs_verbose >= 3) { \
+			fprintf(stderr, "libhugetlbfs: " __VA_ARGS__); \
+			fflush(stderr); \
+		} \
+	} while (0)
 
 #define DEBUG_CONT(...) \
-	if (__hugetlbfs_verbose >= 3) \
-		fprintf(stderr, __VA_ARGS__)
+	do { \
+		if (__hugetlbfs_verbose >= 3) { \
+			fprintf(stderr, __VA_ARGS__); \
+			fflush(stderr); \
+		} \
+	} while (0)
 
 #if defined(__powerpc64__) && !defined(__LP64__)
 /* Older binutils fail to provide this symbol */
