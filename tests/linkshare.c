@@ -243,12 +243,10 @@ static void verify_inodes()
 			if (base != comp) {
 				/*
 				 * we care if we mismatch if
-				 * a) sharing all segments or
-				 * b) sharing only read-only
+				 * sharing only read-only
 				 * segments and this is one
 				 */
-				if (sharing == 2 ||
-				   (sharing == 1 && testtab[i].writable == 0)) {
+				if (sharing == 1 && testtab[i].writable == 0) {
 					shmctl(shmid, IPC_RMID, NULL);
 					shmdt(shm);
 					FAIL("Inodes do not match "

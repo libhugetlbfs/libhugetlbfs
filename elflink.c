@@ -752,8 +752,7 @@ static int obtain_prepared_file(struct seg_info *htlb_seg_info)
 	int ret;
 
 	/* Either share all segments or share only read-only segments */
-	if ((sharing == 2) || ((sharing == 1) &&
-			       !(htlb_seg_info->prot & PROT_WRITE))) {
+	if (sharing && !(htlb_seg_info->prot & PROT_WRITE)) {
 		/* first, try to share */
 		ret = find_or_prepare_shared_file(htlb_seg_info);
 		if (ret == 0)
@@ -848,10 +847,13 @@ static int check_env(void)
 	env = getenv("HUGETLB_SHARE");
 	if (env)
 		sharing = atoi(env);
-	DEBUG("HUGETLB_SHARE=%d, sharing ", sharing);
 	if (sharing == 2) {
-		DEBUG_CONT("enabled for all segments\n");
+		ERROR("HUGETLB_SHARE=%d, however sharing of writable\n"
+			"segments has been deprecated and is now disabled\n",
+			sharing);
+		sharing = 0;
 	} else {
+		DEBUG("HUGETLB_SHARE=%d, sharing ", sharing);
 		if (sharing == 1) {
 			DEBUG_CONT("enabled for only read-only segments\n");
 		} else {

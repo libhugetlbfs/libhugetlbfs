@@ -335,13 +335,10 @@ The reduce this wastage, libugetlbfs can be instructed to allow
 sharing segments between multiple invocations of a program.  To do
 this, you must set the HUGETLB_SHARE variable must be set for all the
 processes in question.  This variable has three possible values:
-	0 (or unset): the default, indicates no segments should be shared
+	anything but 1: the default, indicates no segments should be shared
 	1: indicates that read-only segments (i.e. the program text,
 in most cases) should be shared, read-write segments (data and bss)
 will not be shared.
-	2: indicates that all segments should be shared.  Note that
-the segments will be mapped copy-on-write, so read-write segments may
-not remain shared for very long.
 
 If the HUGETLB_MINIMAL_COPY variable is set for any program using
 shared segments, it must be set to the same value for all invocations
