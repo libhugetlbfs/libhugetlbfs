@@ -52,6 +52,7 @@ static long mapsize;
 
 static void *hugetlbfs_morecore(ptrdiff_t increment)
 {
+	int ret;
 	void *p;
 	long newsize = 0;
 
@@ -99,11 +100,12 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			return NULL;
 		}
 
-#if 0
-/* Use of mlock is disabled because it results in bad numa behavior since
- * the malloc'd memory is allocated node-local to the cpu calling morecore()
- * and not to the cpu(s) that are actually using the memory.
- */
+		/* Use of mlock was reintroduced in libhugetlbfs 1.1,
+		 * as the NUMA issues have been fixed in-kernel. The
+		 * NUMA users of libhugetlbfs' malloc feature are
+		 * expected to use the numactl program to specify an
+		 * appropriate policy for hugepage allocation */
+
 		/* Use mlock to guarantee these pages to the process */
 		ret = mlock(p, newsize);
 		if (ret) {
@@ -112,7 +114,6 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			return NULL;
 		}
 		munlock(p, newsize);
-#endif
 
 		/* we now have mmap'd further */
 		mapsize += newsize;
