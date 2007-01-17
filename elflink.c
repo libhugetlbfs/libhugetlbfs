@@ -858,6 +858,7 @@ static int check_env(void)
 			DEBUG_CONT("enabled for only read-only segments\n");
 		} else {
 			DEBUG_CONT("disabled\n");
+			sharing = 0;
 		}
 	}
 
