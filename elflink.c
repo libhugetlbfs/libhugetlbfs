@@ -776,7 +776,7 @@ static int obtain_prepared_file(struct seg_info *htlb_seg_info)
 
 static void remap_segments(struct seg_info *seg, int num)
 {
-	int hpage_size = gethugepagesize();
+	long hpage_size = gethugepagesize();
 	int i;
 	void *p;
 
