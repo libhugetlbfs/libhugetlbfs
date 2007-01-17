@@ -751,7 +751,7 @@ static int obtain_prepared_file(struct seg_info *htlb_seg_info)
 	int fd = -1;
 	int ret;
 
-	/* Either share all segments or share only read-only segments */
+	/* Share only read-only segments */
 	if (sharing && !(htlb_seg_info->prot & PROT_WRITE)) {
 		/* first, try to share */
 		ret = find_or_prepare_shared_file(htlb_seg_info);
