@@ -465,6 +465,32 @@ static int find_numsyms(Elf_Sym *symtab, char *strtab)
 }
 
 /*
+ * To reduce the size of the extra copy window, we can eliminate certain
+ * symbols based on information in the dynamic section. The following
+ * characteristics apply to symbols which may require copying:
+ * - Within the BSS
+ * - Global or Weak binding
+ * - Object type (variable)
+ * - Non-zero size (zero size means the symbol is just a marker with no data)
+ */
+static inline int keep_symbol(Elf_Sym *s, void *start, void *end)
+{
+	if ((void *)s->st_value < start)
+		return 0;
+	if ((void *)s->st_value > end)
+		return 0;
+	if ((ELF_ST_BIND(s->st_info) != STB_GLOBAL) &&
+	    (ELF_ST_BIND(s->st_info) != STB_WEAK))
+		return 0;
+	if (ELF_ST_TYPE(s->st_info) != STT_OBJECT)
+		return 0;
+	if (s->st_size == 0)
+		return 0;
+
+	return 1;
+}
+
+/*
  * Subtle:  Since libhugetlbfs depends on glibc, we allow it
  * it to be loaded before us.  As part of its init functions, it
  * initializes stdin, stdout, and stderr in the bss.  We need to
@@ -510,22 +536,8 @@ static void get_extracopy(struct seg_info *seg, void **extra_start,
 	start = end_orig;
 	end = start_orig;
 
-	/* 
-	 * To reduce the size of the extra copy window, we can eliminate certain
-	 * symbols based on information in the dynamic section.  The following
-	 * characteristics apply to symbols which may require copying:
-	 * - Within the BSS
-	 * - Global scope
-	 * - Object type (variable)
-	 * - Non-zero size (zero size means the symbol is just a marker with no
-	 *   data)
-	 */
 	for (sym = symtab; sym < symtab + numsyms; sym++) {
-		if (((void *)sym->st_value < start_orig) || 
-			((void *)sym->st_value > end_orig) ||
-			(ELF_ST_BIND(sym->st_info) != STB_GLOBAL) ||
-			(ELF_ST_TYPE(sym->st_info) != STT_OBJECT) ||
-			(sym->st_size == 0))
+		if (!keep_symbol(sym, start_orig, end_orig))
 			continue;
 		/* TODO - add filtering so that we only look at symbols from glibc 
 		   (@@GLIBC_*) */
