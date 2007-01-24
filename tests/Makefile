@@ -6,7 +6,7 @@ LIB_TESTS = gethugepagesize test_root find_path unlinked_fd \
 	chunk-overcommit mprotect alloc-instantiate-race mlock \
 	truncate_reserve_wraparound truncate_sigbus_versus_oom \
 	map_high_truncate_2 truncate_above_4GB direct \
-	misaligned_offset brk_near_huge task-size-overrun
+	misaligned_offset brk_near_huge task-size-overrun stack_grow_into_huge
 LIB_TESTS_64 = straddle_4GB huge_at_4GB_normal_below \
 	huge_below_4GB_normal_above
 NOLIB_TESTS = malloc malloc_manysmall dummy
