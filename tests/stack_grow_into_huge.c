@@ -48,7 +48,9 @@
 void do_child()
 {
 	while (1) {
-		alloca(16*1024*1024);
+		volatile int *x;
+		x = alloca(16*1024*1024);
+		*x = 1;
 	}
 }
 
