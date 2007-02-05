@@ -785,6 +785,40 @@ static int obtain_prepared_file(struct seg_info *htlb_seg_info)
 	return 0;
 }
 
+static void drop_cache(struct seg_info seg)
+{
+	long hpage_size = gethugepagesize();
+	void *p;
+	char c;
+
+	/*
+	 * take a COW fault on each hugepage in
+	 * the segment's file data ...
+	 */
+	for (p = seg.vaddr; p <= seg.vaddr + seg.filesz;
+						p += hpage_size) {
+		memcpy(&c, p, 1);
+		memcpy(p, &c, 1);
+	}
+	/*
+	 * ... as well as each huge page in the
+	 * extracopy area
+	 *
+	 */
+	for (p = seg.extra_vaddr; p && p <= seg.extra_vaddr +
+					seg.extrasz; p += hpage_size) {
+		memcpy(&c, p, 1);
+		memcpy(p, &c, 1);
+	}
+	/*
+	 * Note: fadvise() failing is not
+	 * actually an error, as we'll just use
+	 * an extra set of hugepages (in the
+	 * pagecache).
+	 */
+	posix_fadvise(seg.fd, 0, 0, POSIX_FADV_DONTNEED);
+}
+
 static void remap_segments(struct seg_info *seg, int num)
 {
 	long hpage_size = gethugepagesize();
@@ -828,6 +862,23 @@ static void remap_segments(struct seg_info *seg, int num)
 	/* The segments are all back at this point.
 	 * and it should be safe to reference static data
 	 */
+
+	/*
+	 * This pagecache dropping code should not be used for shared segments.
+	 * But we currently only share read-only segments, so the below check
+	 * for PROT_WRITE is implicitly sufficient.
+	 *
+	 * Note: if minimal_copy is disabled, it is overkill to try and
+	 * save huge pages here by dropping them out of the cache, as we
+	 * will end up using more than normal anyways. Also, due to
+	 * limitations on certain architectures, we would need to avoid
+	 * prefaulting in the extracopy area so as to not use an
+	 * inordinate number of huge pages.
+	 */
+	if (minimal_copy)
+		for (i = 0; i < num; i++)
+			if (seg[i].prot & PROT_WRITE)
+				drop_cache(seg[i]);
 }
 
 static int check_env(void)
