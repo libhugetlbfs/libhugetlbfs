@@ -109,7 +109,9 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 		/* Use mlock to guarantee these pages to the process */
 		ret = mlock(p, newsize);
 		if (ret) {
-			WARNING("Failed to reserve huge pages in hugetlbfs_morecore()\n");
+			WARNING("Failed to reserve huge pages in "
+					"hugetlbfs_morecore(): %s\n",
+					strerror(errno));
 			munmap(p, newsize);
 			return NULL;
 		}
