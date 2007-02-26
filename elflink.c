@@ -186,11 +186,11 @@ static char share_path[PATH_MAX+1];
 #define MAX_HTLB_SEGS	2
 
 struct seg_info {
-	void *vaddr;
-	unsigned long filesz, memsz;
+	void *vaddr, *extra_vaddr;
+	unsigned long filesz, memsz, extrasz;
 	int prot;
 	int fd;
-	int phdr;
+	int index;
 };
 
 static struct seg_info htlb_seg_table[MAX_HTLB_SEGS];
@@ -198,7 +198,6 @@ static int htlb_num_segs;
 static int minimal_copy = 1;
 static int sharing; /* =0 */
 int __debug = 0;
-static Elf_Ehdr *ehdr;
 
 /**
  * assemble_path - handy wrapper around snprintf() for building paths
@@ -229,57 +228,6 @@ static void assemble_path(char *dst, const char *fmt, ...)
 	if (len > PATH_MAX) {
 		ERROR("Overflow assembling path\n");
 		abort();
-	}
-}
-
-/*
- * Parse an ELF header and record segment information for any segments
- * which contain hugetlb information.
- */
-
-static void parse_phdrs(Elf_Ehdr *ehdr)
-{
-	Elf_Phdr *phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
-	int i;
-
-	for (i = 0; i < ehdr->e_phnum; i++) {
-		unsigned long vaddr, filesz, memsz;
-		int prot = 0;
-
-		if (phdr[i].p_type != PT_LOAD)
-			continue;
-
-		if (! (phdr[i].p_flags & PF_LINUX_HUGETLB))
-			continue;
-
-		if (htlb_num_segs >= MAX_HTLB_SEGS) {
-			ERROR("Executable has too many segments marked for "
-			      "hugepage (max %d)\n", MAX_HTLB_SEGS);
-			htlb_num_segs = 0;
-			return;
-		}
-
-		vaddr = phdr[i].p_vaddr;
-		filesz = phdr[i].p_filesz;
-		memsz = phdr[i].p_memsz;
-		if (phdr[i].p_flags & PF_R)
-			prot |= PROT_READ;
-		if (phdr[i].p_flags & PF_W)
-			prot |= PROT_WRITE;
-		if (phdr[i].p_flags & PF_X)
-			prot |= PROT_EXEC;
-
-		DEBUG("Hugepage segment %d "
-			"(phdr %d): %#0lx-%#0lx  (filesz=%#0lx) "
-			"(prot = %#0x)\n",
-			htlb_num_segs, i, vaddr, vaddr+memsz, filesz, prot);
-
-		htlb_seg_table[htlb_num_segs].vaddr = (void *)vaddr;
-		htlb_seg_table[htlb_num_segs].filesz = filesz;
-		htlb_seg_table[htlb_num_segs].memsz = memsz;
-		htlb_seg_table[htlb_num_segs].prot = prot;
-		htlb_seg_table[htlb_num_segs].phdr = i;
-		htlb_num_segs++;
 	}
 }
 
@@ -400,19 +348,17 @@ static int get_shared_file_name(struct seg_info *htlb_seg_info, char *file_path)
 	}
 
 	assemble_path(file_path, "%s/%s_%zd_%d", share_path, binary2,
-		      sizeof(unsigned long) * 8, htlb_seg_info->phdr);
+		      sizeof(unsigned long) * 8, htlb_seg_info->index);
 
 	return 0;
 }
 
 /* Find the .dynamic program header */
-static int find_dynamic(Elf_Dyn **dyntab)
+static int find_dynamic(Elf_Dyn **dyntab, Elf_Phdr *phdr, int phnum)
 {
-	Elf_Phdr *phdr;	/* program header table */
 	int i = 1;
 
-	phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
-	while ((phdr[i].p_type != PT_DYNAMIC) && (i < ehdr->e_phnum)) {
+	while ((phdr[i].p_type != PT_DYNAMIC) && (i < phnum)) {
 		++i;
 	}
 	if (phdr[i].p_type == PT_DYNAMIC) {
@@ -497,8 +443,7 @@ static inline int keep_symbol(Elf_Sym *s, void *start, void *end)
  * include these initialized variables in our copy.
  */
 
-static void get_extracopy(struct seg_info *seg, void **extra_start,
-							void **extra_end)
+static void get_extracopy(struct seg_info *seg, Elf_Phdr *phdr, int phnum)
 {
 	Elf_Dyn *dyntab;        /* dynamic segment table */
 	Elf_Sym *symtab = NULL; /* dynamic symbol table */
@@ -511,12 +456,12 @@ static void get_extracopy(struct seg_info *seg, void **extra_start,
 	end_orig = seg->vaddr + seg->memsz;
 	start_orig = seg->vaddr + seg->filesz;
 	if (seg->filesz == seg->memsz)
-		goto bail2;
+		return;
 	if (!minimal_copy)
 		goto bail2;
 
 	/* Find dynamic program header */
-	ret = find_dynamic(&dyntab);
+	ret = find_dynamic(&dyntab, phdr, phnum);
 	if (ret < 0)
 		goto bail;
 
@@ -557,23 +502,72 @@ static void get_extracopy(struct seg_info *seg, void **extra_start,
 
 	if (found_sym) {
 		/* Return the copy window */
-		*extra_start = start;
-		*extra_end = end;
-		return;
-	} else {
-		/* No need to copy anything */
-		*extra_start = start_orig;
-		*extra_end = start_orig;
-		goto bail3;
+		seg->extra_vaddr = start;
+		seg->extrasz = end - start;
 	}
+	/*
+	 * else no need to copy anything, so leave seg->extra_vaddr as
+	 * NULL
+	 */
+	return;
 
 bail:
 	DEBUG("Unable to perform minimal copy\n");
 bail2:
-	*extra_start = start_orig;
-	*extra_end = end_orig;
-bail3:
-	return;
+	seg->extra_vaddr = start_orig;
+	seg->extrasz = end_orig - start_orig;
+}
+
+/*
+ * Parse an ELF header and record segment information for any segments
+ * which contain hugetlb information.
+ */
+static void parse_elf(Elf_Ehdr *ehdr)
+{
+	Elf_Phdr *phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
+	int i;
+
+	for (i = 0; i < ehdr->e_phnum; i++) {
+		unsigned long vaddr, filesz, memsz;
+		int prot = 0;
+
+		if (phdr[i].p_type != PT_LOAD)
+			continue;
+
+		if (! (phdr[i].p_flags & PF_LINUX_HUGETLB))
+			continue;
+
+		if (htlb_num_segs >= MAX_HTLB_SEGS) {
+			ERROR("Executable has too many segments marked for "
+			      "hugepage (max %d)\n", MAX_HTLB_SEGS);
+			htlb_num_segs = 0;
+			return;
+		}
+
+		vaddr = phdr[i].p_vaddr;
+		filesz = phdr[i].p_filesz;
+		memsz = phdr[i].p_memsz;
+		if (phdr[i].p_flags & PF_R)
+			prot |= PROT_READ;
+		if (phdr[i].p_flags & PF_W)
+			prot |= PROT_WRITE;
+		if (phdr[i].p_flags & PF_X)
+			prot |= PROT_EXEC;
+
+		DEBUG("Hugepage segment %d "
+			"(phdr %d): %#0lx-%#0lx  (filesz=%#0lx) "
+			"(prot = %#0x)\n",
+			htlb_num_segs, i, vaddr, vaddr+memsz, filesz, prot);
+
+		htlb_seg_table[htlb_num_segs].vaddr = (void *)vaddr;
+		htlb_seg_table[htlb_num_segs].filesz = filesz;
+		htlb_seg_table[htlb_num_segs].memsz = memsz;
+		htlb_seg_table[htlb_num_segs].prot = prot;
+		htlb_seg_table[htlb_num_segs].index = i;
+		get_extracopy(&htlb_seg_table[htlb_num_segs], phdr,
+							ehdr->e_phnum);
+		htlb_num_segs++;
+	}
 }
 
 /*
@@ -584,7 +578,7 @@ bail3:
 static int prepare_segment(struct seg_info *seg)
 {
 	int hpage_size = gethugepagesize();
-	void *p, *extra_start, *extra_end;
+	void *p;
 	unsigned long gap;
 	unsigned long size;
 
@@ -592,9 +586,13 @@ static int prepare_segment(struct seg_info *seg)
 	 * Calculate the BSS size that we must copy in order to minimize
 	 * the size of the shared mapping.
 	 */
-	get_extracopy(seg, &extra_start, &extra_end);
-	size = ALIGN((unsigned long)extra_end - (unsigned long)seg->vaddr,
+	if (seg->extra_vaddr) {
+		size = ALIGN((unsigned long)seg->extra_vaddr +
+				seg->extrasz - (unsigned long)seg->vaddr,
 				hpage_size);
+	} else {
+		size = ALIGN(seg->filesz, hpage_size);
+	}
 
 	/* Prepare the hugetlbfs file */
 
@@ -617,11 +615,12 @@ static int prepare_segment(struct seg_info *seg)
 	memcpy(p, seg->vaddr, seg->filesz);
 	DEBUG_CONT("done\n");
 
-	if (extra_end > extra_start) {
+	if (seg->extra_vaddr) {
 		DEBUG("Copying extra %#0lx bytes from %p...",
-			(unsigned long)(extra_end - extra_start), extra_start);
-		gap = extra_start - (seg->vaddr + seg->filesz);
-		memcpy((p + seg->filesz + gap), extra_start, (extra_end - extra_start));
+					seg->extrasz, seg->extra_vaddr);
+		gap = seg->extra_vaddr - (seg->vaddr + seg->filesz);
+		memcpy((p + seg->filesz + gap), seg->extra_vaddr,
+							seg->extrasz);
 		DEBUG_CONT("done\n");
 	}
 
@@ -886,7 +885,7 @@ static int check_env(void)
 static void __attribute__ ((constructor)) setup_elflink(void)
 {
 	extern Elf_Ehdr __executable_start __attribute__((weak));
-	ehdr = &__executable_start;
+	Elf_Ehdr *ehdr = &__executable_start;
 	int ret, i;
 
 	if (! ehdr) {
@@ -898,7 +897,7 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 	if (check_env())
 		return;
 
-	parse_phdrs(ehdr);
+	parse_elf(ehdr);
 
 	if (htlb_num_segs == 0) {
 		DEBUG("Executable is not linked for hugepage segments\n");
