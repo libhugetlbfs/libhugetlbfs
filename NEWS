@@ -1,3 +1,25 @@
+libhugetlbfs 1.1 "Carribbean Jerk"
+======================================================================
+
+This large release brings several performance improvements
+
+Security
+
+* Remove the sharing daemon completely and rework the segment sharing
+  code. Permissions on the hugetlbfs mountpoint are used to enforce
+  segment sharing.
+
+Bug fixes
+
+* Sharing of writable segments is no longer possible, due to address
+  space randomization on x86_64 (although similar issues could happen on
+  any architecture).
+* minimal_copy detection should work better in this release.
+
+Trivial but notable changes
+
+* Testcase updates
+
 libhugetlbfs 1.0.1 "Spicy Garlic"
 ======================================================================
 
