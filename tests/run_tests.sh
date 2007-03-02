@@ -125,7 +125,6 @@ restore_shm_sysctl() {
 }
 
 functional_tests () {
-    #run_test dummy
 # Kernel background tests not requiring hugepage support
     run_test zero_filesize_segment
 

@@ -48,6 +48,18 @@ ifneq ($(BUILDTYPE),NATIVEONLY)
 CC32 = gcc -m32
 ELF32 = elf_i386
 endif
+else
+ifeq ($(ARCH),ia64)
+CC64 = gcc
+LIB64 = lib64
+else
+ifeq ($(ARCH),sparc64)
+CC64 = gcc -m64
+LIB64 = lib64
+else
+$(error "Unrecognized architecture ($(ARCH))")
+endif
+endif
 endif
 endif
 endif
