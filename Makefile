@@ -84,6 +84,14 @@ endif
 
 DEPFILES = $(LIBOBJS:%.o=%.d)
 
+export OBJDIRS
+export CC32
+export CC64
+export ELF32
+export ELF64
+export LIBDIR32
+export LIBDIR64
+
 all:	libs tests
 
 .PHONY:	tests libs
@@ -94,7 +102,7 @@ tests:	libs # Force make to build the library first
 tests:	tests/all
 
 tests/%:
-	$(MAKE) -C tests OBJDIRS="$(OBJDIRS)" CC32="$(CC32)" CC64="$(CC64)" ELF32="$(ELF32)" ELF64="$(ELF64)" $*
+	$(MAKE) -C tests $*
 
 check:	all
 	cd tests; ./run_tests.sh

@@ -32,8 +32,6 @@ SCRIPTS=../ldscripts
 SCRIPTS32 = $(SCRIPTS)/$(ELF32)
 SCRIPTS64 = $(SCRIPTS)/$(ELF64)
 HUGETLBFS_LD=../ld.hugetlbfs
-LIBDIR32 = $(PREFIX)/$(LIB32)
-LIBDIR64 = $(PREFIX)/$(LIB64)
 INST_TESTSDIR32 = $(LIBDIR32)/libhugetlbfs/tests
 INST_TESTSDIR64 = $(LIBDIR64)/libhugetlbfs/tests
 
