@@ -166,7 +166,7 @@ static void __attribute__((constructor)) setup_morecore(void)
 		}
 	} else {
 		heapaddr = (unsigned long)sbrk(0);
-		heapaddr = ALIGN(heapaddr, hugetlbfs_vaddr_granularity());
+		heapaddr = hugetlbfs_slice_end(heapaddr) + 1;
 	}
 
 	DEBUG("setup_morecore(): heapaddr = 0x%lx\n", heapaddr);

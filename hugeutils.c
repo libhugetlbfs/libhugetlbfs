@@ -114,14 +114,45 @@ long gethugepagesize(void)
 	return hpage_size;
 }
 
-long hugetlbfs_vaddr_granularity(void)
-{
+#if defined(__powerpc64__) || defined (__powerpc__)
+#define SLICE_LOW_SHIFT		28
+#define SLICE_HIGH_SHIFT	40
+
+#define SLICE_LOW_TOP		(0x100000000UL)
+#define SLICE_LOW_SIZE		(1UL << SLICE_LOW_SHIFT)
+#define SLICE_HIGH_SIZE		(1UL << SLICE_HIGH_SHIFT)
+#endif
+
+/*
+ * Return the address of the start and end of the hugetlb slice
+ * containing @addr. A slice is a range of addresses, start inclusive
+ * and end exclusive.
+ */
+unsigned long hugetlbfs_slice_start(unsigned long addr) {
 #if defined(__powerpc64__)
-	return (1L << 40);
+	if (addr < SLICE_LOW_TOP)
+		return ALIGN_DOWN(addr, SLICE_LOW_SIZE);
+	else if (addr < SLICE_HIGH_SIZE)
+		return SLICE_LOW_TOP;
+	else
+		return ALIGN_DOWN(addr, SLICE_HIGH_SIZE);
 #elif defined(__powerpc__)
-	return (1L << 28);
+	return ALIGN_DOWN(addr, SLICE_LOW_SIZE);
 #else
-	return gethugepagesize();
+	return ALIGN_DOWN(addr, gethugepagesize());
+#endif
+}
+
+unsigned long hugetlbfs_slice_end(unsigned long addr) {
+#if defined(__powerpc64__)
+	if (addr < SLICE_LOW_TOP)
+		return ALIGN_UP(addr, SLICE_LOW_SIZE) - 1;
+	else
+		return ALIGN_UP(addr, SLICE_HIGH_SIZE) - 1;
+#elif defined(__powerpc__)
+	return ALIGN_UP(addr, SLICE_LOW_SIZE) - 1;
+#else
+	return ALIGN_UP(addr, gethugepagesize()) - 1;
 #endif
 }
 

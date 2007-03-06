@@ -26,7 +26,9 @@
 #define stringify_1(x)	#x
 #define stringify(x)	stringify_1(x)
 
-#define ALIGN(x, a)	(((x) + (a) - 1) & ~((a) - 1))
+#define ALIGN_UP(x, a)		(((x) + (a) - 1) & ~((a) - 1))
+#define ALIGN_DOWN(x, a)	((x) & ~((a) - 1))
+#define ALIGN(x,a)		ALIGN_UP(x,a)
 
 extern int __hugetlbfs_verbose;
 
