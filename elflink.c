@@ -194,6 +194,26 @@ static void assemble_path(char *dst, const char *fmt, ...)
 	}
 }
 
+static void check_memsz()
+{
+	int i;
+	unsigned long memsz_total = 0, memsz_max = 0;
+	if (htlb_num_segs == 0)
+		return;
+	/*
+	 * rough heuristic to see if we'll run out of address
+	 * space
+	 */
+	for (i = 0; i < htlb_num_segs; i++) {
+		memsz_total += htlb_seg_table[i].memsz;
+		if (htlb_seg_table[i].memsz > memsz_max)
+			memsz_max = htlb_seg_table[i].memsz;
+	}
+	/* avoid overflow checking by using two checks */
+	DEBUG("Total memsz = %#0lx, memsz of largest segment = %#0lx\n",
+			memsz_total, memsz_max);
+}
+
 /**
  * find_or_create_share_path - obtain a directory to store the shared
  * hugetlbfs files
@@ -542,6 +562,8 @@ static void parse_elf(Elf_Ehdr *ehdr)
 							ehdr->e_phnum);
 		htlb_num_segs++;
 	}
+	if (__debug)
+		check_memsz();
 }
 
 /*
