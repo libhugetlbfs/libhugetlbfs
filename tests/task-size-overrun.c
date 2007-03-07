@@ -33,14 +33,7 @@
 
 #define MAPS_BUF_SZ 4096
 
-static int endswith(const char *buf, const char *tail)
-{
-	const char *p = buf + strlen(buf) - strlen(tail);
-
-	return strcmp(p, tail) == 0;
-}
-
-static unsigned long find_end_stack(void)
+static unsigned long find_last_mapped(void)
 {
 	FILE *f;
 	char line[MAPS_BUF_SZ];
@@ -56,18 +49,15 @@ static unsigned long find_end_stack(void)
 
 	do {
 		tmp = fgets(line, MAPS_BUF_SZ, f);
-		if (!tmp)
-			FAIL("Couldn't find maps line for stack");
-	} while (! endswith(line, "[stack]\n"));
-
+	} while (tmp);
 	fclose(f);
 
-	verbose_printf("Stack map: %s", line);
+	verbose_printf("Last map: %s", line);
 	ret = sscanf(line, "%lx-%lx %*s %lx %*s %ld %*s", &start, &end, &off, &ino);
 	if (ret != 4)
 		FAIL("Couldn't parse /proc/self/maps line: %s\n", line);
 
-	verbose_printf("Stack mapped at 0x%lx-0x%lx\n", start, end);
+	verbose_printf("Last map at 0x%lx-0x%lx\n", start, end);
 	return end;
 }
 
@@ -76,7 +66,7 @@ static unsigned long find_task_size(void)
 	unsigned long addr;
 	void *p;
 
-	addr = find_end_stack();
+	addr = find_last_mapped();
 	if (!addr || ((addr % getpagesize()) != 0))
 		FAIL("Bogus stack end address, 0x%lx!?", addr);
 
