@@ -30,6 +30,8 @@
  * remap, or because the icache happens to get flushed in the interim.
  */
 
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,6 +39,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/mman.h>
+#include <ucontext.h>
 
 #include <hugetlbfs.h>
 
@@ -51,7 +54,6 @@ static void cacheflush(void *p)
 	asm volatile("dcbst 0,%0; sync; icbi 0,%0; isync" : : "r"(p));
 #endif
 }
-
 
 static void jumpfunc(int copy, void *p)
 {
@@ -80,6 +82,10 @@ static void *sig_expected;
 
 static void sig_handler(int signum, siginfo_t *si, void *uc)
 {
+#if defined(__powerpc__) || defined(__powerpc64__)
+	/* On powerpc, 0 bytes are an illegal instruction, so, if the
+	 * icache is cleared properly, we SIGILL as soon as we jump
+	 * into the cleared page */
 	if (signum == SIGILL) {
 		verbose_printf("SIGILL at %p (sig_expected=%p)\n", si->si_addr,
 			       sig_expected);
@@ -88,6 +94,19 @@ static void sig_handler(int signum, siginfo_t *si, void *uc)
 		}
 		FAIL("SIGILL somewhere unexpected");
 	}
+#elif defined(__i386__) || defined(__x86_64__)
+	/* On x86, zero bytes form a valid instruction:
+	 *	add %al,(%eax)		(i386)
+	 * or	add %al,(%rax)		(x86_64)
+	 *
+	 * So, behaviour depends on the contents of [ER]AX, which in
+	 * turn depends on the details of code generation.  If [ER]AX
+	 * contains a valid pointer, we will execute the instruction
+	 * repeatedly until we run off that hugepage and get a SIGBUS
+	 * on the second, truncated page.  If [ER]AX does not contain
+	 * a valid pointer, we will SEGV on the first instruction in
+	 * the cleared page.  We check for both possibilities
+	 * below. */
 	if (signum == SIGBUS) {
 		verbose_printf("SIGBUS at %p (sig_expected=%p)\n", si->si_addr,
 			       sig_expected);
@@ -98,6 +117,23 @@ static void sig_handler(int signum, siginfo_t *si, void *uc)
 		}
 		FAIL("SIGBUS somewhere unexpected");
 	}
+	if (signum == SIGSEGV) {
+#ifdef __x86_64__
+		void *pc = (void *)((ucontext_t *)uc)->uc_mcontext.gregs[REG_RIP];
+#else
+		void *pc = (void *)((ucontext_t *)uc)->uc_mcontext.gregs[REG_EIP];
+#endif
+
+		verbose_printf("SIGSEGV at %p, PC=%p (sig_expected=%p)\n",
+			       si->si_addr, pc, sig_expected);
+		if (sig_expected == pc) {
+			siglongjmp(sig_escape, 1);
+		}
+		FAIL("SIGSEGV somewhere unexpected");
+	}
+#else
+#error Need to setup signal conditions for this arch
+#endif
 }
 
 static void test_once(int fd)
@@ -133,7 +169,7 @@ static void test_once(int fd)
 	q = p + hpage_size - COPY_SIZE;
 	sig_expected = q;
 
-	jumpfunc(0, q); /* This should SIGILL */
+	jumpfunc(0, q); /* This should blow up */
 
 	FAIL("icache unclean");
 }
@@ -158,6 +194,10 @@ int main(int argc, char *argv[])
 	err = sigaction(SIGBUS, &sa, NULL);
 	if (err)
 		FAIL("Can't install SIGBUS handler");
+
+	err = sigaction(SIGSEGV, &sa, NULL);
+	if (err)
+		FAIL("Can't install SIGSEGV handler");
 
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)
