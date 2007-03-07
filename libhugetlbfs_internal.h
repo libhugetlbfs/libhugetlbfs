@@ -69,4 +69,6 @@ extern int __hugetlbfs_verbose;
 #define __LP64__
 #endif
 
+extern int direct_syscall(int sysnum, ...);
+
 #endif /* _LIBHUGETLBFS_INTERNAL_H */

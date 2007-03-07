@@ -55,31 +55,6 @@
 #define ELF_ST_TYPE(x)  ELF64_ST_TYPE(x)
 #endif
 
-#ifdef __syscall_return
-#ifdef __i386__
-/* The normal i386 syscall macros don't work with -fPIC :( */
-#undef _syscall2
-#define _syscall2(type,name,type1,arg1,type2,arg2) \
-type name(type1 arg1,type2 arg2) \
-{ \
-long __res; \
-__asm__ volatile ("push %%ebx; movl %2,%%ebx; int $0x80; pop %%ebx" \
-        : "=a" (__res) \
-        : "0" (__NR_##name),"r" ((long)(arg1)),"c" ((long)(arg2))); \
-__syscall_return(type,__res); \
-}
-#undef _syscall3
-#define _syscall3(type,name,type1,arg1,type2,arg2,type3,arg3) \
-type name(type1 arg1,type2 arg2,type3 arg3) \
-{ \
-long __res; \
-__asm__ volatile ("push %%ebx; movl %2,%%ebx; int $0x80; pop %%ebx" \
-        : "=a" (__res) \
-        : "0" (__NR_##name),"r" ((long)(arg1)),"c" ((long)(arg2)), \
-                  "d" ((long)(arg3))); \
-__syscall_return(type,__res); \
-}
-#endif /* __i386__ */
 /* This function prints an error message to stderr, then aborts.  It
  * is safe to call, even if the executable segments are presently
  * unmapped.
@@ -90,21 +65,15 @@ __syscall_return(type,__res); \
  * FIXME: This works in practice, but I suspect it
  * is not guaranteed safe: the library functions we call could in
  * theory call other functions via the PLT which will blow up. */
-#define __NR_sys_write __NR_write
-#define __NR_sys_getpid __NR_getpid
-#define __NR_sys_kill __NR_kill
-static _syscall3(ssize_t,sys_write,int,fd,const void *,buf,size_t,count);
-static _syscall0(pid_t,sys_getpid);
-static _syscall2(int,sys_kill,pid_t,pid,int,sig);
 static void write_err(const char *start, int len)
 {
-	sys_write(2, start, len);
+	direct_syscall(__NR_write, 2 /*stderr*/, start, len);
 }
 static void sys_abort(void)
 {
-	pid_t pid = sys_getpid();
+	pid_t pid = direct_syscall(__NR_getpid);
 
-	sys_kill(pid, SIGABRT);
+	direct_syscall(__NR_kill, pid, SIGABRT);
 }
 static void write_err_base(unsigned long val, int base)
 {
@@ -173,13 +142,6 @@ static void unmapped_abort(const char *fmt, ...)
 
 	sys_abort();
 }
-#else /* __syscall_return */
-#warning __syscall_return macro not available. Some debugging will be \
-	disabled during executable remapping
-static void unmapped_abort(const char *fmt, ...)
-{
-}
-#endif /* __syscall_return */
 
 static char share_path[PATH_MAX+1];
 
