@@ -1,6 +1,6 @@
 PREFIX = /usr/local
 
-LIBOBJS = hugeutils.o version.o elflink.o morecore.o debug.o
+LIBOBJS = hugeutils.o version.o morecore.o debug.o
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
 LDSCRIPT_TYPES = B BDT
 LDSCRIPT_DIST_ELF = elf32ppclinux elf64ppc elf_i386 elf_x86_64
@@ -71,9 +71,14 @@ ifdef CC64
 OBJDIRS +=  obj64
 endif
 
-LIBOBJS32 = $(LIBOBJS:%=obj32/%) obj32/$(ELF32).o
-LIBOBJS64 = $(LIBOBJS:%=obj64/%) obj64/$(ELF64).o
-
+ifdef ELF32
+LIBOBJS32 = obj32/elflink.o obj32/$(ELF32).o
+endif
+ifdef ELF64
+LIBOBJS64 = obj64/elflink.o obj64/$(ELF64).o
+endif
+LIBOBJS32 += $(LIBOBJS:%=obj32/%)
+LIBOBJS64 += $(LIBOBJS:%=obj64/%)
 
 LIBDIR32 = $(PREFIX)/$(LIB32)
 LIBDIR64 = $(PREFIX)/$(LIB64)
@@ -99,6 +104,7 @@ endif
 
 DEPFILES = $(LIBOBJS:%.o=%.d)
 
+export ARCH
 export OBJDIRS
 export CC32
 export CC64
