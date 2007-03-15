@@ -47,10 +47,15 @@ void *next_chunk(void *addr)
 		/* 1TB segments above */
 		return PALIGN(addr, 0x10000000000UL);
 }
-#elif __powerpc__
+#elif defined(__powerpc__)
 void *next_chunk(void *addr)
 {
 	return PALIGN(addr, 0x10000000UL);
+}
+#elif defined(__ia64__)
+void *next_chunk(void *addr)
+{
+	return PALIGN(addr, 0x8000000000000000UL);
 }
 #else
 void *next_chunk(void *addr)

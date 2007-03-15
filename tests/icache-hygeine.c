@@ -82,10 +82,10 @@ static void *sig_expected;
 
 static void sig_handler(int signum, siginfo_t *si, void *uc)
 {
-#if defined(__powerpc__) || defined(__powerpc64__)
-	/* On powerpc, 0 bytes are an illegal instruction, so, if the
-	 * icache is cleared properly, we SIGILL as soon as we jump
-	 * into the cleared page */
+#if defined(__powerpc__) || defined(__powerpc64__) || defined(__ia64__)
+	/* On powerpc and ia64, 0 bytes are an illegal instruction, so,
+	 * if the icache is cleared properly, we SIGILL as soon as we
+	 * jump into the cleared page */
 	if (signum == SIGILL) {
 		verbose_printf("SIGILL at %p (sig_expected=%p)\n", si->si_addr,
 			       sig_expected);
