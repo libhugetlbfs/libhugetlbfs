@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 	int fd, pid, s, ret;
 	struct rlimit r;
 	char *b;
-	unsigned long hpage_size = gethugepagesize();
+	long hpage_size = gethugepagesize();
 
 	test_init(argc, argv);
 

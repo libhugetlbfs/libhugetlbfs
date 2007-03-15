@@ -138,7 +138,7 @@ static void sig_handler(int signum, siginfo_t *si, void *uc)
 
 static void test_once(int fd)
 {
-	int hpage_size = gethugepagesize();
+	long hpage_size = gethugepagesize();
 	void *p, *q;
 
 	ftruncate(fd, 0);

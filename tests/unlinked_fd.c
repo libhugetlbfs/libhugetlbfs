@@ -27,7 +27,7 @@
 
 int main(int argc, char *argv[])
 {
-	int hpage_size;
+	long hpage_size;
 	int fd;
 	void *p;
 	int err;

@@ -41,7 +41,8 @@
 
 int main(int argc, char *argv[])
 {
-	int page_size, hpage_size;
+	int page_size;
+	long hpage_size;
 	int fd;
 	void *p, *q;
 	unsigned long lowaddr, highaddr;

@@ -50,7 +50,7 @@
 
 int main(int argc, char *argv[])
 {
-	int hpage_size;
+	long hpage_size;
 	unsigned long totpages, chunk1, chunk2;
 	int fd;
 	void *p, *q;

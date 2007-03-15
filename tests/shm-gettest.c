@@ -40,7 +40,7 @@ extern int errno;
 static unsigned int iter;
 static int nr_hugepages;
 static int shmid = -1;
-static size_t hpage_size;
+static long hpage_size;
 
 void cleanup(void)
 {

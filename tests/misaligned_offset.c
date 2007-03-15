@@ -66,7 +66,7 @@ static unsigned long long read_free(void)
 int main(int argc, char *argv[])
 {
 	int page_size;
-	int hpage_size;
+	long hpage_size;
 	off_t buggy_offset;
 	int fd;
 	void *p, *q;
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 	 * can get thrown away by a pud_clear() */
 	err = mprotect(p, hpage_size, PROT_READ);
 	if (err)
-		FAIL("mprotect(%p, 0x%x, PROT_READ)", p, hpage_size);
+		FAIL("mprotect(%p, 0x%lx, PROT_READ)", p, hpage_size);
 
 	/* Replace top hpage by hpage mapping at confusing file offset */
 	buggy_offset = page_size;

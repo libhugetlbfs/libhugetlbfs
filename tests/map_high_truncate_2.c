@@ -55,7 +55,7 @@
 
 int main(int argc, char *argv[])
 {
-	int hpage_size;
+	long hpage_size;
 	int fd;
 	char *p, *q;
 	unsigned long i;

@@ -51,7 +51,7 @@ int main(int argc, char ** argv)
 {
 	size_t size;
 	size_t i;
-	size_t hpage_size = gethugepagesize();
+	long hpage_size = gethugepagesize();
 	volatile char *shmaddr;
 	char *buffer;
 	int raw_fd;
@@ -63,7 +63,7 @@ int main(int argc, char ** argv)
 
 	nr_hugepages = atoi(argv[1]);
 
-	verbose_printf("hpage_size is: %zu\n", hpage_size);
+	verbose_printf("hpage_size is: %ld\n", hpage_size);
 
 	buffer = malloc(hpage_size*sizeof(char));
 

@@ -66,7 +66,7 @@ void *next_chunk(void *addr)
 
 int main(int argc, char *argv[])
 {
-	int hpage_size;
+	long hpage_size;
 	int fd;
 	void *brk0, *hugemap_addr, *newbrk;
 	char *p;

@@ -109,7 +109,8 @@ static void do_work(int thread, size_t size, int fd)
 int main(int argc, char ** argv)
 {
 	char *addr;
-	size_t hpage_size, size;
+	long hpage_size;
+	size_t size;
 	int i, pid, status, fd, ret;
 	int wait_list[MAX_PROCS];
 
@@ -128,7 +129,7 @@ int main(int argc, char ** argv)
 	/* Have to have enough available hugepages for each thread to
 	 * get its own copy, plus one for the parent/page-cache */
 	size = (nr_hugepages / (threads+1)) * hpage_size;
-	verbose_printf("hpage_size is %zx, Size is %zu, threads: %u\n",
+	verbose_printf("hpage_size is %lx, Size is %zu, threads: %u\n",
 		       hpage_size, size, threads);
 
 	/* First, open the file */

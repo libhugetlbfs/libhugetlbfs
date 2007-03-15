@@ -34,7 +34,7 @@
 
 static sigjmp_buf sig_escape;
 static void *sig_expected = MAP_FAILED;
-static int hpage_size;
+static long hpage_size;
 
 static void sig_handler(int signum, siginfo_t *si, void *uc)
 {

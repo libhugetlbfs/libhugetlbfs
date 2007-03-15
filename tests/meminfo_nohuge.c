@@ -60,7 +60,7 @@ int open(const char *path, int flags, ...)
 
 int main(int argc, char *argv[])
 {
-	int hpage_size;
+	long hpage_size;
 
 	test_init(argc, argv);
 
@@ -68,5 +68,5 @@ int main(int argc, char *argv[])
 	if (hpage_size == -1)
 		PASS();
 
-	FAIL("Mysteriously found a hugepage size of %d\n", hpage_size);
+	FAIL("Mysteriously found a hugepage size of %ld\n", hpage_size);
 }

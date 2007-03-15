@@ -60,7 +60,7 @@ static void sigbus_handler_pass(int signum, siginfo_t *si, void *uc)
 int main(int argc, char *argv[])
 {
 	int page_size;
-	int hpage_size;
+	long hpage_size;
 	long long buggy_offset, truncate_point;
 	int fd;
 	void *p, *q;

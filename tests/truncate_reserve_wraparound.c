@@ -69,7 +69,7 @@ static unsigned long long read_reserved(void)
 
 int main(int argc, char *argv[])
 {
-	int hpage_size;
+	long hpage_size;
 	int fd;
 	void *p;
 	volatile unsigned int *q;

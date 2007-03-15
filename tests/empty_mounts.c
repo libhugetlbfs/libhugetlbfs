@@ -57,7 +57,7 @@ int open(const char *path, int flags, ...)
 
 int main(int argc, char *argv[])
 {
-	int hpage_size;
+	long hpage_size;
 	int fd;
 
 	test_init(argc, argv);

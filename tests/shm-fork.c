@@ -85,7 +85,7 @@ static void do_child(int thread, unsigned long size)
 int main(int argc, char ** argv)
 {
 	unsigned long size;
-	unsigned int hpage_size;
+	long hpage_size;
 	int pid, status;
 	int i;
 	int wait_list[MAX_PROCS];

@@ -47,7 +47,7 @@ static void sigbus_handler(int signum, siginfo_t *si, void *uc)
 
 int main(int argc, char *argv[])
 {
-	int hpage_size;
+	long hpage_size;
 	int fd, fdx;
 	unsigned long totpages;
 	void *p, *q;

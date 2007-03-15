@@ -86,7 +86,7 @@ static unsigned long find_task_size(void)
 
 int main(int argc, char *argv[])
 {
-	int hpage_size;
+	long hpage_size;
 	int fd;
 	void *p;
 	unsigned long task_size;

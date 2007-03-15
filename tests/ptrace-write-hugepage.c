@@ -33,7 +33,7 @@
 
 #define CONST	0xdeadbeefL
 
-static int hpage_size;
+static long hpage_size;
 static volatile int ready_to_trace = 0;
 
 static void sigchld_handler(int signum, siginfo_t *si, void *uc)

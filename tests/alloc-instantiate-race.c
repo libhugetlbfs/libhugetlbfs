@@ -54,7 +54,7 @@ pid_t gettid(void)
 	return syscall(__NR_gettid);
 }
 
-static int hpage_size;
+static long hpage_size;
 static pid_t child1, child2;
 static pthread_t thread1, thread2;
 

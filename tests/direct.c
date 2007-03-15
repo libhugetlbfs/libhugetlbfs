@@ -38,7 +38,7 @@ char buf[IOSZ] __attribute__ ((aligned (IOSZ)));
 
 int main(int argc, char *argv[])
 {
-	int hpage_size;
+	long hpage_size;
 	int fd, dfd;
 	void *p;
 	size_t ret;

@@ -539,7 +539,7 @@ static void parse_elf(Elf_Ehdr *ehdr)
  */
 static int prepare_segment(struct seg_info *seg)
 {
-	int hpage_size = gethugepagesize();
+	long hpage_size = gethugepagesize();
 	void *p;
 	unsigned long gap;
 	unsigned long size;
