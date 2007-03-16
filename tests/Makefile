@@ -23,9 +23,14 @@ LDFLAGS64 = -L../obj64
 INSTALL = install
 
 TESTS = $(LIB_TESTS) $(NOLIB_TESTS) $(STRESS_TESTS)
-ifneq ($(or $(ELF32),$(ELF64)),)
+ifdef ELF32
 TESTS += $(LDSCRIPT_TESTS) $(HUGELINK_TESTS) $(HUGELINK_TESTS:%=xB.%) \
 	$(HUGELINK_TESTS:%=xBDT.%)
+else
+ifdef ELF64
+TESTS += $(LDSCRIPT_TESTS) $(HUGELINK_TESTS) $(HUGELINK_TESTS:%=xB.%) \
+	$(HUGELINK_TESTS:%=xBDT.%)
+endif
 endif
 
 ifneq ($(ARCH),ia64)
