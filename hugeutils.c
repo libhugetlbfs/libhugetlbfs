@@ -42,7 +42,7 @@
 #include "libhugetlbfs_internal.h"
 #include "hugetlbfs.h"
 
-static int hpage_size; /* = 0 */
+static long hpage_size; /* = 0 */
 static char htlb_mount[PATH_MAX+1]; /* = 0 */
 
 /********************************************************************/
