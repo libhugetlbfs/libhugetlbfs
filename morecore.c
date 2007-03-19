@@ -112,10 +112,9 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			WARNING("Failed to reserve huge pages in "
 					"hugetlbfs_morecore(): %s\n",
 					strerror(errno));
-			munmap(p, newsize);
-			return NULL;
+		} else {
+			munlock(p, newsize);
 		}
-		munlock(p, newsize);
 
 		/* we now have mmap'd further */
 		mapsize += newsize;
