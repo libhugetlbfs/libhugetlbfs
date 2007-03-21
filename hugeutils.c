@@ -114,17 +114,6 @@ long gethugepagesize(void)
 	return hpage_size;
 }
 
-long hugetlbfs_vaddr_granularity(void)
-{
-#if defined(__powerpc64__)
-	return (1L << 40);
-#elif defined(__powerpc__)
-	return (1L << 28);
-#else
-	return gethugepagesize();
-#endif
-}
-
 int hugetlbfs_test_path(const char *mount)
 {
 	struct statfs64 sb;

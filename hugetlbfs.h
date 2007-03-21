@@ -22,7 +22,6 @@
 #define HUGETLBFS_MAGIC	0x958458f6
 
 long gethugepagesize(void);
-long hugetlbfs_vaddr_granularity(void);
 int hugetlbfs_test_path(const char *mount);
 const char *hugetlbfs_find_path(void);
 int hugetlbfs_unlinked_fd(void);

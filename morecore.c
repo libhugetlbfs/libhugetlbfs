@@ -39,6 +39,22 @@ static void *heapbase;
 static void *heaptop;
 static long mapsize;
 
+static long hugetlbfs_next_addr(long addr)
+{
+#if defined(__powerpc64__)
+	return ALIGN(addr, 1L << 40);
+#elif defined(__powerpc__)
+	return ALIGN(addr, 1L << 28);
+#elif defined(__ia64__)
+	if (addr < (1UL << 63))
+		return ALIGN(addr, 1UL << 63);
+	else
+		return ALIGN(addr, gethugepagesize());
+#else
+	return ALIGN(addr, gethugepagesize());
+#endif
+}
+
 /*
  * Our plan is to ask for pages 'roughly' at the BASE.  We expect and
  * require the kernel to offer us sequential pages from wherever it
@@ -165,7 +181,7 @@ static void __attribute__((constructor)) setup_morecore(void)
 		}
 	} else {
 		heapaddr = (unsigned long)sbrk(0);
-		heapaddr = ALIGN(heapaddr, hugetlbfs_vaddr_granularity());
+		heapaddr = hugetlbfs_next_addr(heapaddr);
 	}
 
 	DEBUG("setup_morecore(): heapaddr = 0x%lx\n", heapaddr);
