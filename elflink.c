@@ -414,6 +414,7 @@ static void get_extracopy(struct seg_info *seg, Elf_Phdr *phdr, int phnum)
 	int ret, numsyms, found_sym = 0;
 	void *start, *end, *start_orig, *end_orig;
 	void *sym_start, *sym_end;
+	extern void __libhuge_filesz __attribute__((weak));
 
 	end_orig = seg->vaddr + seg->memsz;
 	start_orig = seg->vaddr + seg->filesz;
@@ -457,6 +458,15 @@ static void get_extracopy(struct seg_info *seg, Elf_Phdr *phdr, int phnum)
 			start = sym_start;
 		if (sym_end > end)
 			end = sym_end;
+	}
+
+	if (&__libhuge_filesz > end) {
+		/* be careful if the algorithm didn't find any symbols
+		 * to copy */
+		if (start == end_orig)
+			start = start_orig;
+		end = &__libhuge_filesz;
+		DEBUG("Found __libhuge_filesz at %p\n", &__libhuge_filesz);
 	}
 
 	if (__debug)

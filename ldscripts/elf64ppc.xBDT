@@ -179,9 +179,11 @@ SECTIONS
     *(.sbss .sbss.* .gnu.linkonce.sb.*)
     *(.scommon)
   } :hdata
-  /* Ensure the plt appears in the on-disk portion of the binary so it
-   * will be copied during hugetlb remapping */
-  .plt            : { LONG(0) *(.plt) } :hdata
+  .plt            : { *(.plt) } :hdata
+  /* Rather than emit LONG(0) in the .plt section, use a symbol to mark
+   * the end of the need-to-copy data so that it will be copied during
+   * hugetlb remapping */
+  __libhuge_filesz = .;
   .bss            :
   {
    *(.dynbss)
