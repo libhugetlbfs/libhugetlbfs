@@ -714,8 +714,6 @@ static int find_or_prepare_shared_file(struct seg_info *htlb_seg_info)
 			      " failure: %s\n", tmp_path, strerror(errno));
 		close(fdx);
 	}
-	if (fds > 0)
-		close(fds);
 
 	return -1;
 }
