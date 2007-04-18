@@ -14,6 +14,10 @@ PHDRS
   htlb PT_LOAD FLAGS (0x00100007);
   dynamic PT_DYNAMIC ;
   note PT_NOTE ;
+  /* this is the value of PT_GNU_EH_FRAME as defined in
+     usr/include/elf.h but binutils does not recognize that identifier
+     as it does other PT_ constants. */
+  eh_frame_hdr 1685382480 FLAGS (0x00000004);
 }
 SECTIONS
 {
@@ -90,7 +94,7 @@ SECTIONS
     *(.sdata2 .sdata2.* .gnu.linkonce.s2.*)
   }
   .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) }
-  .eh_frame_hdr : { *(.eh_frame_hdr) }
+  .eh_frame_hdr : { *(.eh_frame_hdr) } :data :eh_frame_hdr
 /*  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) }*/
 /*  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) }*/
   /* Adjust the address for the data segment.  We want to adjust up to
