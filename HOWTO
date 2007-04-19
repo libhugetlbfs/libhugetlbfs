@@ -2,7 +2,7 @@ libhugetlbfs HOWTO
 ==================
 
 Author: David Gibson <dwg@au1.ibm.com>, Adam Litke <agl@us.ibm.com>, and others
-Last updated: Monday, September 25th 2006
+Last updated: Monday, July 2nd, 2007
 
 Introduction
 ============
@@ -310,6 +310,10 @@ libhugetlbfs:
 		otherwise, only the necessary parts will be, which can
 		be much more efficient (default)
 
+	HUGETLB_FORCE_ELFMAP
+	HUGETLB_FORCE_ELFMAP_EXECSTART
+		Explained in "Partial segment remapping"
+
 	HUGETLB_MORECORE
 	HUGETLB_MORECORE_HEAPBASE
 		Explained in "Using hugepages for malloc()
@@ -372,6 +376,36 @@ The files created in hugetlbfs for sharing are persistent, and must be
 manually deleted to free the hugepages in question.  Future versions
 of libhugetlbfs should include tools and scripts to automate this
 cleanup.
+
+	Partial segment remapping
+	-------------------------
+
+libhugetlbfs has limited support for remapping a normal, non-relinked
+binary's data, text and BSS into hugepages. To enable this feature,
+HUGETLB_FORCE_ELFMAP must be set to "yes", and
+HUGETLB_FORCE_ELFMAP_EXECSTART must contain the address at which
+__executable_start can be found in the binary. This is typically the
+same address for all binaries on the system and can often be found by
+examining the system linker scripts. To view the system default linker
+script, run
+
+	$ ld --verbose
+
+Partial segment remapping is not guaranteed to work. Most importantly, a
+binary's segments must be large enough even when not relinked by
+libhugetlbfs:
+
+	architecture	address		minimum segment size
+	------------	-------		--------------------
+	i386, x86_64	all		hugepage size
+	ppc32		all		256M
+	ppc64		0-4G		256M
+	ppc64		4G-1T		1020G
+	ppc64		1T+		1T
+
+The raw size, though, is not sufficient to indicate if the code will
+succeed, due to alignment. Since the binary is not relinked, however,
+this is relatively straightforward to 'test and see'.
 
 Examples
 ========

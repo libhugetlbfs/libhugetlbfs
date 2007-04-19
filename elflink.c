@@ -160,6 +160,7 @@ static struct seg_info htlb_seg_table[MAX_HTLB_SEGS];
 static int htlb_num_segs;
 static int minimal_copy = 1;
 static int sharing; /* =0 */
+static unsigned long force_remap; /* =0 */
 int __debug = 0;
 
 /**
@@ -512,11 +513,7 @@ bail2:
 	seg->extrasz = end_orig - start_orig;
 }
 
-/*
- * Parse an ELF header and record segment information for any segments
- * which contain hugetlb information.
- */
-static void parse_elf(Elf_Ehdr *ehdr)
+static void parse_elf_relinked(Elf_Ehdr *ehdr)
 {
 	Elf_Phdr *phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
 	int i;
@@ -566,6 +563,137 @@ static void parse_elf(Elf_Ehdr *ehdr)
 		check_memsz();
 }
 
+#define ALIGN_UP(x,a)	(((x) + (a)) & ~((a) - 1))
+#define ALIGN_DOWN(x,a) ((x) & ~((a) - 1))
+
+#if defined(__powerpc64__) || defined (__powerpc__)
+#define SLICE_LOW_SHIFT		28
+#define SLICE_HIGH_SHIFT	40
+
+#define SLICE_LOW_TOP		(0x100000000UL)
+#define SLICE_LOW_SIZE		(1UL << SLICE_LOW_SHIFT)
+#define SLICE_HIGH_SIZE		(1UL << SLICE_HIGH_SHIFT)
+#endif
+
+/*
+ * Return the address of the start and end of the hugetlb slice
+ * containing @addr. A slice is a range of addresses, start inclusive
+ * and end exclusive.
+ * Note, that since relinking is not supported on ia64, we can leave it
+ * out here.
+ */
+static unsigned long hugetlb_slice_start(unsigned long addr)
+{
+#if defined(__powerpc64__)
+	if (addr < SLICE_LOW_TOP)
+		return ALIGN_DOWN(addr, SLICE_LOW_SIZE);
+	else if (addr < SLICE_HIGH_SIZE)
+		return SLICE_LOW_TOP;
+	else
+		return ALIGN_DOWN(addr, SLICE_HIGH_SIZE);
+#elif defined(__powerpc__)
+	return ALIGN_DOWN(addr, SLICE_LOW_SIZE);
+#else
+	return ALIGN_DOWN(addr, gethugepagesize());
+#endif
+}
+
+static unsigned long hugetlb_slice_end(unsigned long addr)
+{
+#if defined(__powerpc64__)
+	if (addr < SLICE_LOW_TOP)
+		return ALIGN_UP(addr, SLICE_LOW_SIZE) - 1;
+	else
+		return ALIGN_UP(addr, SLICE_HIGH_SIZE) - 1;
+#elif defined(__powerpc__)
+	return ALIGN_UP(addr, SLICE_LOW_SIZE) - 1;
+#else
+	return ALIGN_UP(addr, gethugepagesize()) - 1;
+#endif
+}
+
+static unsigned long hugetlb_next_slice_start(unsigned long addr)
+{
+	return hugetlb_slice_end(addr) + 1;
+}
+
+static unsigned long hugetlb_prev_slice_end(unsigned long addr)
+{
+	return hugetlb_slice_start(addr) - 1;
+}
+
+static void parse_elf_normal(Elf_Ehdr *ehdr)
+{
+	Elf_Phdr *phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
+	unsigned long vaddr, filesz, memsz, gap;
+	unsigned long slice_end;
+	int prot = 0;
+	int i;
+
+	for (i = 0; i < ehdr->e_phnum && htlb_num_segs < MAX_HTLB_SEGS; i++) {
+		if (phdr[i].p_type != PT_LOAD)
+			continue;
+
+		/*
+		 * Partial segment remapping only makes sense if the
+		 * memory size of the segment is larger than the
+		 * granularity at which hugepages can be used. This
+		 * mostly affects ppc, where the segment must be larger
+		 * than 256M. This guarantees that remapping the binary
+		 * in this forced way won't violate any contiguity
+		 * constraints.
+		 */
+		vaddr = hugetlb_next_slice_start(phdr[i].p_vaddr);
+		gap = vaddr - phdr[i].p_vaddr;
+		slice_end = hugetlb_slice_end(vaddr);
+		/*
+		 * we should stop remapping just before the slice
+		 * containing the end of the memsz portion (taking away
+		 * the gap of the memsz)
+		 */
+		memsz = phdr[i].p_memsz;
+		if (memsz < gap) {
+			DEBUG("Segment %d's unaligned memsz is too small: "
+					"%#0lx < %#0lx\n",
+					i, memsz, gap);
+			continue;
+		}
+		memsz -= gap;
+		if (memsz < (slice_end - vaddr)) {
+			DEBUG("Segment %d's aligned memsz is too small: "
+					"%#0lx < %#0lx\n",
+					i, memsz, slice_end - vaddr);
+			continue;
+		}
+		memsz = hugetlb_prev_slice_end(vaddr + memsz) - vaddr;
+
+		/*
+		 * minimal_copy is disabled so just set filesz to memsz,
+		 * to avoid issues in prepare
+		 */
+		filesz = memsz;
+
+		if (phdr[i].p_flags & PF_R)
+			prot |= PROT_READ;
+		if (phdr[i].p_flags & PF_W)
+			prot |= PROT_WRITE;
+		if (phdr[i].p_flags & PF_X)
+			prot |= PROT_EXEC;
+
+		DEBUG("Hugepage segment %d (phdr %d): %#0lx-%#0lx "
+				"(filesz=%#0lx) " "(prot = %#0x)\n",
+				htlb_num_segs, i, vaddr, vaddr+memsz,
+				filesz, prot);
+
+		htlb_seg_table[htlb_num_segs].vaddr = (void *)vaddr;
+		htlb_seg_table[htlb_num_segs].filesz = filesz;
+		htlb_seg_table[htlb_num_segs].memsz = memsz;
+		htlb_seg_table[htlb_num_segs].prot = prot;
+		htlb_seg_table[htlb_num_segs].index = i;
+		htlb_num_segs++;
+	}
+}
+
 /*
  * Copy a program segment into a huge page. If possible, try to copy the
  * smallest amount of data possible, unless the user disables this 
@@ -573,7 +701,7 @@ static void parse_elf(Elf_Ehdr *ehdr)
  */
 static int prepare_segment(struct seg_info *seg)
 {
-	long hpage_size = gethugepagesize();
+	int hpage_size = gethugepagesize();
 	void *p;
 	unsigned long gap;
 	unsigned long size;
@@ -824,9 +952,18 @@ static void remap_segments(struct seg_info *seg, int num)
 	 */
 }
 
+static int is_valid_elf(Elf_Ehdr *ehdr)
+{
+	return ehdr->e_ident[EI_MAG0] == 0x7f &&
+		ehdr->e_ident[EI_MAG1] == 'E' &&
+		ehdr->e_ident[EI_MAG2] == 'L' &&
+		ehdr->e_ident[EI_MAG3] == 'F';
+}
+
 static int check_env(void)
 {
-	char *env;
+	char *env, *env2, *env3, *ep;
+	extern Elf_Ehdr __executable_start __attribute__((weak));
 
 	env = getenv("HUGETLB_ELFMAP");
 	if (env && (strcasecmp(env, "no") == 0)) {
@@ -837,13 +974,48 @@ static int check_env(void)
 
 	env = getenv("LD_PRELOAD");
 	if (env && strstr(env, "libhugetlbfs")) {
-		ERROR("LD_PRELOAD is incompatible with segment remapping\n");
-		ERROR("Segment remapping has been DISABLED\n");
-		return -1;
+		env2 = getenv("HUGETLB_FORCE_ELFMAP");
+		if (env2 && (strcasecmp(env2, "yes") == 0)) {
+			env3 = getenv("HUGETLB_FORCE_ELFMAP_EXECSTART");
+			if (!env3) {
+				ERROR("HUGETLB_FORCE_ELFMAP=%s, but "
+						"HUGETLB_FORCE_ELFMAP_EXECSTART "
+						"is unset\n", env2);
+				return -1;
+			}
+			force_remap = strtoul(env3, &ep, 16);
+			if (*ep != '\0') {
+				ERROR("Can't parse HUGETLB_FORCE_ELFMAP_EXECSTART: "
+						"%s\n", strerror(errno));
+				return -1;
+			}
+			if (!is_valid_elf((Elf_Ehdr *)force_remap)) {
+				DEBUG("The address passed in "
+						"HUGETLB_FORCE_ELFMAP_EXECSTART "
+						"(%#0lx) is not the "
+						"location of a valid ELF "
+						"header\n", force_remap);
+				return -1;
+			}
+			DEBUG("HUGETLB_FORCE_ELFMAP=%s, "
+					"HUGETLB_FORCE_ELFMAP_EXECSTART=%#0lx, "
+					"enabling partial segment "
+					"remapping for non-relinked "
+					"binaries\n",
+					env2, force_remap);
+			DEBUG("Disabling filesz copy optimization\n");
+			minimal_copy = 0;
+		} else {
+			if (&__executable_start) {
+				ERROR("LD_PRELOAD is incompatible with segment remapping\n");
+				ERROR("Segment remapping has been DISABLED\n");
+				return -1;
+			}
+		}
 	}
 
 	env = getenv("HUGETLB_MINIMAL_COPY");
-	if (env && (strcasecmp(env, "no") == 0)) {
+	if (minimal_copy && env && (strcasecmp(env, "no") == 0)) {
 		DEBUG("HUGETLB_MINIMAL_COPY=%s, disabling filesz copy "
 			"optimization\n", env);
 		minimal_copy = 0;
@@ -876,29 +1048,51 @@ static int check_env(void)
 	return 0;
 }
 
-static void __attribute__ ((constructor)) setup_elflink(void)
+/*
+ * Parse an ELF header and record segment information for any segments
+ * which contain hugetlb information.
+ */
+static int parse_elf()
 {
 	extern Elf_Ehdr __executable_start __attribute__((weak));
-	Elf_Ehdr *ehdr = &__executable_start;
-	int ret, i;
 
-	if (! ehdr) {
-		DEBUG("Couldn't locate __executable_start, "
-		      "not attempting to remap segments\n");
-		return;
+	/* a normal, not relinked binary */
+	if (! (&__executable_start)) {
+		if (force_remap) {
+			parse_elf_normal((Elf_Ehdr *)force_remap);
+			if (htlb_num_segs == 0) {
+				DEBUG("No segments were appropriate for "
+						"partial remapping\n");
+				return -1;
+			}
+		} else {
+			DEBUG("Couldn't locate __executable_start, "
+				"not attempting to remap segments\n");
+			return -1;
+		}
+	} else {
+		parse_elf_relinked(&__executable_start);
+		if (htlb_num_segs == 0) {
+			DEBUG("No segments were appropriate for "
+					"remapping\n");
+			return -1;
+		}
 	}
+
+	return 0;
+}
+
+static void __attribute__ ((constructor)) setup_elflink(void)
+{
+	int i, ret;
 
 	if (check_env())
 		return;
 
-	DEBUG("libhugetlbfs version: %s\n", VERSION);
-
-	parse_elf(ehdr);
-
-	if (htlb_num_segs == 0) {
-		DEBUG("Executable is not linked for hugepage segments\n");
+	if (parse_elf())
 		return;
-	}
+
+	DEBUG("libhugetlbfs version: %s\n", VERSION);
 
 	/* Do we need to find a share directory */
 	if (sharing) {
