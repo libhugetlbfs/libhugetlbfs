@@ -466,6 +466,7 @@ static void get_extracopy(struct seg_info *seg, Elf_Phdr *phdr, int phnum)
 		if (start == end_orig)
 			start = start_orig;
 		end = &__libhuge_filesz;
+		found_sym = 1;
 		DEBUG("Found __libhuge_filesz at %p\n", &__libhuge_filesz);
 	}
 
