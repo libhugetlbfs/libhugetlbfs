@@ -101,6 +101,7 @@ static int read_maps(unsigned long addr, char *buf)
 		if (!tmp)
 			break;
 
+		buf[0] = '\0';
 		ret = sscanf(line, "%lx-%lx %*s %lx %*s %ld %255s",
 			     &start, &end, &off, &ino,
 			     buf);
