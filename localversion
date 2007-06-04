@@ -52,9 +52,14 @@ if [ "$?" -eq 0 ]; then
 	fi
 
 else
+	if [ ! -f "$file" ]; then
+		echo 1>&2 "$0: ERROR: unversioned tarball"
+		echo "#error UNVERSIONED tarball" >"$file.h"
+		exit 1
+	fi
+
 	# No version control, use the modification times 
 	# of the source.
-
 	for s in "$@"
 	do
 		if [ "$s" -nt "$file" ]; then
