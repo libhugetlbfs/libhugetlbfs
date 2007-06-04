@@ -36,6 +36,7 @@
 #include <elf.h>
 #include <dlfcn.h>
 
+#include "version.h"
 #include "hugetlbfs.h"
 #include "libhugetlbfs_internal.h"
 
@@ -867,6 +868,8 @@ static void __attribute__ ((constructor)) setup_elflink(void)
 
 	if (check_env())
 		return;
+
+	DEBUG("libhugetlbfs version: %s\n", VERSION);
 
 	parse_elf(ehdr);
 
