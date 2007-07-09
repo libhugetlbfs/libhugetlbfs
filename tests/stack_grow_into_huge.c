@@ -43,6 +43,9 @@
  * converted to huge pages and the stack is made to grow into the this
  * preceeding segment, some kernels may attempt to map normal pages into the
  * huge page-only segment -- resulting in bugs.
+ *
+ * The kernel bug in question was fixed by commit
+ * 0d59a01bc461bbab4017ff449b8401151ef44cf6.
  */
 
 void do_child()

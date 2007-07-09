@@ -157,7 +157,7 @@ functional_tests () {
     run_test truncate_above_4GB
     run_test brk_near_huge
     run_test task-size-overrun
-    skip_test stack_grow_into_huge
+    run_test stack_grow_into_huge
 
 # Tests requiring an active mount and hugepage COW
     run_test private
