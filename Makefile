@@ -12,9 +12,10 @@ NODEPTARGETS=<version.h> <clean>
 
 INSTALL = install
 
-LDFLAGS = --no-undefined-version -Wl,--version-script=version.lds
-CFLAGS = -O2 -Wall -fPIC -g
-CPPFLAGS = -D__LIBHUGETLBFS__
+LDFLAGS += --no-undefined-version -Wl,--version-script=version.lds
+CFLAGS ?= -O2 -g
+CFLAGS += -Wall -fPIC
+CPPFLAGS += -D__LIBHUGETLBFS__
 
 ARCH = $(shell uname -m | sed -e s/i.86/i386/)
 
@@ -187,11 +188,11 @@ obj64/libhugetlbfs.a: $(LIBOBJS64)
 
 obj32/libhugetlbfs.so: $(LIBOBJS32)
 	@$(VECHO) LD32 "(shared)" $@
-	$(CC32) $(LDFLAGS) -shared -o $@ $^ $(LDLIBS)
+	$(CC32) $(LDFLAGS) -Wl,-soname,$@ -shared -o $@ $^ $(LDLIBS)
 
 obj64/libhugetlbfs.so: $(LIBOBJS64)
 	@$(VECHO) LD64 "(shared)" $@
-	$(CC64) $(LDFLAGS) -shared -o $@ $^ $(LDLIBS)
+	$(CC64) $(LDFLAGS) -Wl,-soname,$@ -shared -o $@ $^ $(LDLIBS)
 
 obj32/%.i:	%.c
 	@$(VECHO) CPP $@
@@ -242,7 +243,7 @@ objscript.%: %
 	@$(VECHO) OBJSCRIPT $*
 	sed "s!### SET DEFAULT LDSCRIPT PATH HERE ###!HUGETLB_LDSCRIPT_PATH=$(LDSCRIPTDIR)!" < $< > $@
 
-install: all $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
+install: libs $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	@$(VECHO) INSTALL
 	$(INSTALL) -d $(DESTDIR)$(LDSCRIPTDIR)
 	$(INSTALL) -m 644 $(INSTALL_LDSCRIPTS:%=ldscripts/%) $(DESTDIR)$(LDSCRIPTDIR)
