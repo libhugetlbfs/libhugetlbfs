@@ -22,6 +22,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <link.h>
 #include <malloc.h>
 #include <string.h>
 #include <unistd.h>
@@ -622,16 +623,19 @@ static unsigned long hugetlb_prev_slice_end(unsigned long addr)
 	return hugetlb_slice_start(addr) - 1;
 }
 
-static void parse_elf_normal(Elf_Ehdr *ehdr)
+static int parse_one_obj(struct dl_phdr_info *info, size_t size, void *data)
 {
-	Elf_Phdr *phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
 	unsigned long vaddr, filesz, memsz, gap;
 	unsigned long slice_end;
 	int prot = 0;
 	int i;
+	
+	/* Skip this object if it's not the main program */
+	if (info->dlpi_addr)
+		return 0;
 
-	for (i = 0; i < ehdr->e_phnum && htlb_num_segs < MAX_HTLB_SEGS; i++) {
-		if (phdr[i].p_type != PT_LOAD)
+	for (i = 0; i < info->dlpi_phnum && htlb_num_segs < MAX_HTLB_SEGS; i++) {
+		if (info->dlpi_phdr[i].p_type != PT_LOAD)
 			continue;
 
 		/*
@@ -643,15 +647,15 @@ static void parse_elf_normal(Elf_Ehdr *ehdr)
 		 * in this forced way won't violate any contiguity
 		 * constraints.
 		 */
-		vaddr = hugetlb_next_slice_start(phdr[i].p_vaddr);
-		gap = vaddr - phdr[i].p_vaddr;
+		vaddr = hugetlb_next_slice_start(info->dlpi_phdr[i].p_vaddr);
+		gap = vaddr - info->dlpi_phdr[i].p_vaddr;
 		slice_end = hugetlb_slice_end(vaddr);
 		/*
 		 * we should stop remapping just before the slice
 		 * containing the end of the memsz portion (taking away
 		 * the gap of the memsz)
 		 */
-		memsz = phdr[i].p_memsz;
+		memsz = info->dlpi_phdr[i].p_memsz;
 		if (memsz < gap) {
 			DEBUG("Segment %d's unaligned memsz is too small: "
 					"%#0lx < %#0lx\n",
@@ -673,11 +677,11 @@ static void parse_elf_normal(Elf_Ehdr *ehdr)
 		 */
 		filesz = memsz;
 
-		if (phdr[i].p_flags & PF_R)
+		if (info->dlpi_phdr[i].p_flags & PF_R)
 			prot |= PROT_READ;
-		if (phdr[i].p_flags & PF_W)
+		if (info->dlpi_phdr[i].p_flags & PF_W)
 			prot |= PROT_WRITE;
-		if (phdr[i].p_flags & PF_X)
+		if (info->dlpi_phdr[i].p_flags & PF_X)
 			prot |= PROT_EXEC;
 
 		DEBUG("Hugepage segment %d (phdr %d): %#0lx-%#0lx "
@@ -692,6 +696,12 @@ static void parse_elf_normal(Elf_Ehdr *ehdr)
 		htlb_seg_table[htlb_num_segs].index = i;
 		htlb_num_segs++;
 	}
+	return 1;
+}
+
+static void parse_elf_normal(void)
+{
+	dl_iterate_phdr(parse_one_obj, NULL);
 }
 
 /*
@@ -952,17 +962,9 @@ static void remap_segments(struct seg_info *seg, int num)
 	 */
 }
 
-static int is_valid_elf(Elf_Ehdr *ehdr)
-{
-	return ehdr->e_ident[EI_MAG0] == 0x7f &&
-		ehdr->e_ident[EI_MAG1] == 'E' &&
-		ehdr->e_ident[EI_MAG2] == 'L' &&
-		ehdr->e_ident[EI_MAG3] == 'F';
-}
-
 static int check_env(void)
 {
-	char *env, *env2, *env3, *ep;
+	char *env, *env2;
 	extern Elf_Ehdr __executable_start __attribute__((weak));
 
 	env = getenv("HUGETLB_ELFMAP");
@@ -976,33 +978,12 @@ static int check_env(void)
 	if (env && strstr(env, "libhugetlbfs")) {
 		env2 = getenv("HUGETLB_FORCE_ELFMAP");
 		if (env2 && (strcasecmp(env2, "yes") == 0)) {
-			env3 = getenv("HUGETLB_FORCE_ELFMAP_EXECSTART");
-			if (!env3) {
-				ERROR("HUGETLB_FORCE_ELFMAP=%s, but "
-						"HUGETLB_FORCE_ELFMAP_EXECSTART "
-						"is unset\n", env2);
-				return -1;
-			}
-			force_remap = strtoul(env3, &ep, 16);
-			if (*ep != '\0') {
-				ERROR("Can't parse HUGETLB_FORCE_ELFMAP_EXECSTART: "
-						"%s\n", strerror(errno));
-				return -1;
-			}
-			if (!is_valid_elf((Elf_Ehdr *)force_remap)) {
-				DEBUG("The address passed in "
-						"HUGETLB_FORCE_ELFMAP_EXECSTART "
-						"(%#0lx) is not the "
-						"location of a valid ELF "
-						"header\n", force_remap);
-				return -1;
-			}
+			force_remap = 1;
 			DEBUG("HUGETLB_FORCE_ELFMAP=%s, "
-					"HUGETLB_FORCE_ELFMAP_EXECSTART=%#0lx, "
 					"enabling partial segment "
 					"remapping for non-relinked "
 					"binaries\n",
-					env2, force_remap);
+					env2);
 			DEBUG("Disabling filesz copy optimization\n");
 			minimal_copy = 0;
 		} else {
@@ -1059,7 +1040,7 @@ static int parse_elf()
 	/* a normal, not relinked binary */
 	if (! (&__executable_start)) {
 		if (force_remap) {
-			parse_elf_normal((Elf_Ehdr *)force_remap);
+			parse_elf_normal();
 			if (htlb_num_segs == 0) {
 				DEBUG("No segments were appropriate for "
 						"partial remapping\n");
