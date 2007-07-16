@@ -188,11 +188,11 @@ obj64/libhugetlbfs.a: $(LIBOBJS64)
 
 obj32/libhugetlbfs.so: $(LIBOBJS32)
 	@$(VECHO) LD32 "(shared)" $@
-	$(CC32) $(LDFLAGS) -Wl,-soname,$@ -shared -o $@ $^ $(LDLIBS)
+	$(CC32) $(LDFLAGS) -Wl,-soname,$(notdir $@) -shared -o $@ $^ $(LDLIBS)
 
 obj64/libhugetlbfs.so: $(LIBOBJS64)
 	@$(VECHO) LD64 "(shared)" $@
-	$(CC64) $(LDFLAGS) -Wl,-soname,$@ -shared -o $@ $^ $(LDLIBS)
+	$(CC64) $(LDFLAGS) -Wl,-soname,$(notdir $@) -shared -o $@ $^ $(LDLIBS)
 
 obj32/%.i:	%.c
 	@$(VECHO) CPP $@
