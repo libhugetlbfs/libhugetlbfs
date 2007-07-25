@@ -256,5 +256,5 @@ install-docs:
 	$(INSTALL) -d $(DESTDIR)$(DOCDIR)
 	for x in $(EXTRA_DIST); do $(INSTALL) -m 755 $$x $(DESTDIR)$(DOCDIR)/$$x; done
 
-install-tests: install	# Force make to install the library first
+install-tests: tests install	# Force make to build tests and install the library first
 	${MAKE} -C tests install DESTDIR=$(DESTDIR) OBJDIRS="$(OBJDIRS)" LIB32=$(LIB32) LIB64=$(LIB64)
