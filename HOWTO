@@ -311,7 +311,6 @@ libhugetlbfs:
 		be much more efficient (default)
 
 	HUGETLB_FORCE_ELFMAP
-	HUGETLB_FORCE_ELFMAP_EXECSTART
 		Explained in "Partial segment remapping"
 
 	HUGETLB_MORECORE
@@ -382,14 +381,7 @@ cleanup.
 
 libhugetlbfs has limited support for remapping a normal, non-relinked
 binary's data, text and BSS into hugepages. To enable this feature,
-HUGETLB_FORCE_ELFMAP must be set to "yes", and
-HUGETLB_FORCE_ELFMAP_EXECSTART must contain the address at which
-__executable_start can be found in the binary. This is typically the
-same address for all binaries on the system and can often be found by
-examining the system linker scripts. To view the system default linker
-script, run
-
-	$ ld --verbose
+HUGETLB_FORCE_ELFMAP must be set to "yes".
 
 Partial segment remapping is not guaranteed to work. Most importantly, a
 binary's segments must be large enough even when not relinked by
@@ -406,6 +398,10 @@ libhugetlbfs:
 The raw size, though, is not sufficient to indicate if the code will
 succeed, due to alignment. Since the binary is not relinked, however,
 this is relatively straightforward to 'test and see'.
+
+NOTE: You must use LD_PRELOAD to load libhugetlbfs.so when using
+partial remapping.
+
 
 Examples
 ========
