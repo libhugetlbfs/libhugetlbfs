@@ -144,6 +144,7 @@ functional_tests () {
     run_test shared
     run_test mprotect
     run_test mlock
+    run_test misalign
 
 # Specific kernel bug tests
     run_test ptrace-write-hugepage
