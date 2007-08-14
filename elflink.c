@@ -629,10 +629,11 @@ static int parse_one_obj(struct dl_phdr_info *info, size_t size, void *data)
 	unsigned long slice_end;
 	int prot = 0;
 	int i;
-	
-	/* Skip this object if it's not the main program */
-	if (info->dlpi_addr)
-		return 0;
+
+	/* This should never actually be called more than once in an
+	 * iteration: we assume that dl_iterate_phdrs() always gives
+	 * us the main program's phdrs on the first iteration, and
+	 * always return 1 to cease iteration at that point. */
 
 	for (i = 0; i < info->dlpi_phnum && htlb_num_segs < MAX_HTLB_SEGS; i++) {
 		if (info->dlpi_phdr[i].p_type != PT_LOAD)
