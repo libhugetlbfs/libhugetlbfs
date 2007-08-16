@@ -1,26 +1,7 @@
-PHDRS
-{
-  headers PT_PHDR PHDRS ;
-  interp PT_INTERP ;
-  text PT_LOAD FILEHDR PHDRS ;
-  data PT_LOAD ;
-  empty PT_LOAD ;
-  dynamic PT_DYNAMIC ;
-  note PT_NOTE ;
-  gnu_stack PT_GNU_STACK ;
-}
 SECTIONS
 {
-	.interp : { } :interp :text
-	.note.ABI-tag : { *(.note.ABI-tag) } :text
-	.note.SuSE    : { *(.note.SuSE) } :text
-	.hash : { } :text
-	.tdata : { } :data
-	.dynamic : { } :dynamic :data
-	.got : { } :data
-	.plt : { } :data
-	.data : { } :data
+	.empty (0x20000000) : {
+		__empty_segment = .;
+		. = . + 4;
+	}
 }
-INPUT( dummy.o );
-INPUT( testutils.o );
-INPUT( -lc );

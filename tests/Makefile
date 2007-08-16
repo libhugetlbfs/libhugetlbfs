@@ -14,6 +14,7 @@ LDSCRIPT_TESTS = zero_filesize_segment
 HUGELINK_TESTS = linkhuge linkhuge_nofd linkshare
 STRESS_TESTS = mmap-gettest mmap-cow shm-gettest shm-getraw shm-fork
 HELPERS = get_hugetlbfs_path
+BADTOOLCHAIN = bad-toolchain.sh
 
 CFLAGS = -O2 -Wall -g
 CPPFLAGS = -I..
@@ -88,13 +89,13 @@ $(NOLIB_TESTS:%=obj64/%): %: %.o obj64/testutils.o
 	@$(VECHO) LD64 "(nolib test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS)
 
-$(LDSCRIPT_TESTS:%=obj32/%): obj32/%: %.ld obj32/dummy.o obj32/testutils.o
+$(LDSCRIPT_TESTS:%=obj32/%): obj32/%: %.ld obj32/%.o obj32/testutils.o
 	@$(VECHO) LD32 "(preload test)" $@
-	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ -Lobj32 $< $(LDLIBS)
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ -Lobj32 $^ $(LDLIBS) || cp $(BADTOOLCHAIN) $@
 
-$(LDSCRIPT_TESTS:%=obj64/%): obj64/%: %.ld obj64/dummy.o obj64/testutils.o
+$(LDSCRIPT_TESTS:%=obj64/%): obj64/%: %.ld obj64/%.o obj64/testutils.o
 	@$(VECHO) LD64 "(preload test)" $@
-	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ -Lobj64 $< $(LDLIBS)
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ -Lobj64 $^ $(LDLIBS) || cp $(BADTOOLCHAIN) $@
 
 $(HUGELINK_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 	@$(VECHO) LD32 "(hugelink test)" $@
