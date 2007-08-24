@@ -1,3 +1,37 @@
+libhugetlbfs 1.2 "Mango Habanero"
+======================================================================
+
+New features
+
+* Partial segment remapping. This allows non-relinked binaries to try
+  to take advantage of libhugetlbfs' segment remapping code. Large
+  segments are required, especially on Power. This feature is useful
+  for estimating huge page performance, however full relinking will
+  still perform better.
+* Add extra debugging for binaries that may run out of address space.
+* Log library version when HUGETLB_VERBOSE is enabled.
+* Beginning support for ia64 and sparc64.
+* New test to check handling of misaligned mmap() parameters.
+
+Bug fixes
+
+* Fix EH_FRAME segment. Fixes some C++ applications.
+* Rework PLT detection to work better on Power.
+* Add per-target-arch syscall stubs to the library. These provide
+  reliable error messages from elflink.c if they occur while the
+  program segments are unmapped.
+* Add proper SONAME to shared libs.
+* Makefile respects CFLAGS/LDFLAGS/CPPFLAGS environment variables.
+* Make mlock() failure non-fatal.
+
+Test suite fixes
+
+* Fix zero_filesize_segment test.
+* Fix the icache-hygeine testcase for i386 and x86_64.
+* Fix SEGVs in task-size-overrun test.
+* Enable stack_grow_into_huge test, previously skipped.
+* Fix test_addr_huge() for anon pages.
+
 libhugetlbfs 1.1 "Carribbean Jerk"
 ======================================================================
 
