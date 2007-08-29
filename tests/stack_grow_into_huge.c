@@ -48,13 +48,19 @@
  * 0d59a01bc461bbab4017ff449b8401151ef44cf6.
  */
 
-void do_child()
+#ifdef __LP64__
+#define STACK_ALLOCATION_SIZE	(256*1024*1024)
+#else
+#define STACK_ALLOCATION_SIZE	(16*1024*1024)
+#endif
+
+void do_child(void *stop_address)
 {
-	while (1) {
-		volatile int *x;
-		x = alloca(16*1024*1024);
+	volatile int *x;
+	do {
+		x = alloca(STACK_ALLOCATION_SIZE);
 		*x = 1;
-	}
+	} while ((void *)x >= stop_address);
 }
 
 int main(int argc, char *argv[])
@@ -63,6 +69,7 @@ int main(int argc, char *argv[])
 	struct rlimit r;
 	char *b;
 	long hpage_size = gethugepagesize();
+	void *stack_address, *mmap_address, *heap_address;
 
 	test_init(argc, argv);
 
@@ -77,17 +84,35 @@ int main(int argc, char *argv[])
 	if (fd < 0)
 		CONFIG("Couldn't get hugepage fd");
 
-	b = mmap(0, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-	if (b != MAP_FAILED)
-		munmap(b, hpage_size);
-	else
+	stack_address = alloca(0);
+	heap_address = sbrk(0);
+
+	/*
+	 * paranoia: start mapping two hugepages below the start of the stack,
+	 * in case the alignment would cause us to map over something if we
+	 * only used a gap of one hugepage.
+	 */
+	mmap_address = PALIGN(stack_address - 2 * hpage_size, hpage_size);
+
+	do {
+		b = mmap(mmap_address, hpage_size, PROT_READ|PROT_WRITE,
+						MAP_FIXED|MAP_SHARED, fd, 0);
+		mmap_address -= hpage_size;
+		/*
+		 * if we get all the way down to the heap, stop trying
+		 */
+		if (mmap_address <= heap_address)
+			break;
+	} while (b == MAP_FAILED);
+
+	if (b == MAP_FAILED)
 		FAIL("mmap");
 
 	if ((pid = fork()) < 0)
 		FAIL("fork");
 
 	if (pid == 0) {
-		do_child();
+		do_child(mmap_address);
 		exit(0);
 	}
 
