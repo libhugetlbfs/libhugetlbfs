@@ -11,8 +11,8 @@ PHDRS
 {
   headers PT_PHDR PHDRS ;
   interp PT_INTERP ;
-  text PT_LOAD FILEHDR PHDRS FLAGS (0x00100005);
-  data PT_LOAD FLAGS (0x00100007);
+  htext PT_LOAD FILEHDR PHDRS FLAGS (0x00100005);
+  hdata PT_LOAD FLAGS (0x00100007);
   dynamic PT_DYNAMIC ;
   note PT_NOTE ;
   gnu_stack PT_GNU_STACK ;
@@ -27,87 +27,87 @@ SECTIONS
   /* Different from the normal origin address, because we make it 16MB
    * aligned, in case of future larger hugepages */
   __executable_start = 0x1000000; . = 0x1000000 + SIZEOF_HEADERS;
-  .interp         : { *(.interp) } :interp :text
-  .hash           : { *(.hash) } :text
-  .note.SuSE      : { *(.note.SuSE) } :text :note
-  .note.ABI-tag   : { *(.note.ABI-tag) } :text :note
-  .dynsym         : { *(.dynsym) } :text
-  .dynstr         : { *(.dynstr) } :text
-  .gnu.version    : { *(.gnu.version) } :text
-  .gnu.version_d  : { *(.gnu.version_d) } :text
-  .gnu.version_r  : { *(.gnu.version_r) } :text
-  .rel.init       : { *(.rel.init) } :text
-  .rela.init      : { *(.rela.init) } :text
-  .rel.text       : { *(.rel.text .rel.text.* .rel.gnu.linkonce.t.*) } :text
-  .rela.text      : { *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*) } :text
-  .rel.fini       : { *(.rel.fini) } :text
-  .rela.fini      : { *(.rela.fini) } :text
-  .rel.rodata     : { *(.rel.rodata .rel.rodata.* .rel.gnu.linkonce.r.*) } :text
-  .rela.rodata    : { *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*) } :text
-  .rel.data.rel.ro   : { *(.rel.data.rel.ro*) } :text
-  .rela.data.rel.ro   : { *(.rel.data.rel.ro*) } :text
-  .rel.data       : { *(.rel.data .rel.data.* .rel.gnu.linkonce.d.*) } :text
-  .rela.data      : { *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*) } :text
-  .rel.tdata	  : { *(.rel.tdata .rel.tdata.* .rel.gnu.linkonce.td.*) } :text
-  .rela.tdata	  : { *(.rela.tdata .rela.tdata.* .rela.gnu.linkonce.td.*) } :text
-  .rel.tbss	  : { *(.rel.tbss .rel.tbss.* .rel.gnu.linkonce.tb.*) } :text
-  .rela.tbss	  : { *(.rela.tbss .rela.tbss.* .rela.gnu.linkonce.tb.*) } :text
-  .rel.ctors      : { *(.rel.ctors) } :text
-  .rela.ctors     : { *(.rela.ctors) } :text
-  .rel.dtors      : { *(.rel.dtors) } :text
-  .rela.dtors     : { *(.rela.dtors) } :text
-  .rel.got        : { *(.rel.got) } :text
-  .rela.got       : { *(.rela.got) } :text
-  .rel.bss        : { *(.rel.bss .rel.bss.* .rel.gnu.linkonce.b.*) } :text
-  .rela.bss       : { *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*) } :text
-  .rel.plt        : { *(.rel.plt) } :text
-  .rela.plt       : { *(.rela.plt) } :text
+  .interp         : { *(.interp) } :interp :htext
+  .hash           : { *(.hash) } :htext
+  .note.SuSE      : { *(.note.SuSE) } :htext :note
+  .note.ABI-tag   : { *(.note.ABI-tag) } :htext :note
+  .dynsym         : { *(.dynsym) } :htext
+  .dynstr         : { *(.dynstr) } :htext
+  .gnu.version    : { *(.gnu.version) } :htext
+  .gnu.version_d  : { *(.gnu.version_d) } :htext
+  .gnu.version_r  : { *(.gnu.version_r) } :htext
+  .rel.init       : { *(.rel.init) } :htext
+  .rela.init      : { *(.rela.init) } :htext
+  .rel.text       : { *(.rel.text .rel.text.* .rel.gnu.linkonce.t.*) } :htext
+  .rela.text      : { *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*) } :htext
+  .rel.fini       : { *(.rel.fini) } :htext
+  .rela.fini      : { *(.rela.fini) } :htext
+  .rel.rodata     : { *(.rel.rodata .rel.rodata.* .rel.gnu.linkonce.r.*) } :htext
+  .rela.rodata    : { *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*) } :htext
+  .rel.data.rel.ro   : { *(.rel.data.rel.ro*) } :htext
+  .rela.data.rel.ro   : { *(.rel.data.rel.ro*) } :htext
+  .rel.data       : { *(.rel.data .rel.data.* .rel.gnu.linkonce.d.*) } :htext
+  .rela.data      : { *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*) } :htext
+  .rel.tdata	  : { *(.rel.tdata .rel.tdata.* .rel.gnu.linkonce.td.*) } :htext
+  .rela.tdata	  : { *(.rela.tdata .rela.tdata.* .rela.gnu.linkonce.td.*) } :htext
+  .rel.tbss	  : { *(.rel.tbss .rel.tbss.* .rel.gnu.linkonce.tb.*) } :htext
+  .rela.tbss	  : { *(.rela.tbss .rela.tbss.* .rela.gnu.linkonce.tb.*) } :htext
+  .rel.ctors      : { *(.rel.ctors) } :htext
+  .rela.ctors     : { *(.rela.ctors) } :htext
+  .rel.dtors      : { *(.rel.dtors) } :htext
+  .rela.dtors     : { *(.rela.dtors) } :htext
+  .rel.got        : { *(.rel.got) } :htext
+  .rela.got       : { *(.rela.got) } :htext
+  .rel.bss        : { *(.rel.bss .rel.bss.* .rel.gnu.linkonce.b.*) } :htext
+  .rela.bss       : { *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*) } :htext
+  .rel.plt        : { *(.rel.plt) } :htext
+  .rela.plt       : { *(.rela.plt) } :htext
   .init           :
   {
     KEEP (*(.init))
-  } :text =0x90909090
-  .plt            : { *(.plt) } :text
+  } :htext =0x90909090
+  .plt            : { *(.plt) } :htext
   .text           :
   {
     *(.text .stub .text.* .gnu.linkonce.t.*)
     KEEP (*(.text.*personality*))
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
-  } :text =0x90909090
+  } :htext =0x90909090
   .fini           :
   {
     KEEP (*(.fini))
-  } :text =0x90909090
+  } :htext =0x90909090
   PROVIDE (__etext = .);
   PROVIDE (_etext = .);
   PROVIDE (etext = .);
-  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) } :text
-  .rodata1        : { *(.rodata1) } :text
-  .eh_frame_hdr : { *(.eh_frame_hdr) } :text :eh_frame_hdr
-  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) } :text
-  .gcc_except_table   : ONLY_IF_RO { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) } :text
+  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) } :htext
+  .rodata1        : { *(.rodata1) } :htext
+  .eh_frame_hdr : { *(.eh_frame_hdr) } :htext :eh_frame_hdr
+  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) } :htext
+  .gcc_except_table   : ONLY_IF_RO { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) } :htext
   /* We don't maintain address congruence here, because saving
    * hugepages is more important than saving executable size. */
   . = ALIGN (0x1000000); /* Align to 16MB (4MB hugepage size, plus some slack in case of larger hugepages in future */
   /* Exception handling  */
-  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) } :data
-  .gcc_except_table   : ONLY_IF_RW { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) } :data
+  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) } :hdata
+  .gcc_except_table   : ONLY_IF_RW { KEEP (*(.gcc_except_table)) *(.gcc_except_table.*) } :hdata
   /* Thread Local Storage sections  */
-  .tdata	  : { *(.tdata .tdata.* .gnu.linkonce.td.*) } :data
-  .tbss		  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) } :data
+  .tdata	  : { *(.tdata .tdata.* .gnu.linkonce.td.*) } :hdata
+  .tbss		  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) } :hdata
   /* Ensure the __preinit_array_start label is properly aligned.  We
      could instead move the label definition inside the section, but
      the linker would then create the section even if it turns out to
      be empty, which isn't pretty.  */
   . = ALIGN(64 / 8);
   PROVIDE (__preinit_array_start = .);
-  .preinit_array     : { KEEP (*(.preinit_array)) } :data
+  .preinit_array     : { KEEP (*(.preinit_array)) } :hdata
   PROVIDE (__preinit_array_end = .);
   PROVIDE (__init_array_start = .);
-  .init_array     : { KEEP (*(.init_array)) } :data
+  .init_array     : { KEEP (*(.init_array)) } :hdata
   PROVIDE (__init_array_end = .);
   PROVIDE (__fini_array_start = .);
-  .fini_array     : { KEEP (*(.fini_array)) } :data
+  .fini_array     : { KEEP (*(.fini_array)) } :hdata
   PROVIDE (__fini_array_end = .);
   .ctors          :
   {
@@ -128,26 +128,26 @@ SECTIONS
     KEEP (*(EXCLUDE_FILE (*crtend*.o ) .ctors))
     KEEP (*(SORT(.ctors.*)))
     KEEP (*(.ctors))
-  } :data
+  } :hdata
   .dtors          :
   {
     KEEP (*crtbegin*.o(.dtors))
     KEEP (*(EXCLUDE_FILE (*crtend*.o ) .dtors))
     KEEP (*(SORT(.dtors.*)))
     KEEP (*(.dtors))
-  } :data
-  .jcr            : { KEEP (*(.jcr)) } :data
-  .data.rel.ro : { *(.data.rel.ro.local) *(.data.rel.ro*) } :data
-  .dynamic        : { *(.dynamic) } :dynamic :data
-  .got            : { *(.got) } :data
-  .got.plt        : { *(.got.plt) } :data
+  } :hdata
+  .jcr            : { KEEP (*(.jcr)) } :hdata
+  .data.rel.ro : { *(.data.rel.ro.local) *(.data.rel.ro*) } :hdata
+  .dynamic        : { *(.dynamic) } :dynamic :hdata
+  .got            : { *(.got) } :hdata
+  .got.plt        : { *(.got.plt) } :hdata
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
     KEEP (*(.gnu.linkonce.d.*personality*))
     SORT(CONSTRUCTORS)
-  } :data
-  .data1          : { *(.data1) } :data
+  } :hdata
+  .data1          : { *(.data1) } :hdata
   _edata = .;
   PROVIDE (edata = .);
   __bss_start = .;
@@ -160,7 +160,7 @@ SECTIONS
       _end.  Align after .bss to ensure correct alignment even if the
       .bss section disappears because there are no input sections.  */
    . = ALIGN(64 / 8);
-  } :data
+  } :hdata
   . = ALIGN(64 / 8);
   _end = .;
   PROVIDE (end = .);
