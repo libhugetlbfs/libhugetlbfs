@@ -165,6 +165,11 @@ int main(int argc, char *argv[])
 					FAIL("%s is not hugepage\n",
 					     testtab[i].name);
 			}
+			if (linkchar && !strchr(link_string, linkchar)) {
+				if (testtab[i].is_huge)
+					FAIL("%s is hugepage\n",
+						testtab[i].name);
+			}
 		}
 	}
 	PASS();
