@@ -124,6 +124,15 @@ restore_shm_sysctl() {
     echo "$SHMALL" > /proc/sys/kernel/shmall
 }
 
+setup_dynamic_pool_sysctl() {
+    DYNAMIC_POOL=`cat /proc/sys/vm/hugetlb_dynamic_pool`
+    echo 1 > /proc/sys/vm/hugetlb_dynamic_pool
+}
+
+restore_dynamic_pool_sysctl() {
+    echo "$DYNAMIC_POOL" > /proc/sys/vm/hugetlb_dynamic_pool
+}
+
 functional_tests () {
 # Kernel background tests not requiring hugepage support
     run_test zero_filesize_segment
@@ -182,6 +191,12 @@ functional_tests () {
     run_test alloc-instantiate-race `free_hpages` private
     run_test truncate_reserve_wraparound
     run_test truncate_sigbus_versus_oom `free_hpages`
+
+# Test accounting of HugePages_{Total|Free|Resv|Surp}
+#  Alters the size of the hugepage pool so should probably be run last
+    setup_dynamic_pool_sysctl
+    run_test counters
+    restore_dynamic_pool_sysctl
 }
 
 stress_tests () {
