@@ -192,6 +192,9 @@ functional_tests () {
     run_test truncate_reserve_wraparound
     run_test truncate_sigbus_versus_oom `free_hpages`
 
+# Test hugetlbfs filesystem quota accounting
+    run_test quota
+
 # Test accounting of HugePages_{Total|Free|Resv|Surp}
 #  Alters the size of the hugepage pool so should probably be run last
     setup_dynamic_pool_sysctl
