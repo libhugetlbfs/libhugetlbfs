@@ -151,7 +151,7 @@ static char share_path[PATH_MAX+1];
 #define MAX_HTLB_SEGS	2
 
 struct seg_info {
-	void *vaddr, *extra_vaddr;
+	void *vaddr;
 	unsigned long filesz, memsz, extrasz;
 	int prot;
 	int fd;
@@ -436,12 +436,12 @@ static void get_extracopy(struct seg_info *seg, Elf_Phdr *phdr, int phnum)
 	Elf_Sym *sym;           /* a symbol */
 	char *strtab = NULL;    /* string table for dynamic symbols */
 	int ret, numsyms, found_sym = 0;
-	void *start, *end, *start_orig, *end_orig;
+	void *start, *end, *end_orig;
 	void *sym_start, *sym_end;
 	extern void __libhuge_filesz __attribute__((weak));
 
 	end_orig = seg->vaddr + seg->memsz;
-	start_orig = seg->vaddr + seg->filesz;
+	start = seg->vaddr + seg->filesz;
 	if (seg->filesz == seg->memsz)
 		return;
 	if (!minimal_copy)
@@ -465,11 +465,10 @@ static void get_extracopy(struct seg_info *seg, Elf_Phdr *phdr, int phnum)
 	 * We must ensure any returns done hereafter have sane start and end 
 	 * values, as the criss-cross apple sauce algorithm is beginning 
 	 */
-	start = end_orig;
-	end = start_orig;
+	end = start;
 
 	for (sym = symtab; sym < symtab + numsyms; sym++) {
-		if (!keep_symbol(sym, start_orig, end_orig))
+		if (!keep_symbol(sym, start, end_orig))
 			continue;
 		/* TODO - add filtering so that we only look at symbols from glibc 
 		   (@@GLIBC_*) */
@@ -478,8 +477,6 @@ static void get_extracopy(struct seg_info *seg, Elf_Phdr *phdr, int phnum)
 		found_sym = 1;
 		sym_start = (void *)sym->st_value;
 		sym_end = (void *)(sym->st_value + sym->st_size);
-		if (sym_start < start)
-			start = sym_start;
 		if (sym_end > end)
 			end = sym_end;
 	}
@@ -487,8 +484,6 @@ static void get_extracopy(struct seg_info *seg, Elf_Phdr *phdr, int phnum)
 	if (&__libhuge_filesz > end) {
 		/* be careful if the algorithm didn't find any symbols
 		 * to copy */
-		if (start == end_orig)
-			start = start_orig;
 		end = &__libhuge_filesz;
 		found_sym = 1;
 		DEBUG("Found __libhuge_filesz at %p\n", &__libhuge_filesz);
@@ -498,21 +493,17 @@ static void get_extracopy(struct seg_info *seg, Elf_Phdr *phdr, int phnum)
 		check_bss(start_orig, end_orig);
 
 	if (found_sym) {
-		/* Return the copy window */
-		seg->extra_vaddr = start;
 		seg->extrasz = end - start;
 	}
 	/*
-	 * else no need to copy anything, so leave seg->extra_vaddr as
-	 * NULL
+	 * else no need to copy anything, so leave seg->extrasz as zero
 	 */
 	return;
 
 bail:
 	DEBUG("Unable to perform minimal copy\n");
 bail2:
-	seg->extra_vaddr = start_orig;
-	seg->extrasz = end_orig - start_orig;
+	seg->extrasz = end_orig - start;
 }
 
 static void parse_elf_relinked(Elf_Ehdr *ehdr)
@@ -715,17 +706,14 @@ static int prepare_segment(struct seg_info *seg)
 {
 	int hpage_size = gethugepagesize();
 	void *p;
-	unsigned long gap;
 	unsigned long size;
 
 	/*
 	 * Calculate the BSS size that we must copy in order to minimize
 	 * the size of the shared mapping.
 	 */
-	if (seg->extra_vaddr) {
-		size = ALIGN((unsigned long)seg->extra_vaddr +
-				seg->extrasz - (unsigned long)seg->vaddr,
-				hpage_size);
+	if (seg->extrasz > 0) {
+		size = ALIGN(seg->filesz + seg->extrasz, hpage_size);
 	} else {
 		size = ALIGN(seg->filesz, hpage_size);
 	}
@@ -751,11 +739,10 @@ static int prepare_segment(struct seg_info *seg)
 	memcpy(p, seg->vaddr, seg->filesz);
 	DEBUG_CONT("done\n");
 
-	if (seg->extra_vaddr) {
+	if (seg->extrasz > 0) {
 		DEBUG("Copying extra %#0lx bytes from %p...",
-					seg->extrasz, seg->extra_vaddr);
-		gap = seg->extra_vaddr - (seg->vaddr + seg->filesz);
-		memcpy((p + seg->filesz + gap), seg->extra_vaddr,
+					seg->extrasz, seg->vaddr + seg->filesz);
+		memcpy((p + seg->filesz), seg->vaddr + seg->filesz,
 							seg->extrasz);
 		DEBUG_CONT("done\n");
 	}
