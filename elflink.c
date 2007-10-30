@@ -32,6 +32,7 @@
 #include <sys/file.h>
 #include <linux/unistd.h>
 #include <sys/mman.h>
+#include <sys/wait.h>
 #include <errno.h>
 #include <limits.h>
 #include <elf.h>
@@ -893,7 +894,7 @@ static int find_or_prepare_shared_file(struct seg_info *htlb_seg_info)
 static int obtain_prepared_file(struct seg_info *htlb_seg_info)
 {
 	int fd = -1;
-	int ret;
+	int ret, pid, status;
 
 	/* Share only read-only segments */
 	if (sharing && !(htlb_seg_info->prot & PROT_WRITE)) {
@@ -909,11 +910,33 @@ static int obtain_prepared_file(struct seg_info *htlb_seg_info)
 		return -1;
 	htlb_seg_info->fd = fd;
 
-	ret = prepare_segment(htlb_seg_info);
-	if (ret < 0) {
-		DEBUG("Failed to prepare segment\n");
+	/* [PPC] Prior to 2.6.22 (which added slices), our temporary hugepage
+	 * mappings are placed in the segment before the stack. This 'taints' that
+	 * segment for be hugepage-only for the lifetime of the process, resulting
+	 * in a maximum stack size of 256MB. If we instead create our hugepage
+	 * mappings in a child process, we can avoid this problem.
+	 *
+	 * This does not adversely affect non-PPC platforms so do it everywhere.
+	 */
+	if ((pid = fork()) < 0) {
+		DEBUG("fork failed");
 		return -1;
 	}
+	if (pid == 0) {
+		ret = prepare_segment(htlb_seg_info);
+		if (ret < 0) {
+			DEBUG("Failed to prepare segment\n");
+			exit(1);
+		}
+		else
+			exit(0);
+	}
+	ret = waitpid(pid, &status, 0);
+	if (ret == -1) {
+		DEBUG("waitpid failed");
+		return -1;
+	}
+
 	DEBUG("Prepare succeeded\n");
 	return 0;
 }
