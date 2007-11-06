@@ -70,7 +70,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 {
 	int ret;
 	void *p;
-	long delta = 0;
+	long delta;
 
 	DEBUG("hugetlbfs_morecore(%ld) = ...\n", (long)increment);
 
@@ -83,13 +83,11 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	DEBUG("heapbase = %p, heaptop = %p, mapsize = %lx, delta=%ld\n",
 	      heapbase, heaptop, mapsize, delta);
 
-	/* growing the heap */
+	/* align to multiple of hugepagesize. */
+	delta = ALIGN(delta, blocksize);
+
 	if (delta > 0) {
-		/*
-		 * convert our request to a multiple of hugepages
-		 * we will have more space allocated then used, basically
-		 */
-		delta = ALIGN(delta, blocksize);
+		/* growing the heap */
 
 		DEBUG("Attempting to map %ld bytes\n", delta);
 
@@ -134,6 +132,50 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 
 		/* we now have mmap'd further */
 		mapsize += delta;
+	} else if (delta < 0) {
+		/* shrinking the heap */
+
+		if (!mapsize) {
+			WARNING("Can't shrink empty heap!");
+			return NULL;
+		}
+
+		/*
+		 * If we are forced to change the heapaddr from the
+		 * original brk() value we have violated brk semantics
+		 * (which we are not supposed to do).  This shouldn't
+		 * pose a problem until glibc tries to trim the heap to an
+		 * address lower than what we aligned heapaddr to.  At that
+		 * point the alignment "gap" causes heap corruption.
+		 * So we don't allow the heap to shrink below heapbase.
+		 */
+		if (mapsize + delta < 0) {  /* remember: delta is negative */
+			WARNING("Unable to shrink heap below %p\n", heapbase);
+			/* unmap just what is currently mapped */
+			delta = -mapsize;
+			/* we need heaptop + increment == heapbase, so: */
+			increment = heapbase - heaptop;
+		}
+		DEBUG("Attempting to unmap %ld bytes @ %p\n", -delta,
+			heapbase + mapsize + delta);
+		ret = munmap(heapbase + mapsize + delta, -delta);
+		if (ret) {
+			WARNING("Unmapping failed in hugetlbfs_morecore(): "
+				"%s\n", strerror(errno));
+		} else {
+
+			/*
+			 * Now shrink the hugetlbfs file.
+			 */
+			mapsize += delta;
+			ret = ftruncate(heap_fd, mapsize);
+			if (ret) {
+				WARNING("Couldn't truncate hugetlbfs file in "
+					"hugetlbfs_morecore(): %s\n",
+					strerror(errno));
+			}
+		}
+
 	}
 
 	/* heap is continuous */
@@ -191,16 +233,7 @@ static void __attribute__((constructor)) setup_morecore(void)
 
 	/* Set some allocator options more appropriate for hugepages */
 	
-	/* XXX: This morecore implementation does not support trimming!
-	 * If we are forced to change the heapaddr from the original brk()
-	 * value we have violated brk semantics (which we are not supposed to
-	 * do).  This shouldn't pose a problem until glibc tries to trim the
-	 * heap to an address lower than what we aligned heapaddr to.  At that
-	 * point the alignment "gap" causes heap corruption.
-	 *
-	 * So, for now, disable heap trimming.
-	 */
-	mallopt(M_TRIM_THRESHOLD, -1);
+	mallopt(M_TRIM_THRESHOLD, blocksize / 2);
 	mallopt(M_TOP_PAD, blocksize / 2);
 	/* we always want to use our morecore, not ordinary mmap().
 	 * This doesn't appear to prohibit malloc() from falling back
