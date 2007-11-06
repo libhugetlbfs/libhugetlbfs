@@ -70,7 +70,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 {
 	int ret;
 	void *p;
-	long newsize = 0;
+	long delta = 0;
 
 	DEBUG("hugetlbfs_morecore(%ld) = ...\n", (long)increment);
 
@@ -78,23 +78,23 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	 * how much to grow the heap by =
 	 * 	(size of heap) + malloc request - mmap'd space
 	 */
-	newsize = (heaptop-heapbase) + increment - mapsize;
+	delta = (heaptop-heapbase) + increment - mapsize;
 
-	DEBUG("heapbase = %p, heaptop = %p, mapsize = %lx, newsize=%ld\n",
-	      heapbase, heaptop, mapsize, newsize);
+	DEBUG("heapbase = %p, heaptop = %p, mapsize = %lx, delta=%ld\n",
+	      heapbase, heaptop, mapsize, delta);
 
 	/* growing the heap */
-	if (newsize > 0) {
+	if (delta > 0) {
 		/*
 		 * convert our request to a multiple of hugepages
 		 * we will have more space allocated then used, basically
 		 */
-		newsize = ALIGN(newsize, blocksize);
+		delta = ALIGN(delta, blocksize);
 
-		DEBUG("Attempting to map %ld bytes\n", newsize);
+		DEBUG("Attempting to map %ld bytes\n", delta);
 
 		/* map in (extend) more of the file at the end of our last map */
-		p = mmap(heapbase + mapsize, newsize, PROT_READ|PROT_WRITE,
+		p = mmap(heapbase + mapsize, delta, PROT_READ|PROT_WRITE,
 			 MAP_PRIVATE, heap_fd, mapsize);
 		if (p == MAP_FAILED) {
 			WARNING("Mapping failed in hugetlbfs_morecore()\n");
@@ -110,7 +110,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			heapbase = heaptop = p;
 		} else if (p != (heapbase + mapsize)) {
 			/* Couldn't get the mapping where we wanted */
-			munmap(p, newsize);
+			munmap(p, delta);
 			WARNING("Mapped at %p instead of %p in hugetlbfs_morecore()\n",
 			      p, heapbase + mapsize);
 			return NULL;
@@ -123,17 +123,17 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 		 * appropriate policy for hugepage allocation */
 
 		/* Use mlock to guarantee these pages to the process */
-		ret = mlock(p, newsize);
+		ret = mlock(p, delta);
 		if (ret) {
 			WARNING("Failed to reserve huge pages in "
 					"hugetlbfs_morecore(): %s\n",
 					strerror(errno));
 		} else {
-			munlock(p, newsize);
+			munlock(p, delta);
 		}
 
 		/* we now have mmap'd further */
-		mapsize += newsize;
+		mapsize += delta;
 	}
 
 	/* heap is continuous */
