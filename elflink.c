@@ -490,7 +490,7 @@ static void get_extracopy(struct seg_info *seg, Elf_Phdr *phdr, int phnum)
 	}
 
 	if (__debug)
-		check_bss(start_orig, end_orig);
+		check_bss(start, end_orig);
 
 	if (found_sym) {
 		seg->extrasz = end - start;
