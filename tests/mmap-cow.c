@@ -45,7 +45,6 @@ extern int errno;
 
 #define HTLB_FILE "mmap-cow"
 #define BUF_SZ 256
-#define MAX_PROCS 100
 
 #define CHILD_FAIL(thread, fmt, ...) \
 	do { \
@@ -112,7 +111,7 @@ int main(int argc, char ** argv)
 	long hpage_size;
 	size_t size;
 	int i, pid, status, fd, ret;
-	int wait_list[MAX_PROCS];
+	pid_t *wait_list;
 
 	test_init(argc, argv);
 
@@ -124,6 +123,10 @@ int main(int argc, char ** argv)
 
 	if ((threads+1) > nr_hugepages)
 		CONFIG("Need more hugepages than threads\n");
+
+	wait_list = malloc(threads * sizeof(pid_t));
+	if (wait_list == NULL)
+		CONFIG("Couldn't allocate memory for wait_list\n");
 
 	hpage_size = gethugepagesize();
 	/* Have to have enough available hugepages for each thread to
@@ -173,6 +176,7 @@ int main(int argc, char ** argv)
 
 	munmap(addr, size);
 	close(fd);
+	free(wait_list);
 
 	PASS();
 }
