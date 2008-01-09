@@ -46,7 +46,7 @@ extern int errno;
 #define BUF_SZ 1024
 
 /* Global test configuration */
-#define DYNAMIC_SYSCTL "/proc/sys/vm/hugetlb_dynamic_pool"
+#define DYNAMIC_SYSCTL "/proc/sys/vm/nr_overcommit_hugepages"
 static long saved_nr_hugepages;
 static long hpage_size;
 
@@ -92,7 +92,7 @@ void verify_dynamic_pool_support(void)
 
 	if (read(fd, &value, 1) != 1)
 		FAIL("Unable to read %s", DYNAMIC_SYSCTL);
-	if (value != '1')
+	if (value == '0')
 		CONFIG("Dynamic hugetlb pool support present, but disabled");
 	close(fd);
 }
