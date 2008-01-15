@@ -179,13 +179,14 @@ SECTIONS
   . = ALIGN(64 / 8);
   . = ALIGN(64 / 8);
   . = DATA_SEGMENT_END (.);
-  /* Hugepage area */
-  /* Saving hugepages is more important than saving executable size, so
-   * we don't attempt to maintain congruence here */
-  . = ALIGN(0x18000000000); /* Move into next 1TB area, but use 1.5TB
-			     * instead of 1TB for compatibility with
-			     * old kernels that have a fixed hugepage
-			     * range */
+  /* Hugepage area:
+   * Saving hugepages is more important than saving executable size, so
+   * we don't attempt to maintain congruence here.
+   * In order to map hugepages into the address space, we must advance the
+   * location counter to a segment boundary.  If the address is < 4G, the
+   * next segment will be on a 256M boundary.  For higher areas, we have a
+   * 1TB granularity. */
+  . = (. < 0x100000000) ? ALIGN(0x10000000) : ALIGN(0x10000000000);
   /* HACK: workaround fact that kernel may not cope with segments with zero
    * filesize */
   .hugetlb.data : { LONG(1) } :htlb
