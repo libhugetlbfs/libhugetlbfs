@@ -125,12 +125,16 @@ restore_shm_sysctl() {
 }
 
 setup_dynamic_pool_sysctl() {
-    DYNAMIC_POOL=`cat /proc/sys/vm/nr_overcommit_hugepages`
-    echo 10 > /proc/sys/vm/hugetlb_dynamic_pool
+    if [ -f /proc/sys/vm/nr_overcommit_hugepages ]; then
+    	DYNAMIC_POOL=`cat /proc/sys/vm/nr_overcommit_hugepages`
+    	echo 10 > /proc/sys/vm/hugetlb_dynamic_pool
+    fi
 }
 
 restore_dynamic_pool_sysctl() {
-    echo "$DYNAMIC_POOL" > /proc/sys/vm/nr_overcommit_hugepages
+    if [ -f /proc/sys/vm/nr_overcommit_hugepages ]; then
+        echo "$DYNAMIC_POOL" > /proc/sys/vm/nr_overcommit_hugepages
+    fi
 }
 
 functional_tests () {
