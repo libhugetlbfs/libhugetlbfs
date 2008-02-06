@@ -66,6 +66,9 @@ int main(int argc, char ** argv)
 	verbose_printf("hpage_size is: %ld\n", hpage_size);
 
 	buffer = malloc(hpage_size*sizeof(char));
+	if (!buffer)
+		FAIL("malloc(%li): %s", hpage_size*sizeof(char),
+			strerror(errno));
 
 	raw_fd = open(argv[2], O_RDONLY);
 	if (!raw_fd)
