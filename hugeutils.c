@@ -99,7 +99,7 @@ static long read_meminfo(const char *tag)
 
 long gethugepagesize(void)
 {
-	int hpage_kb;
+	long hpage_kb;
 
 	if (hpage_size)
 		return hpage_size;

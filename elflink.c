@@ -704,7 +704,7 @@ static void parse_elf_normal(void)
  */
 static int prepare_segment(struct seg_info *seg)
 {
-	int hpage_size = gethugepagesize();
+	long hpage_size = gethugepagesize();
 	void *p;
 	unsigned long size;
 
