@@ -108,16 +108,22 @@ static long read_meminfo(const char *tag)
 long gethugepagesize(void)
 {
 	long hpage_kb;
+	long max_hpage_kb = LONG_MAX / 1024;
 
 	if (hpage_size)
 		return hpage_size;
 
 	hpage_kb = read_meminfo("Hugepagesize:");
-	if (hpage_kb < 0)
+	if (hpage_kb < 0) {
 		hpage_size = -1;
-	else
-		/* convert from kb to bytes */
-		hpage_size = 1024 * hpage_kb;
+	} else {
+		if (hpage_kb > max_hpage_kb)
+			/* would overflow if converted to bytes */
+			hpage_size = -1;
+		else
+			/* convert from kb to bytes */
+			hpage_size = 1024 * hpage_kb;
+	}
 
 	return hpage_size;
 }
