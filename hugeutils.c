@@ -84,7 +84,15 @@ static long read_meminfo(const char *tag)
 		return -1; /* looks like the line we want isn't there */
 
 	p += strlen(tag);
+	errno = 0;
 	val = strtol(p, &q, 0);
+	if (errno != 0) {
+		if (errno == ERANGE && val == LONG_MAX)
+			ERROR("Value of %s in /proc/meminfo overflows long\n", tag);
+		else
+			ERROR("strtol() failed (%s)\n", strerror(errno));
+		return -1;
+	}
 	if (! isspace(*q)) {
 		ERROR("Couldn't parse /proc/meminfo value\n");
 		return -1;
