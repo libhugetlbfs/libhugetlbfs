@@ -15,6 +15,7 @@ LDSCRIPT_TESTS = zero_filesize_segment
 HUGELINK_TESTS = linkhuge linkhuge_nofd linkshare
 STRESS_TESTS = mmap-gettest mmap-cow shm-gettest shm-getraw shm-fork
 HELPERS = get_hugetlbfs_path
+HELPER_LIBS = libheapshrink.so
 BADTOOLCHAIN = bad-toolchain.sh
 
 CFLAGS = -O2 -Wall -g
@@ -58,11 +59,12 @@ DEPFILES = $(LIB_TESTS:%=%.d) $(NOLIB_TESTS:%=%.d) $(HUGELINK_TESTS:%=%.d) \
 
 ALLTESTS = $(foreach DIR,$(OBJDIRS),$(TESTS:%=$(DIR)/%))
 ALLHELPERS = $(foreach DIR,$(OBJDIRS),$(HELPERS:%=$(DIR)/%))
+ALLHELPERLIBS = $(foreach DIR,$(OBJDIRS),$(HELPER_LIBS:%=$(DIR)/%))
 ifdef CC64
 ALLTESTS += $(TESTS_64:%=obj64/%)
 endif
 
-all:	$(ALLTESTS) $(ALLHELPERS)
+all:	$(ALLTESTS) $(ALLHELPERS) $(ALLHELPERLIBS)
 
 obj32/%.o: %.c
 	@$(VECHO) CC32 $@
@@ -73,6 +75,26 @@ obj64/%.o: %.c
 	@$(VECHO) CC64 $@
 	@mkdir -p obj64
 	$(CC64) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+
+obj32/%-pic.o: %.c
+	@$(VECHO) CC32 $@
+	@mkdir -p obj32
+	$(CC32) $(CPPFLAGS) $(CFLAGS) -fPIC -o $@ -c $<
+
+obj64/%-pic.o: %.c
+	@$(VECHO) CC64 $@
+	@mkdir -p obj64
+	$(CC64) $(CPPFLAGS) $(CFLAGS) -fPIC -o $@ -c $<
+
+obj32/libheapshrink.so: obj32/heapshrink-helper-pic.o
+	@$(VECHO) LD32 "(shared)" $@
+	@mkdir -p obj32
+	$(CC32) -Wl,-soname,$(notdir $@) -shared -o $@ $^
+
+obj64/libheapshrink.so: obj64/heapshrink-helper-pic.o
+	@$(VECHO) LD64 "(shared)" $@
+	@mkdir -p obj64
+	$(CC64) -Wl,-soname,$(notdir $@) -shared -o $@ $^
 
 $(LIB_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 	@$(VECHO) LD32 "(lib test)" $@

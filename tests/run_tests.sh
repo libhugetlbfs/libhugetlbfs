@@ -37,7 +37,7 @@ run_test_bits () {
 
     if [ -d obj$BITS ]; then
 	echo -n "$@ ($BITS):	"
-	PATH="obj$BITS:$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH:../obj$BITS" $ENV "$@"
+	PATH="obj$BITS:$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH:../obj$BITS:obj$BITS" $ENV "$@"
     fi
 }
 
@@ -185,7 +185,11 @@ functional_tests () {
     run_test malloc_manysmall
     preload_test HUGETLB_MORECORE=yes malloc_manysmall
     run_test heapshrink
+    run_test LD_PRELOAD=libheapshrink.so heapshrink
     preload_test HUGETLB_MORECORE=yes heapshrink
+    run_test LD_PRELOAD="libhugetlbfs.so libheapshrink.so" HUGETLB_MORECORE=yes heapshrink
+    preload_test HUGETLB_MORECORE=yes HUGETLB_MORECORE_SHRINK=yes heapshrink
+    run_test LD_PRELOAD="libhugetlbfs.so libheapshrink.so" HUGETLB_MORECORE=yes HUGETLB_MORECORE_SHRINK=yes heapshrink
     run_test HUGETLB_VERBOSE=1 HUGETLB_MORECORE=yes heap-overflow # warnings expected
     elflink_test HUGETLB_VERBOSE=0 linkhuge_nofd # Lib error msgs expected
     elflink_test linkhuge

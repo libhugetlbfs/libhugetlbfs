@@ -35,6 +35,7 @@
 #include "libhugetlbfs_internal.h"
 
 static int heap_fd;
+static int shrink_ok;		/* default = 0; no shrink */
 static int zero_fd;
 static long blocksize;
 
@@ -166,6 +167,12 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	} else if (delta < 0) {
 		/* shrinking the heap */
 
+		if (!shrink_ok) {
+			/* shouldn't ever get here */
+			WARNING("Heap shrinking is turned off\n");
+			return NULL;
+		}
+
 		if (!mapsize) {
 			WARNING("Can't shrink empty heap!\n");
 			return NULL;
@@ -231,6 +238,25 @@ void __hugetlbfs_setup_morecore(void)
 		return;
 	}
 
+	/*
+	 * We have been seeing some unexpected behavior from malloc when
+	 * heap shrinking is enabled, so heap shrinking is disabled by
+	 * default.
+	 *
+	 * If malloc has been called successfully before setup_morecore,
+	 * glibc will notice a gap between the previous top-of-heap and
+	 * the new top-of-heap when it calls hugetlbfs_morecore.  It treats
+	 * this as a "foreign sbrk."  Unfortunately, the "foreign sbrk"
+	 * handling code will then immediately try to free the memory
+	 * allocated by hugetlbfs_morecore!
+	 *
+	 * This behavior has been reported to the ptmalloc2 maintainer,
+	 * along with a patch to correct the behavior.
+	 */
+	env = getenv("HUGETLB_MORECORE_SHRINK");
+	if (env && strcasecmp(env, "yes") == 0)
+		shrink_ok = 1;
+
 	blocksize = gethugepagesize();
 	if (blocksize <= 0) {
 		if (errno == ENOSYS)
@@ -269,7 +295,10 @@ void __hugetlbfs_setup_morecore(void)
 
 	/* Set some allocator options more appropriate for hugepages */
 	
-	mallopt(M_TRIM_THRESHOLD, blocksize / 2);
+	if (shrink_ok)
+		mallopt(M_TRIM_THRESHOLD, blocksize / 2);
+	else
+		mallopt(M_TRIM_THRESHOLD, -1);
 	mallopt(M_TOP_PAD, blocksize / 2);
 	/* we always want to use our morecore, not ordinary mmap().
 	 * This doesn't appear to prohibit malloc() from falling back

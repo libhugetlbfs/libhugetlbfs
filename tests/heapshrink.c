@@ -26,23 +26,38 @@
 
 int main(int argc, char **argv)
 {
-	int is_huge, have_env;
+	int is_huge, have_env, shrink_ok, have_helper;
 	void *p;
 
 	test_init(argc, argv);
 
 	have_env = getenv("HUGETLB_MORECORE") != NULL;
+	shrink_ok = getenv("HUGETLB_MORECORE_SHRINK") != NULL;
+	p = getenv("LD_PRELOAD");
+	have_helper = p != NULL && strstr(p, "heapshrink") != NULL;
 
 	p = malloc(SIZE);
+	if (!p) {
+		if (shrink_ok && have_helper) {
+			/* Hitting unexpected behavior in malloc() */
+			PASS_INCONCLUSIVE();
+		} else
+			FAIL("malloc(%d) failed\n", SIZE);
+	}
 	memset(p, 0, SIZE);
 	is_huge = test_addr_huge(p+SIZE-1) == 1;
-	if (have_env && !is_huge)
-		FAIL("Heap not on hugepages");
+	if (have_env && !is_huge) {
+		if (shrink_ok && have_helper) {
+			/* Hitting unexpected behavior in malloc() */
+			PASS_INCONCLUSIVE();
+		} else
+			FAIL("Heap not on hugepages");
+	}
 	if (!have_env && is_huge)
 		FAIL("Heap unexpectedly on hugepages");
 
 	free(p);
-	if (test_addr_huge(p+SIZE-1) == 1)
+	if (shrink_ok && test_addr_huge(p+SIZE-1) == 1)
 		FAIL("Heap did not shrink");
 	PASS();
 }

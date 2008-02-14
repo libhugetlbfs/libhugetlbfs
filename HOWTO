@@ -268,6 +268,10 @@ hugepages are available to and used by many process can result in some
 applications receving SIGKILL, so its use is not recommended in
 high-availability or production environments.
 
+By default, the hugepage heap does not shrink.  To enable hugepage heap
+shrinking, set HUGETLB_MORECORE_SHRINK=yes.  NB: We have been seeing some
+unexpected behavior from glibc's malloc when this is enabled.
+
 Using hugepage text, data, or BSS
 ---------------------------------
 
