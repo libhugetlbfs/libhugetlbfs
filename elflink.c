@@ -340,7 +340,7 @@ static int get_shared_file_name(struct seg_info *htlb_seg_info, char *file_path)
 }
 
 /* Find the .dynamic program header */
-static int find_dynamic(Elf_Dyn **dyntab, Elf_Phdr *phdr, int phnum)
+static int find_dynamic(Elf_Dyn **dyntab, const Elf_Phdr *phdr, int phnum)
 {
 	int i = 1;
 
@@ -429,7 +429,7 @@ static inline int keep_symbol(Elf_Sym *s, void *start, void *end)
  * include these initialized variables in our copy.
  */
 
-static void get_extracopy(struct seg_info *seg, Elf_Phdr *phdr, int phnum)
+static void get_extracopy(struct seg_info *seg, const Elf_Phdr *phdr, int phnum)
 {
 	Elf_Dyn *dyntab;        /* dynamic segment table */
 	Elf_Sym *symtab = NULL; /* dynamic symbol table */
