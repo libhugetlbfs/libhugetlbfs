@@ -506,56 +506,6 @@ bail2:
 	seg->extrasz = end_orig - start;
 }
 
-static void parse_elf_relinked(Elf_Ehdr *ehdr)
-{
-	Elf_Phdr *phdr = (Elf_Phdr *)((char *)ehdr + ehdr->e_phoff);
-	int i;
-
-	for (i = 0; i < ehdr->e_phnum; i++) {
-		unsigned long vaddr, filesz, memsz;
-		int prot = 0;
-
-		if (phdr[i].p_type != PT_LOAD)
-			continue;
-
-		if (! (phdr[i].p_flags & PF_LINUX_HUGETLB))
-			continue;
-
-		if (htlb_num_segs >= MAX_HTLB_SEGS) {
-			ERROR("Executable has too many segments marked for "
-			      "hugepage (max %d)\n", MAX_HTLB_SEGS);
-			htlb_num_segs = 0;
-			return;
-		}
-
-		vaddr = phdr[i].p_vaddr;
-		filesz = phdr[i].p_filesz;
-		memsz = phdr[i].p_memsz;
-		if (phdr[i].p_flags & PF_R)
-			prot |= PROT_READ;
-		if (phdr[i].p_flags & PF_W)
-			prot |= PROT_WRITE;
-		if (phdr[i].p_flags & PF_X)
-			prot |= PROT_EXEC;
-
-		DEBUG("Hugepage segment %d "
-			"(phdr %d): %#0lx-%#0lx  (filesz=%#0lx) "
-			"(prot = %#0x)\n",
-			htlb_num_segs, i, vaddr, vaddr+memsz, filesz, prot);
-
-		htlb_seg_table[htlb_num_segs].vaddr = (void *)vaddr;
-		htlb_seg_table[htlb_num_segs].filesz = filesz;
-		htlb_seg_table[htlb_num_segs].memsz = memsz;
-		htlb_seg_table[htlb_num_segs].prot = prot;
-		htlb_seg_table[htlb_num_segs].index = i;
-		get_extracopy(&htlb_seg_table[htlb_num_segs], phdr,
-							ehdr->e_phnum);
-		htlb_num_segs++;
-	}
-	if (__debug)
-		check_memsz();
-}
-
 #define ALIGN_UP(x,a)	(((x) + (a)) & ~((a) - 1))
 #define ALIGN_DOWN(x,a) ((x) & ~((a) - 1))
 
@@ -615,11 +565,78 @@ static unsigned long hugetlb_prev_slice_end(unsigned long addr)
 	return hugetlb_slice_start(addr) - 1;
 }
 
-static int parse_one_obj(struct dl_phdr_info *info, size_t size, void *data)
+/*
+ * Store a copy of the given program header 
+ */
+int save_phdr(int table_idx, int phnum, const ElfW(Phdr) *phdr)
 {
-	unsigned long vaddr, filesz, memsz, gap;
-	unsigned long slice_end;
 	int prot = 0;
+
+	if (table_idx >= MAX_HTLB_SEGS) {
+		ERROR("Executable has too many segments (max %d)\n",
+			MAX_HTLB_SEGS);
+		htlb_num_segs = 0;
+		return -1;
+	}
+
+	if (phdr->p_flags & PF_R)
+		prot |= PROT_READ;
+	if (phdr->p_flags & PF_W)
+		prot |= PROT_WRITE;
+	if (phdr->p_flags & PF_X)
+		prot |= PROT_EXEC;
+	
+	htlb_seg_table[table_idx].vaddr = (void *) phdr->p_vaddr;
+	htlb_seg_table[table_idx].filesz = phdr->p_filesz;
+	htlb_seg_table[table_idx].memsz = phdr->p_memsz;
+	htlb_seg_table[table_idx].prot = prot;
+	htlb_seg_table[table_idx].index = phnum;
+
+	DEBUG("Segment %d (phdr %d): %#0lx-%#0lx  (filesz=%#0lx) "
+		"(prot = %#0x)\n", table_idx, phnum,
+		(unsigned long)  phdr->p_vaddr,
+		(unsigned long) phdr->p_vaddr + phdr->p_memsz,
+		(unsigned long) phdr->p_filesz, (unsigned int) prot);
+
+	return 0;
+}
+
+/*
+ * Parse the phdrs of a program linked with the libhugetlbfs linker scripts
+ */
+static
+int parse_elf_relinked(struct dl_phdr_info *info, size_t size, void *data)
+{
+	int i;
+
+	for (i = 0; i < info->dlpi_phnum; i++) {
+		if (info->dlpi_phdr[i].p_type != PT_LOAD)
+			continue;
+
+		if (!(info->dlpi_phdr[i].p_flags & PF_LINUX_HUGETLB))
+			continue;
+
+		if (save_phdr(htlb_num_segs, i, &info->dlpi_phdr[i]))
+			return 1;
+
+		get_extracopy(&htlb_seg_table[htlb_num_segs],
+				&info->dlpi_phdr[0], info->dlpi_phnum);
+
+		htlb_num_segs++;
+	}
+	if (__debug)
+		check_memsz();
+	return 1;
+}
+
+/*
+ * Parse the phdrs of a normal program to attempt partial segment remapping
+ */
+static
+int parse_elf_partial(struct dl_phdr_info *info, size_t size, void *data)
+{
+	unsigned long vaddr, memsz, gap;
+	unsigned long slice_end;
 	int i;
 
 	/* This should never actually be called more than once in an
@@ -627,7 +644,7 @@ static int parse_one_obj(struct dl_phdr_info *info, size_t size, void *data)
 	 * us the main program's phdrs on the first iteration, and
 	 * always return 1 to cease iteration at that point. */
 
-	for (i = 0; i < info->dlpi_phnum && htlb_num_segs < MAX_HTLB_SEGS; i++) {
+	for (i = 0; i < info->dlpi_phnum; i++) {
 		if (info->dlpi_phdr[i].p_type != PT_LOAD)
 			continue;
 
@@ -664,37 +681,24 @@ static int parse_one_obj(struct dl_phdr_info *info, size_t size, void *data)
 		}
 		memsz = hugetlb_prev_slice_end(vaddr + memsz) - vaddr;
 
+		if (save_phdr(htlb_num_segs, i, &info->dlpi_phdr[i]))
+			return 1;
+
 		/*
-		 * minimal_copy is disabled so just set filesz to memsz,
-		 * to avoid issues in prepare
+		 * When remapping partial segments, we create a sub-segment
+		 * that is based on the original.  For this reason, we must
+		 * make some changes to the phdr captured by save_phdr():
+		 * 	vaddr is aligned upwards to a slice boundary
+		 * 	memsz is aligned downwards to a slice boundary
+		 * 	filesz is set to memsz to force all memory to be copied
 		 */
-		filesz = memsz;
-
-		if (info->dlpi_phdr[i].p_flags & PF_R)
-			prot |= PROT_READ;
-		if (info->dlpi_phdr[i].p_flags & PF_W)
-			prot |= PROT_WRITE;
-		if (info->dlpi_phdr[i].p_flags & PF_X)
-			prot |= PROT_EXEC;
-
-		DEBUG("Hugepage segment %d (phdr %d): %#0lx-%#0lx "
-				"(filesz=%#0lx) " "(prot = %#0x)\n",
-				htlb_num_segs, i, vaddr, vaddr+memsz,
-				filesz, prot);
-
 		htlb_seg_table[htlb_num_segs].vaddr = (void *)vaddr;
-		htlb_seg_table[htlb_num_segs].filesz = filesz;
+		htlb_seg_table[htlb_num_segs].filesz = memsz;
 		htlb_seg_table[htlb_num_segs].memsz = memsz;
-		htlb_seg_table[htlb_num_segs].prot = prot;
-		htlb_seg_table[htlb_num_segs].index = i;
+
 		htlb_num_segs++;
 	}
 	return 1;
-}
-
-static void parse_elf_normal(void)
-{
-	dl_iterate_phdr(parse_one_obj, NULL);
 }
 
 /*
@@ -1051,7 +1055,7 @@ static int parse_elf()
 	/* a normal, not relinked binary */
 	if (! (&__executable_start)) {
 		if (force_remap) {
-			parse_elf_normal();
+			dl_iterate_phdr(parse_elf_partial, NULL);
 			if (htlb_num_segs == 0) {
 				DEBUG("No segments were appropriate for "
 						"partial remapping\n");
@@ -1063,7 +1067,7 @@ static int parse_elf()
 			return -1;
 		}
 	} else {
-		parse_elf_relinked(&__executable_start);
+		dl_iterate_phdr(parse_elf_relinked, NULL);
 		if (htlb_num_segs == 0) {
 			DEBUG("No segments were appropriate for "
 					"remapping\n");
