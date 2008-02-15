@@ -712,17 +712,7 @@ static int prepare_segment(struct seg_info *seg)
 	void *p;
 	unsigned long size;
 
-	/*
-	 * Calculate the BSS size that we must copy in order to minimize
-	 * the size of the shared mapping.
-	 */
-	if (seg->extrasz > 0) {
-		size = ALIGN(seg->filesz + seg->extrasz, hpage_size);
-	} else {
-		size = ALIGN(seg->filesz, hpage_size);
-	}
-
-	/* Prepare the hugetlbfs file */
+	size = ALIGN(seg->filesz + seg->extrasz, hpage_size);
 
 	p = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, seg->fd, 0);
 	if (p == MAP_FAILED) {
@@ -738,18 +728,10 @@ static int prepare_segment(struct seg_info *seg)
 	 * be contained in the filesz portion of the segment.
 	 */
 
-	DEBUG("Mapped hugeseg at %p. Copying %#0lx bytes from %p...",
-	      p, seg->filesz, seg->vaddr);
-	memcpy(p, seg->vaddr, seg->filesz);
+	DEBUG("Mapped hugeseg at %p. Copying %#0lx bytes and %#0lx extra bytes"
+		" from %p...", p, seg->filesz, seg->extrasz, seg->vaddr);
+	memcpy(p, seg->vaddr, seg->filesz + seg->extrasz);
 	DEBUG_CONT("done\n");
-
-	if (seg->extrasz > 0) {
-		DEBUG("Copying extra %#0lx bytes from %p...",
-					seg->extrasz, seg->vaddr + seg->filesz);
-		memcpy((p + seg->filesz), seg->vaddr + seg->filesz,
-							seg->extrasz);
-		DEBUG_CONT("done\n");
-	}
 
 	munmap(p, size);
 
