@@ -28,6 +28,7 @@
 #include "libhugetlbfs_internal.h"
 
 int __hugetlbfs_verbose = 1;
+int __hugetlbfs_debug = 0;
 
 static int initialized;
 
@@ -41,6 +42,10 @@ static void __hugetlbfs_init_debug(void)
 	env = getenv("HUGETLB_VERBOSE");
 	if (env)
 		__hugetlbfs_verbose = atoi(env);
+
+	env = getenv("HUGETLB_DEBUG");
+	if (env)
+		__hugetlbfs_debug = 1;
 
 	initialized = 1;
 }

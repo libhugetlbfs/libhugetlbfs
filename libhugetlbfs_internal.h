@@ -29,6 +29,7 @@
 #define ALIGN(x, a)	(((x) + (a) - 1) & ~((a) - 1))
 
 extern int __hugetlbfs_verbose;
+extern int __hugetlbfs_debug;
 
 #define ERROR(...) \
 	do { \

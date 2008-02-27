@@ -163,7 +163,6 @@ static int htlb_num_segs;
 static int minimal_copy = 1;
 static int sharing; /* =0 */
 static unsigned long force_remap; /* =0 */
-int __debug = 0;
 
 /**
  * assemble_path - handy wrapper around snprintf() for building paths
@@ -489,7 +488,7 @@ static void get_extracopy(struct seg_info *seg, const Elf_Phdr *phdr, int phnum)
 		DEBUG("Found __libhuge_filesz at %p\n", &__libhuge_filesz);
 	}
 
-	if (__debug)
+	if (__hugetlbfs_debug)
 		check_bss(start, end_orig);
 
 	if (found_sym) {
@@ -624,7 +623,7 @@ int parse_elf_relinked(struct dl_phdr_info *info, size_t size, void *data)
 
 		htlb_num_segs++;
 	}
-	if (__debug)
+	if (__hugetlbfs_debug)
 		check_memsz();
 	return 1;
 }
@@ -1015,12 +1014,6 @@ static int check_env(void)
 			DEBUG_CONT("disabled\n");
 			sharing = 0;
 		}
-	}
-
-	env = getenv("HUGETLB_DEBUG");
-	if (env) {
-		DEBUG("HUGETLB_DEBUG=%s, enabling extra checking\n", env);
-		__debug = 1;
 	}
 
 	return 0;
