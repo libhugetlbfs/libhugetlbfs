@@ -404,7 +404,7 @@ static int find_numsyms(Elf_Sym *symtab, char *strtab)
  * - Object type (variable)
  * - Non-zero size (zero size means the symbol is just a marker with no data)
  */
-static inline int keep_symbol(Elf_Sym *s, void *start, void *end)
+static inline int keep_symbol(char *strtab, Elf_Sym *s, void *start, void *end)
 {
 	if ((void *)s->st_value < start)
 		return 0;
@@ -416,6 +416,8 @@ static inline int keep_symbol(Elf_Sym *s, void *start, void *end)
 	if (ELF_ST_TYPE(s->st_info) != STT_OBJECT)
 		return 0;
 	if (s->st_size == 0)
+		return 0;
+	if (!strstr(strtab + s->st_name, "GLIBC"))
 		return 0;
 
 	return 1;
@@ -467,10 +469,8 @@ static void get_extracopy(struct seg_info *seg, const Elf_Phdr *phdr, int phnum)
 	end = start;
 
 	for (sym = symtab; sym < symtab + numsyms; sym++) {
-		if (!keep_symbol(sym, start, end_orig))
+		if (!keep_symbol(strtab, sym, start, end_orig))
 			continue;
-		/* TODO - add filtering so that we only look at symbols from glibc 
-		   (@@GLIBC_*) */
 
 		/* These are the droids we are looking for */
 		found_sym = 1;
