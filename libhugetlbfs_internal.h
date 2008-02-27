@@ -45,7 +45,7 @@ extern void __hugetlbfs_setup_debug();
 
 #define ERROR(...) \
 	do { \
-		if (__hugetlbfs_verbose >= 1) { \
+		if (__hugetlbfs_debug || __hugetlbfs_verbose >= 1) { \
 			fprintf(stderr, "libhugetlbfs: ERROR: " __VA_ARGS__); \
 			fflush(stderr); \
 		} \
@@ -53,7 +53,7 @@ extern void __hugetlbfs_setup_debug();
 
 #define WARNING(...) \
 	do { \
-		if (__hugetlbfs_verbose >= 2) { \
+		if (__hugetlbfs_debug || __hugetlbfs_verbose >= 2) { \
 			fprintf(stderr, "libhugetlbfs: WARNING: " __VA_ARGS__); \
 			fflush(stderr); \
 		} \
@@ -61,7 +61,7 @@ extern void __hugetlbfs_setup_debug();
 
 #define DEBUG(...) \
 	do { \
-		if (__hugetlbfs_verbose >= 3) { \
+		if (__hugetlbfs_debug || __hugetlbfs_verbose >= 3) { \
 			fprintf(stderr, "libhugetlbfs: " __VA_ARGS__); \
 			fflush(stderr); \
 		} \
@@ -69,7 +69,7 @@ extern void __hugetlbfs_setup_debug();
 
 #define DEBUG_CONT(...) \
 	do { \
-		if (__hugetlbfs_verbose >= 3) { \
+		if (__hugetlbfs_debug || __hugetlbfs_verbose >= 3) { \
 			fprintf(stderr, __VA_ARGS__); \
 			fflush(stderr); \
 		} \
