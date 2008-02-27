@@ -1,6 +1,6 @@
 PREFIX = /usr/local
 
-LIBOBJS = hugeutils.o version.o morecore.o debug.o
+LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
 LDSCRIPT_TYPES = B BDT
 LDSCRIPT_DIST_ELF = elf32ppclinux elf64ppc elf_i386 elf_x86_64

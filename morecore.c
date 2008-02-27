@@ -187,7 +187,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	return p;
 }
 
-static void __attribute__((constructor)) setup_morecore(void)
+void __hugetlbfs_setup_morecore(void)
 {
 	char *env, *ep;
 	unsigned long heapaddr;

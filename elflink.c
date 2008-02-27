@@ -1053,7 +1053,7 @@ static int parse_elf()
 	return 0;
 }
 
-static void __attribute__ ((constructor)) setup_elflink(void)
+void __hugetlbfs_setup_elflink(void)
 {
 	int i, ret;
 

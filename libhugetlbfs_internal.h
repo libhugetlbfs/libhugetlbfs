@@ -30,6 +30,9 @@
 
 extern int __hugetlbfs_verbose;
 extern int __hugetlbfs_debug;
+extern void __hugetlbfs_setup_elflink();
+extern void __hugetlbfs_setup_morecore();
+extern void __hugetlbfs_setup_debug();
 
 #define ERROR(...) \
 	do { \

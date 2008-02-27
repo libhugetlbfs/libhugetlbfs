@@ -1,6 +1,6 @@
 /*
  * libhugetlbfs - Easy use of Linux hugepages
- * Copyright (C) 2005-2006 David Gibson & Adam Litke, IBM Corporation.
+ * Copyright (C) 2008 Nishanth Aravamudan, IBM Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -17,40 +17,11 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <malloc.h>
-#include <sys/mman.h>
-#include <errno.h>
-
-#include "hugetlbfs.h"
-
 #include "libhugetlbfs_internal.h"
 
-int __hugetlbfs_verbose = 1;
-int __hugetlbfs_debug = 0;
-
-static int initialized;
-
-static void __hugetlbfs_init_debug(void)
+static void __attribute__ ((constructor)) setup_libhugetlbfs(void)
 {
-	char *env;
-
-	if (initialized)
-		return;
-
-	env = getenv("HUGETLB_VERBOSE");
-	if (env)
-		__hugetlbfs_verbose = atoi(env);
-
-	env = getenv("HUGETLB_DEBUG");
-	if (env)
-		__hugetlbfs_debug = 1;
-
-	initialized = 1;
-}
-
-void __hugetlbfs_setup_debug(void)
-{
-	__hugetlbfs_init_debug();
+	__hugetlbfs_setup_debug();
+	__hugetlbfs_setup_elflink();
+	__hugetlbfs_setup_morecore();
 }
