@@ -420,6 +420,10 @@ static inline int keep_symbol(char *strtab, Elf_Sym *s, void *start, void *end)
 	if (!strstr(strtab + s->st_name, "GLIBC"))
 		return 0;
 
+	if (__hugetlbfs_debug)
+		DEBUG("symbol to copy at %p: %s\n", (void *)s->st_value,
+						strtab + s->st_name);
+
 	return 1;
 }
 
