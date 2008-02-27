@@ -101,9 +101,12 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 
 		/* if this is the first map */
 		if (! mapsize) {
-			if (heapbase && (heapbase != p))
+			if (heapbase && (heapbase != p)) {
 				WARNING("Heap originates at %p instead of %p\n",
 					p, heapbase);
+				if (__hugetlbfs_debug)
+					dump_proc_pid_maps();
+			}
 			/* then setup the heap variables */
 			heapbase = heaptop = p;
 		} else if (p != (heapbase + mapsize)) {
@@ -111,6 +114,8 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			munmap(p, delta);
 			WARNING("Mapped at %p instead of %p in hugetlbfs_morecore()\n",
 			      p, heapbase + mapsize);
+			if (__hugetlbfs_debug)
+				dump_proc_pid_maps();
 			return NULL;
 		}
 

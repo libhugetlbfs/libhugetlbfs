@@ -259,3 +259,35 @@ long hugetlbfs_num_pages(void)
 {
 	return read_meminfo("HugePages_Total:");
 }
+
+#define MAPS_BUF_SZ 4096
+long dump_proc_pid_maps()
+{
+	FILE *f;
+	char line[MAPS_BUF_SZ];
+	size_t ret;
+
+	f = fopen("/proc/self/maps", "r");
+	if (!f) {
+		ERROR("Failed to open /proc/self/maps\n");
+		return -1;
+	}
+
+	while (1) {
+		ret = fread(line, sizeof(char), MAPS_BUF_SZ, f);
+		if (ret < 0) {
+			ERROR("Failed to read /proc/self/maps\n");
+			return -1;
+		}
+		if (ret == 0)
+			break;
+		ret = fwrite(line, sizeof(char), ret, stderr);
+		if (ret < 0) {
+			ERROR("Failed to write /proc/self/maps to stderr\n");
+			return -1;
+		}
+	}
+
+	fclose(f);
+	return 0;
+}
