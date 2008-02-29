@@ -202,7 +202,7 @@ void __hugetlbfs_setup_morecore(void)
 	}
 
 	blocksize = gethugepagesize();
-	if (! blocksize) {
+	if (blocksize <= 0) {
 		ERROR("Hugepages unavailable\n");
 		return;
 	}
