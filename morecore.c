@@ -42,12 +42,12 @@ static long mapsize;
 static long hugetlbfs_next_addr(long addr)
 {
 #if defined(__powerpc64__)
-	return ALIGN(addr, 1L << 40);
+	return ALIGN(addr, 1L << SLICE_HIGH_SHIFT);
 #elif defined(__powerpc__)
-	return ALIGN(addr, 1L << 28);
+	return ALIGN(addr, 1L << SLICE_LOW_SHIFT);
 #elif defined(__ia64__)
-	if (addr < (1UL << 63))
-		return ALIGN(addr, 1UL << 63);
+	if (addr < (1UL << SLICE_HIGH_SHIFT))
+		return ALIGN(addr, 1UL << SLICE_HIGH_SHIFT);
 	else
 		return ALIGN(addr, gethugepagesize());
 #else

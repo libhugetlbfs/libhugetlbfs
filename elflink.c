@@ -505,13 +505,7 @@ bail2:
 	seg->extrasz = end_orig - start;
 }
 
-#define ALIGN_UP(x,a)	(((x) + (a)) & ~((a) - 1))
-#define ALIGN_DOWN(x,a) ((x) & ~((a) - 1))
-
 #if defined(__powerpc64__) || defined (__powerpc__)
-#define SLICE_LOW_SHIFT		28
-#define SLICE_HIGH_SHIFT	40
-
 #define SLICE_LOW_TOP		(0x100000000UL)
 #define SLICE_LOW_SIZE		(1UL << SLICE_LOW_SHIFT)
 #define SLICE_HIGH_SIZE		(1UL << SLICE_HIGH_SHIFT)

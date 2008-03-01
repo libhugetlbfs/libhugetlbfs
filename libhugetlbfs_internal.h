@@ -27,6 +27,15 @@
 #define stringify(x)	stringify_1(x)
 
 #define ALIGN(x, a)	(((x) + (a) - 1) & ~((a) - 1))
+#define ALIGN_UP(x,a)	(((x) + (a)) & ~((a) - 1))
+#define ALIGN_DOWN(x,a) ((x) & ~((a) - 1))
+
+#if defined(__powerpc64__) || defined (__powerpc__)
+#define SLICE_LOW_SHIFT		28
+#define SLICE_HIGH_SHIFT	40
+#elif defined(__ia64__)
+#define SLICE_HIGH_SHIFT	63
+#endif
 
 extern int __hugetlbfs_verbose;
 extern int __hugetlbfs_debug;
