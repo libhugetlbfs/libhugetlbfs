@@ -34,20 +34,23 @@ static void test_simple_mlock(int flags)
 	int fd = hugetlbfs_unlinked_fd();
 	void *p;
 	int ret;
+	long hpage_size = gethugepagesize();
+	if (hpage_size < 0)
+		CONFIG("No hugepage kernel support");
 
-	p = mmap(0, gethugepagesize(), PROT_READ|PROT_WRITE, flags, fd, 0);
+	p = mmap(0, hpage_size, PROT_READ|PROT_WRITE, flags, fd, 0);
 	if (p == MAP_FAILED)
 		FAIL("mmap() failed (flags=%x): %s", flags, strerror(errno));
 
-	ret = mlock(p, gethugepagesize());
+	ret = mlock(p, hpage_size);
 	if (ret)
 		FAIL("mlock() failed (flags=%x): %s", flags, strerror(errno));
 
-	ret = munlock(p, gethugepagesize());
+	ret = munlock(p, hpage_size);
 	if (ret)
 		FAIL("munlock() failed (flags=%x): %s", flags, strerror(errno));
 
-	ret = munmap(p, gethugepagesize());
+	ret = munmap(p, hpage_size);
 	if (ret)
 		FAIL("munmap() failed (flags=%x): %s", flags, strerror(errno));
 
