@@ -268,7 +268,9 @@ void _map(int s, int hpages, int flags, int line)
 	 * reserved and hence, will not work with partial reservations.
 	 */
 	if (flags & MAP_SHARED) {
-		unsigned long shortfall = hpages - prev_free + prev_resv;
+		unsigned long shortfall = 0;
+		if (hpages + prev_resv > prev_free)
+			shortfall = hpages - prev_free + prev_resv;
 		et += shortfall;
 		ef = prev_free + shortfall;
 		er = prev_resv + hpages;
@@ -319,7 +321,7 @@ void _unmap(int s, int hpages, int flags, int line)
 		int unused_surplus = min(hpages - touched[s], es);
 		et -= unused_surplus;
 		ef -= unused_surplus;
-		er -= unused_surplus;
+		er -= hpages - touched[s];
 		es -= unused_surplus;
 	}
 
@@ -360,7 +362,10 @@ void _touch(int s, int hpages, int flags, int line)
 		er = prev_resv - hpages;
 		es = prev_surp;
 	} else {
-		et = prev_total + (hpages - prev_free + prev_resv);
+		if (hpages + prev_resv > prev_free)
+			et = prev_total + (hpages - prev_free + prev_resv);
+		else
+			et = prev_total;
 		er = prev_resv;
 		es = prev_surp + et - prev_total;
 		ef = prev_free - hpages + et - prev_total;
@@ -369,10 +374,10 @@ void _touch(int s, int hpages, int flags, int line)
 }
 #define touch(s, h, f) _touch(s, h, f, __LINE__)
 
-void run_test(char *desc)
+void run_test(char *desc, int base_nr)
 {
 	verbose_printf("%s...\n", desc);
-	set_nr_hugepages(0);
+	set_nr_hugepages(base_nr);
 
 	/* untouched, shared mmap */
 	map(SL_TEST, 1, MAP_SHARED);
@@ -395,16 +400,16 @@ void run_test(char *desc)
 	/* Explicit resizing during outstanding surplus */
 	/* Consume surplus when growing pool */
 	map(SL_TEST, 2, MAP_SHARED);
-	set_nr_hugepages(1);
+	set_nr_hugepages(max(base_nr, 1));
 
 	/* Add pages once surplus is consumed */
-	set_nr_hugepages(3);
+	set_nr_hugepages(max(base_nr, 3));
 
 	/* Release free huge pages first */
-	set_nr_hugepages(2);
+	set_nr_hugepages(max(base_nr, 2));
 
 	/* When shrinking beyond committed level, increase surplus */
-	set_nr_hugepages(0);
+	set_nr_hugepages(base_nr);
 
 	/* Upon releasing the reservation, reduce surplus counts */
 	unmap(SL_TEST, 2, MAP_SHARED);
@@ -414,35 +419,46 @@ void run_test(char *desc)
 
 int main(int argc, char ** argv)
 {
+	int base_nr;
+
 	test_init(argc, argv);
 	verify_dynamic_pool_support();
 	saved_nr_hugepages = read_meminfo("HugePages_Total:");
 	hpage_size = gethugepagesize();
 
-	/* Run the tests with a clean slate */
-	run_test("Clean");
+	/*
+	 * This test case should require a maximum of 3 huge pages.
+	 * Run through the battery of tests multiple times, with an increasing
+	 * base pool size.  This alters the circumstances under which surplus
+	 * pages need to be allocated and increases the corner cases tested.
+	 */
+	for (base_nr = 0; base_nr <= 3; base_nr++) {
+		verbose_printf("Base pool size: %i\n", base_nr);
+		/* Run the tests with a clean slate */
+		run_test("Clean", base_nr);
 
-	/* Now with a pre-existing untouched, shared mmap */
-	map(SL_SETUP, 1, MAP_SHARED);
-	run_test("Untouched, shared");
-	unmap(SL_SETUP, 1, MAP_SHARED);
+		/* Now with a pre-existing untouched, shared mmap */
+		map(SL_SETUP, 1, MAP_SHARED);
+		run_test("Untouched, shared", base_nr);
+		unmap(SL_SETUP, 1, MAP_SHARED);
 
-	/* Now with a pre-existing untouched, private mmap */
-	map(SL_SETUP, 1, MAP_PRIVATE);
-	run_test("Untouched, private");
-	unmap(SL_SETUP, 1, MAP_PRIVATE);
+		/* Now with a pre-existing untouched, private mmap */
+		map(SL_SETUP, 1, MAP_PRIVATE);
+		run_test("Untouched, private", base_nr);
+		unmap(SL_SETUP, 1, MAP_PRIVATE);
 
-	/* Now with a pre-existing touched, shared mmap */
-	map(SL_SETUP, 1, MAP_SHARED);
-	touch(SL_SETUP, 1, MAP_SHARED);
-	run_test("Touched, shared");
-	unmap(SL_SETUP, 1, MAP_SHARED);
+		/* Now with a pre-existing touched, shared mmap */
+		map(SL_SETUP, 1, MAP_SHARED);
+		touch(SL_SETUP, 1, MAP_SHARED);
+		run_test("Touched, shared", base_nr);
+		unmap(SL_SETUP, 1, MAP_SHARED);
 
-	/* Now with a pre-existing touched, private mmap */
-	map(SL_SETUP, 1, MAP_PRIVATE);
-	touch(SL_SETUP, 1, MAP_PRIVATE);
-	run_test("Touched, private");
-	unmap(SL_SETUP, 1, MAP_PRIVATE);
+		/* Now with a pre-existing touched, private mmap */
+		map(SL_SETUP, 1, MAP_PRIVATE);
+		touch(SL_SETUP, 1, MAP_PRIVATE);
+		run_test("Touched, private", base_nr);
+		unmap(SL_SETUP, 1, MAP_PRIVATE);
+	}
 
 	PASS();
 }
