@@ -378,8 +378,8 @@ int main(int argc, char ** argv)
 	int base_nr;
 
 	test_init(argc, argv);
-	verify_dynamic_pool_support();
 	saved_nr_hugepages = read_meminfo("HugePages_Total:");
+	verify_dynamic_pool_support();
 	hpage_size = gethugepagesize();
 
 	/*
