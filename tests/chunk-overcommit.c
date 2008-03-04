@@ -59,10 +59,7 @@ int main(int argc, char *argv[])
 
 	test_init(argc, argv);
 
-	if (argc != 2)
-		CONFIG("Usage: overcommit <# total available hugepages>");
-
-	totpages = atoi(argv[1]);
+	totpages = read_meminfo("HugePages_Free:");
 
 	hpage_size = gethugepagesize();
 	if (hpage_size < 0)

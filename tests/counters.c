@@ -23,7 +23,6 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -43,7 +42,6 @@
  */
 
 extern int errno;
-#define BUF_SZ 1024
 
 /* Global test configuration */
 #define DYNAMIC_SYSCTL "/proc/sys/vm/nr_overcommit_hugepages"
@@ -95,48 +93,6 @@ void verify_dynamic_pool_support(void)
 	if (value == '0')
 		CONFIG("Dynamic hugetlb pool support present, but disabled");
 	close(fd);
-}
-
-/* XXX: Copied from hugeutils.c.  Need to figure out how to share this */
-static long read_meminfo(const char *tag)
-{
-	int fd;
-	char buf[BUF_SZ];
-	int len, readerr;
-	char *p, *q;
-	long val;
-
-	fd = open("/proc/meminfo", O_RDONLY);
-	if (fd < 0) {
-		ERROR("Couldn't open /proc/meminfo (%s)\n", strerror(errno));
-		return -1;
-	}
-
-	len = read(fd, buf, sizeof(buf));
-	readerr = errno;
-	close(fd);
-	if (len < 0) {
-		ERROR("Error reading /proc/meminfo (%s)\n", strerror(readerr));
-		return -1;
-	}
-	if (len == sizeof(buf)) {
-		ERROR("/proc/meminfo is too large\n");
-		return -1;
-	}
-	buf[len] = '\0';
-
-	p = strstr(buf, tag);
-	if (!p)
-		return -1; /* looks like the line we want isn't there */
-
-	p += strlen(tag);
-	val = strtol(p, &q, 0);
-	if (! isspace(*q)) {
-		ERROR("Couldn't parse /proc/meminfo value\n");
-		return -1;
-	}
-
-	return val;
 }
 
 void bad_value(int line, const char *name, long expect, long actual)

@@ -192,11 +192,11 @@ functional_tests () {
 # Accounting bug tests
 # reset free hpages because sharing will have held some
 # alternatively, use
-    run_test chunk-overcommit `free_hpages`
-    run_test alloc-instantiate-race `free_hpages` shared
-    run_test alloc-instantiate-race `free_hpages` private
+    run_test chunk-overcommit
+    run_test alloc-instantiate-race shared
+    run_test alloc-instantiate-race private
     run_test truncate_reserve_wraparound
-    run_test truncate_sigbus_versus_oom `free_hpages`
+    run_test truncate_sigbus_versus_oom
 
 # Test hugetlbfs filesystem quota accounting
     run_test quota

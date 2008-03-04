@@ -230,19 +230,17 @@ int main(int argc, char *argv[])
 
 	test_init(argc, argv);
 
-	if (argc != 3)
-		CONFIG("Usage: alloc-instantiate-race"
-		       "<# total available hugepages> <private|shard>");
+	if (argc != 2)
+		CONFIG("Usage: alloc-instantiate-race <private|shared>");
 
-	totpages = atoi(argv[1]);
+	totpages = read_meminfo("HugePages_Free:");
 
-	if (strcmp(argv[2], "shared") == 0) {
+	if (strcmp(argv[1], "shared") == 0) {
 		race_type = MAP_SHARED;
-	} else if (strcmp(argv[2], "private") == 0) {
+	} else if (strcmp(argv[1], "private") == 0) {
 		race_type = MAP_PRIVATE;
 	} else {
-		CONFIG("Usage: alloc-instantiate-race"
-		       "<# total available hugepages> <private|shard>");
+		CONFIG("Usage: alloc-instantiate-race <private|shared>");
 	}
 
 	hpage_size = gethugepagesize();

@@ -25,6 +25,7 @@
 #include <limits.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
@@ -32,10 +33,12 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 
 #include "hugetests.h"
 
 #define HUGETLBFS_MAGIC	0x958458f6
+#define BUF_SZ 1024
 
 int verbose_test = 1;
 char *test_name;
@@ -156,6 +159,48 @@ int test_addr_huge(void *p)
 		return -1;
 
 	return (sb.f_type == HUGETLBFS_MAGIC);
+}
+
+/* XXX: Copied from hugeutils.c.  Need to figure out how to share this */
+long read_meminfo(const char *tag)
+{
+	int fd;
+	char buf[BUF_SZ];
+	int len, readerr;
+	char *p, *q;
+	long val;
+
+	fd = open("/proc/meminfo", O_RDONLY);
+	if (fd < 0) {
+		ERROR("Couldn't open /proc/meminfo (%s)\n", strerror(errno));
+		return -1;
+	}
+
+	len = read(fd, buf, sizeof(buf));
+	readerr = errno;
+	close(fd);
+	if (len < 0) {
+		ERROR("Error reading /proc/meminfo (%s)\n", strerror(readerr));
+		return -1;
+	}
+	if (len == sizeof(buf)) {
+		ERROR("/proc/meminfo is too large\n");
+		return -1;
+	}
+	buf[len] = '\0';
+
+	p = strstr(buf, tag);
+	if (!p)
+		return -1; /* looks like the line we want isn't there */
+
+	p += strlen(tag);
+	val = strtol(p, &q, 0);
+	if (! isspace(*q)) {
+		ERROR("Couldn't parse /proc/meminfo value\n");
+		return -1;
+	}
+
+	return val;
 }
 
 ino_t get_addr_inode(void *p)
