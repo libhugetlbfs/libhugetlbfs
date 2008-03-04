@@ -27,12 +27,15 @@
 #include <errno.h>
 #include <dlfcn.h>
 #include <string.h>
+#include <fcntl.h>
+#include <sys/uio.h>
 
 #include "hugetlbfs.h"
 
 #include "libhugetlbfs_internal.h"
 
 static int heap_fd;
+static int zero_fd;
 static long blocksize;
 
 static void *heapbase;
@@ -65,9 +68,12 @@ static long hugetlbfs_next_addr(long addr)
  * Luckily, if it does not do so and we error out malloc will happily
  * go back to small pages and use mmap to get them.  Hurrah.
  */
+#define IOV_LEN	64
 
 static void *hugetlbfs_morecore(ptrdiff_t increment)
 {
+	int i, j;
+	struct iovec iov[IOV_LEN];
 	int ret;
 	void *p;
 	long delta;
@@ -119,20 +125,36 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			return NULL;
 		}
 
-		/* Use of mlock was reintroduced in libhugetlbfs 1.1,
-		 * as the NUMA issues have been fixed in-kernel. The
-		 * NUMA users of libhugetlbfs' malloc feature are
+		/* The NUMA users of libhugetlbfs' malloc feature are
 		 * expected to use the numactl program to specify an
 		 * appropriate policy for hugepage allocation */
 
-		/* Use mlock to guarantee these pages to the process */
-		ret = mlock(p, delta);
-		if (ret) {
-			WARNING("Failed to reserve huge pages in "
-					"hugetlbfs_morecore(): %s\n",
-					strerror(errno));
-		} else {
-			munlock(p, delta);
+		/*
+		 * Use readv(2) to instantiate the hugepages.  If we
+		 * can't get all that were requested, release the entire
+		 * mapping and return NULL.  Glibc malloc will then fall back
+		 * to using mmap of base pages.
+		 *
+		 * If we instead returned a hugepage mapping with insufficient
+		 * hugepages, the VM system would kill the process when the
+		 * process tried to access the missing memory.
+		 */
+
+		for (i = 0; i < delta; ) {
+			for (j = 0; j < IOV_LEN && i < delta; j++) {
+				iov[j].iov_base = p + i;
+				iov[j].iov_len = 1;
+				i += blocksize;
+			}
+			ret = readv(zero_fd, iov, j);
+			if (ret != j) {
+				DEBUG("Got %d of %d requested; err=%d\n", ret,
+				      j, ret < 0 ? errno : 0);
+				WARNING("Failed to reserve huge pages in "
+					"hugetlbfs_morecore()\n");
+				munmap(p, delta);
+				return NULL;
+			}
 		}
 
 		/* we now have mmap'd further */
@@ -230,6 +252,7 @@ void __hugetlbfs_setup_morecore(void)
 		heapaddr = (unsigned long)sbrk(0);
 		heapaddr = hugetlbfs_next_addr(heapaddr);
 	}
+	zero_fd = open("/dev/zero", O_RDONLY);
 
 	DEBUG("setup_morecore(): heapaddr = 0x%lx\n", heapaddr);
 

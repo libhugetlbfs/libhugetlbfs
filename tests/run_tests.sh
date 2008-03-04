@@ -182,6 +182,7 @@ functional_tests () {
     preload_test HUGETLB_MORECORE=yes malloc_manysmall
     run_test heapshrink
     preload_test HUGETLB_MORECORE=yes heapshrink
+    run_test HUGETLB_VERBOSE=1 HUGETLB_MORECORE=yes heap-overflow # warnings expected
     elflink_test HUGETLB_VERBOSE=0 linkhuge_nofd # Lib error msgs expected
     elflink_test linkhuge
 
