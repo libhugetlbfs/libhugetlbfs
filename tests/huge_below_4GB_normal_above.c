@@ -59,6 +59,9 @@ int main(int argc, char *argv[])
 	if (sizeof(void *) <= 4)
 		IRRELEVANT();
 
+	if (hpage_size > FOURGB)
+		CONFIG("Huge page size is too large");
+
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)
 		FAIL("hugetlbfs_unlinked_fd()");
@@ -67,7 +70,7 @@ int main(int argc, char *argv[])
 
 	/* We use a low address right below 4GB so we can test for
 	 * off-by-one errors */
-	lowaddr = 0x100000000UL - hpage_size;
+	lowaddr = FOURGB - hpage_size;
 	verbose_printf("Mapping hugepage at at %lx...", lowaddr);
 	p = mmap((void *)lowaddr, hpage_size, PROT_READ|PROT_WRITE,
 		 MAP_SHARED|MAP_FIXED, fd, 0);
@@ -84,7 +87,7 @@ int main(int argc, char *argv[])
 		FAIL("Mapped address is not hugepage");
 
 	/* Test for off by one errors */
-	highaddr = 0x100000000UL;
+	highaddr = FOURGB;
 	verbose_printf("Mapping normal page at %lx...", highaddr);
 	q = mmap((void *)highaddr, page_size, PROT_READ|PROT_WRITE,
 		 MAP_SHARED|MAP_FIXED|MAP_ANONYMOUS, 0, 0);

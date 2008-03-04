@@ -28,6 +28,8 @@
 #define RC_FAIL		2
 #define RC_BUG		99
 
+#define FOURGB (1UL << 32)
+
 extern int verbose_test;
 extern char *test_name;
 void test_init(int argc, char *argv[]);

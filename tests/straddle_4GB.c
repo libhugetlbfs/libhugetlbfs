@@ -43,11 +43,14 @@ int main(int argc, char *argv[])
 	if (sizeof(void *) <= 4)
 		TEST_BUG("64-bit only");
 
+	if (hpage_size > FOURGB)
+		CONFIG("Huge page size too large");
+
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)
 		FAIL("hugetlbfs_unlinked_fd()");
 
-	straddle_addr = (1UL << 32) - hpage_size;
+	straddle_addr = FOURGB - hpage_size;
 
 	/* We first try to get the mapping without MAP_FIXED */
 	verbose_printf("Mapping without MAP_FIXED at %lx...", straddle_addr);
