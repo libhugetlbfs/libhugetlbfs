@@ -186,6 +186,8 @@ int main(int argc, char ** argv)
 	test_init(argc, argv);
 	mountpoint[0] = '\0';
 	hpage_size = gethugepagesize();
+	if (hpage_size < 0)
+		CONFIG("No hugepage kernel support");
 
 	get_quota_fs(hpage_size);
 
