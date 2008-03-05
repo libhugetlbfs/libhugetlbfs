@@ -48,6 +48,8 @@
 #define COPY_SIZE	128
 #define NUM_REPETITIONS	64	/* Seems to be enough to trigger reliably */
 
+static long hpage_size;
+
 static void cacheflush(void *p)
 {
 #ifdef __powerpc__
@@ -138,7 +140,6 @@ static void sig_handler(int signum, siginfo_t *si, void *uc)
 
 static void test_once(int fd)
 {
-	long hpage_size = gethugepagesize();
 	void *p, *q;
 
 	ftruncate(fd, 0);
@@ -186,6 +187,10 @@ int main(int argc, char *argv[])
 		.sa_sigaction = sig_handler,
 		.sa_flags = SA_SIGINFO,
 	};
+
+	hpage_size = gethugepagesize();
+	if (hpage_size < 0)
+		CONFIG("No hugepage kernel support");
 
 	err = sigaction(SIGILL, &sa, NULL);
 	if (err)
