@@ -161,7 +161,7 @@ functional_tests () {
 
 # Specific kernel bug tests
     run_test ptrace-write-hugepage
-    run_test icache-hygeine
+    run_test icache-hygiene
     run_test slbpacaflush
     run_test_bits 64 straddle_4GB
     run_test_bits 64 huge_at_4GB_normal_below
