@@ -67,6 +67,8 @@ int main(int argc, char *argv[])
 	if (hpage_size < 0)
 		CONFIG("No hugepage kernel support");
 
+	check_free_huge_pages(4);
+
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)
 		FAIL("hugetlbfs_unlinked_fd()");

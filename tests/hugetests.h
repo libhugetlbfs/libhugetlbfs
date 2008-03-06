@@ -32,6 +32,7 @@
 
 extern int verbose_test;
 extern char *test_name;
+void check_free_huge_pages(int nr_pages_needed);
 void test_init(int argc, char *argv[]);
 int test_addr_huge(void *p);
 long read_meminfo(const char *tag);

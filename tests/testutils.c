@@ -43,6 +43,13 @@
 int verbose_test = 1;
 char *test_name;
 
+void check_free_huge_pages(int nr_pages_needed)
+{
+	int freepages = read_meminfo("HugePages_Free:");
+	if (freepages < nr_pages_needed)
+		CONFIG("Must have at least %i free hugepages", nr_pages_needed);
+}
+
 void  __attribute__((weak)) cleanup(void)
 {
 }
