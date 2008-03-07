@@ -191,10 +191,6 @@ SECTIONS
     PROVIDE (__sbss_end = .); PROVIDE (___sbss_end = .);
   } :hdata
   .plt            :  { *(.plt) } :hdata
-  /* Rather than emit LONG(0) in the .plt section, use a symbol to mark
-   * the end of the need-to-copy data so that it will be copied during
-   * hugetlb remapping */
-  __libhuge_filesz = .;
   .bss            :
   {
    *(.dynbss)
