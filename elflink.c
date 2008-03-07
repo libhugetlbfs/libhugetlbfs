@@ -427,6 +427,12 @@ static inline int keep_symbol(char *strtab, Elf_Sym *s, void *start, void *end)
 	return 1;
 }
 
+/* If unspecified by the architecture, no extra copying of the plt is needed */
+ElfW(Word) __attribute__ ((weak)) plt_extrasz(ElfW(Dyn) *dyntab)
+{
+	return 0;
+}
+
 /*
  * Subtle:  Since libhugetlbfs depends on glibc, we allow it
  * it to be loaded before us.  As part of its init functions, it
@@ -443,7 +449,7 @@ static void get_extracopy(struct seg_info *seg, const Elf_Phdr *phdr, int phnum)
 	int ret, numsyms, found_sym = 0;
 	void *start, *end, *end_orig;
 	void *sym_start, *sym_end;
-	extern void __libhuge_filesz __attribute__((weak));
+	void *plt_end;
 
 	end_orig = seg->vaddr + seg->memsz;
 	start = seg->vaddr + seg->filesz;
@@ -484,12 +490,16 @@ static void get_extracopy(struct seg_info *seg, const Elf_Phdr *phdr, int phnum)
 			end = sym_end;
 	}
 
-	if (&__libhuge_filesz > end) {
-		/* be careful if the algorithm didn't find any symbols
-		 * to copy */
-		end = &__libhuge_filesz;
+	/*
+	 * Some platforms (PowerPC 64bit ELF) place their PLT beyond the filesz
+	 * part of the data segment.  When this is the case, we must extend the
+	 * copy window to include this data which has been initialized by the
+	 * run-time linker.
+	 */
+	plt_end = start + plt_extrasz(dyntab);
+	if (plt_end > end) {
+		end = plt_end;
 		found_sym = 1;
-		DEBUG("Found __libhuge_filesz at %p\n", &__libhuge_filesz);
 	}
 
 	if (__hugetlbfs_debug)

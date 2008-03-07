@@ -19,6 +19,9 @@
 #ifndef _LIBHUGETLBFS_INTERNAL_H
 #define _LIBHUGETLBFS_INTERNAL_H
 
+#include <elf.h>
+#include <link.h>
+
 #ifndef __LIBHUGETLBFS__
 #error This header should not be included by library users.
 #endif /* __LIBHUGETLBFS__ */
@@ -80,6 +83,8 @@ extern void __hugetlbfs_setup_debug();
 #define __LP64__
 #endif
 
+/* Arch-specific callbacks */
 extern int direct_syscall(int sysnum, ...);
+extern ElfW(Word) plt_extrasz(ElfW(Dyn) *dyntab);
 
 #endif /* _LIBHUGETLBFS_INTERNAL_H */
