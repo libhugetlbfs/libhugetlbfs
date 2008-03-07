@@ -146,7 +146,8 @@ int test_addr_huge(void *p)
 	if (ret < 0)
 		return ret;
 	if (ret == 0) {
-		ERROR("Couldn't find address %p in /proc/self/maps\n", p);
+		verbose_printf("Couldn't find address %p in /proc/self/maps\n",
+			       p);
 		return -1;
 	}
 
