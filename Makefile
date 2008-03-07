@@ -73,10 +73,10 @@ OBJDIRS +=  obj64
 endif
 
 ifdef ELF32
-LIBOBJS32 = obj32/elflink.o obj32/$(ELF32).o
+LIBOBJS32 = obj32/elflink.o obj32/sys-$(ELF32).o
 endif
 ifdef ELF64
-LIBOBJS64 = obj64/elflink.o obj64/$(ELF64).o
+LIBOBJS64 = obj64/elflink.o obj64/sys-$(ELF64).o
 endif
 LIBOBJS32 += $(LIBOBJS:%=obj32/%)
 LIBOBJS64 += $(LIBOBJS:%=obj64/%)
