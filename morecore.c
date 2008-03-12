@@ -72,7 +72,8 @@ static long hugetlbfs_next_addr(long addr)
 
 static void *hugetlbfs_morecore(ptrdiff_t increment)
 {
-	int i, j;
+	unsigned long offset;
+	int i;
 	struct iovec iov[IOV_LEN];
 	int ret;
 	void *p;
@@ -140,16 +141,16 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 		 * process tried to access the missing memory.
 		 */
 
-		for (i = 0; i < delta; ) {
-			for (j = 0; j < IOV_LEN && i < delta; j++) {
-				iov[j].iov_base = p + i;
-				iov[j].iov_len = 1;
-				i += blocksize;
+		for (offset = 0; offset < delta; ) {
+			for (i = 0; i < IOV_LEN && offset < delta; i++) {
+				iov[i].iov_base = p + offset;
+				iov[i].iov_len = 1;
+				offset += blocksize;
 			}
-			ret = readv(zero_fd, iov, j);
-			if (ret != j) {
+			ret = readv(zero_fd, iov, i);
+			if (ret != i) {
 				DEBUG("Got %d of %d requested; err=%d\n", ret,
-				      j, ret < 0 ? errno : 0);
+				      i, ret < 0 ? errno : 0);
 				WARNING("Failed to reserve huge pages in "
 					"hugetlbfs_morecore()\n");
 				munmap(p, delta);
