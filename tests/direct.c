@@ -60,6 +60,7 @@ int main(int argc, char *argv[])
 		else
 			CONFIG("Falied to open direct-IO file");
 	}
+	unlink(TMPFILE);
 
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
 	if (p == MAP_FAILED)
