@@ -99,6 +99,45 @@ to use both gcc and GNU binutils.  For PowerPC and AMD64 systems you
 will need a "biarch" compiler, which can build both 32-bit and 64-bit
 binaries.
 
+Configuration prerequisites
+---------------------------
+
+In kernels before 2.6.24, hugepages must be allocated at boot-time via
+the hugepages= command-line parameter or at run-time via the
+/proc/sys/vm/nr_hugepages sysctl. If memory is restricted on the system,
+boot-time allocation is recommended. Hugepages so allocated will be in
+the static hugepage pool.
+
+In kernels starting with 2.6.24, the hugepage pool can grown on-demand.
+If this feature should be used, /proc/sys/vm/nr_overcommit_hugepages
+should be set to the maximum size of the hugepage pool. No hugepages
+need to be allocated via /proc/sys/vm/nr_hugepages or hugepages= in this
+case. Hugepages so allocated will be in the dynamic hugepage pool.
+
+For the running of the libhugetlbfs testsuite (see below), allocating 20
+static hugepages is recommended. Due to memory restrictions, the number
+of hugepages requested may not be allocated if the allocation is
+attempted at run-time. Users should verify the actual number of
+hugepages allocated by either
+
+       cat /proc/sys/vm/nr_hugepages
+
+or
+
+       grep HugePages_Free /proc/meminfo
+
+With 20 hugepages allocated, most tests should succeed. However, with
+smaller hugepages sizes, many more hugepages may be necessary.
+
+To use libhugetlbfs features, as well as to run the testsuite, hugetlbfs
+must be mounted:
+
+       mkdir -p /mnt/hugetlbfs
+       mount -t hugetlbfs none /mnt/hugetlbfs
+
+If hugepages should be available to non-root users, the permissions on
+the mountpoint need to be set appropriately.
+
 Installation
 ============
 
