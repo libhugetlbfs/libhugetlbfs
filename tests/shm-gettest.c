@@ -95,6 +95,8 @@ int main(int argc, char ** argv)
 	if (argc < 3)
 		CONFIG("Usage: shmgettest <# iterations> <# pages>\n");
 
+	check_hugetlb_shm_group();
+
 	iter = atoi(argv[1]);
 	nr_hugepages = atoi(argv[2]);
 

@@ -50,6 +50,36 @@ void check_free_huge_pages(int nr_pages_needed)
 		CONFIG("Must have at least %i free hugepages", nr_pages_needed);
 }
 
+void check_must_be_root(void)
+{
+	uid_t uid = getuid();
+	if (uid != 0)
+		CONFIG("Must be root");
+}
+
+void check_hugetlb_shm_group(void)
+{
+	int fd;
+	ssize_t ret;
+	gid_t hugetlb_shm_group;
+	gid_t gid = getgid();
+	uid_t uid = getuid();
+
+	/* root is an exception */
+	if (uid == 0)
+		return;
+
+	fd = open("/proc/sys/vm/hugetlb_shm_group", O_RDONLY);
+	if (fd < 0)
+		ERROR("Unable to open /proc/sys/vm/hugetlb_shm_group");
+	ret = read(fd, &hugetlb_shm_group, sizeof(hugetlb_shm_group));
+	if (ret < 0)
+		ERROR("Unable to read /proc/sys/vm/hugetlb_shm_group");
+	close(fd);
+	if (hugetlb_shm_group != gid)
+		CONFIG("Do not have permission to use SHM_HUGETLB");
+}
+
 void  __attribute__((weak)) cleanup(void)
 {
 }

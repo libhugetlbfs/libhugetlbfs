@@ -101,6 +101,8 @@ int main(int argc, char ** argv)
 	if (numprocs > MAX_PROCS)
 		CONFIG("Cannot spawn more than %d processes", MAX_PROCS);
 
+	check_hugetlb_shm_group();
+
 	hpage_size = gethugepagesize();
         size = hpage_size * nr_hugepages;
 	verbose_printf("Requesting %lu bytes\n", size);

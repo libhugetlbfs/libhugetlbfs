@@ -111,17 +111,21 @@ elflink_and_share_test () {
 }
 
 setup_shm_sysctl() {
-    SHMMAX=`cat /proc/sys/kernel/shmmax`
-    SHMALL=`cat /proc/sys/kernel/shmall`
-    LIMIT=$(( $HPAGE_SIZE * $TOTAL_HPAGES ))
-    echo "$LIMIT" > /proc/sys/kernel/shmmax
-    echo "set shmmax limit to $LIMIT"
-    echo "$LIMIT" > /proc/sys/kernel/shmall
+    if [ $UID == 0 ]; then
+	SHMMAX=`cat /proc/sys/kernel/shmmax`
+	SHMALL=`cat /proc/sys/kernel/shmall`
+	LIMIT=$(( $HPAGE_SIZE * $TOTAL_HPAGES ))
+	echo "$LIMIT" > /proc/sys/kernel/shmmax
+	echo "set shmmax limit to $LIMIT"
+	echo "$LIMIT" > /proc/sys/kernel/shmall
+    fi
 }
 
 restore_shm_sysctl() {
-    echo "$SHMMAX" > /proc/sys/kernel/shmmax
-    echo "$SHMALL" > /proc/sys/kernel/shmall
+    if [ $UID == 0 ]; then
+	echo "$SHMMAX" > /proc/sys/kernel/shmmax
+	echo "$SHMALL" > /proc/sys/kernel/shmall
+    fi
 }
 
 setup_dynamic_pool_sysctl() {

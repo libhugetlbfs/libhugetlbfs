@@ -58,6 +58,8 @@ int main(int argc, char ** argv)
 
 	test_init(argc, argv);
 
+	check_hugetlb_shm_group();
+
 	if (argc < 3)
 		CONFIG("Usage:  %s <# pages> <device>", argv[0]);
 

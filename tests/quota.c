@@ -184,6 +184,7 @@ void _spawn(int l, int expected_result, unsigned long size, int flags,
 int main(int argc, char ** argv)
 {
 	test_init(argc, argv);
+	check_must_be_root();
 	mountpoint[0] = '\0';
 	hpage_size = gethugepagesize();
 	if (hpage_size < 0)
