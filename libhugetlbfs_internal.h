@@ -45,27 +45,28 @@ extern int __hugetlbfs_debug;
 extern void __hugetlbfs_setup_elflink();
 extern void __hugetlbfs_setup_morecore();
 extern void __hugetlbfs_setup_debug();
+extern char __hugetlbfs_hostname[];
 
-#define ERROR(...) \
+#define ERROR(format, ...) \
 	do { \
 		if (__hugetlbfs_debug || __hugetlbfs_verbose >= 1) { \
-			fprintf(stderr, "libhugetlbfs: ERROR: " __VA_ARGS__); \
+			fprintf(stderr, "libhugetlbfs [%s:%d]: ERROR: " format, __hugetlbfs_hostname, getpid(), ##__VA_ARGS__); \
 			fflush(stderr); \
 		} \
 	} while (0)
 
-#define WARNING(...) \
+#define WARNING(format, ...) \
 	do { \
 		if (__hugetlbfs_debug || __hugetlbfs_verbose >= 2) { \
-			fprintf(stderr, "libhugetlbfs: WARNING: " __VA_ARGS__); \
+			fprintf(stderr, "libhugetlbfs [%s:%d]: WARNING: " format, __hugetlbfs_hostname, getpid(), ##__VA_ARGS__); \
 			fflush(stderr); \
 		} \
 	} while (0)
 
-#define DEBUG(...) \
+#define DEBUG(format, ...) \
 	do { \
 		if (__hugetlbfs_debug || __hugetlbfs_verbose >= 3) { \
-			fprintf(stderr, "libhugetlbfs: " __VA_ARGS__); \
+			fprintf(stderr, "libhugetlbfs [%s:%d]: " format, __hugetlbfs_hostname, getpid(), ##__VA_ARGS__); \
 			fflush(stderr); \
 		} \
 	} while (0)

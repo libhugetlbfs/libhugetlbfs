@@ -19,8 +19,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <malloc.h>
-#include <sys/mman.h>
+#include <unistd.h>
+#include <string.h>
 #include <errno.h>
 
 #include "hugetlbfs.h"
@@ -29,6 +29,7 @@
 
 int __hugetlbfs_verbose = 1;
 int __hugetlbfs_debug = 0;
+char __hugetlbfs_hostname[64];
 
 static int initialized;
 
@@ -46,6 +47,8 @@ static void __hugetlbfs_init_debug(void)
 	env = getenv("HUGETLB_DEBUG");
 	if (env)
 		__hugetlbfs_debug = 1;
+
+	gethostname(__hugetlbfs_hostname, sizeof(__hugetlbfs_hostname)-1);
 
 	initialized = 1;
 }
