@@ -141,20 +141,22 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 		 * process tried to access the missing memory.
 		 */
 
-		for (offset = 0; offset < delta; ) {
-			for (i = 0; i < IOV_LEN && offset < delta; i++) {
-				iov[i].iov_base = p + offset;
-				iov[i].iov_len = 1;
-				offset += blocksize;
-			}
-			ret = readv(zero_fd, iov, i);
-			if (ret != i) {
-				DEBUG("Got %d of %d requested; err=%d\n", ret,
-				      i, ret < 0 ? errno : 0);
-				WARNING("Failed to reserve huge pages in "
-					"hugetlbfs_morecore()\n");
-				munmap(p, delta);
-				return NULL;
+		if (__hugetlbfs_prefault) {
+			for (offset = 0; offset < delta; ) {
+				for (i = 0; i < IOV_LEN && offset < delta; i++) {
+					iov[i].iov_base = p + offset;
+					iov[i].iov_len = 1;
+					offset += blocksize;
+				}
+				ret = readv(zero_fd, iov, i);
+				if (ret != i) {
+					DEBUG("Got %d of %d requested; err=%d\n", ret,
+							i, ret < 0 ? errno : 0);
+					WARNING("Failed to reserve huge pages in "
+							"hugetlbfs_morecore()\n");
+					munmap(p, delta);
+					return NULL;
+				}
 			}
 		}
 

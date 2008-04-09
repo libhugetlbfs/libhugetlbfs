@@ -247,6 +247,27 @@ segment); for 64-bit PowerPC binaries the address is rounded-up to a
 multiple of 1TB.  On all other platforms the address is rounded-up to
 the size of a hugepage.
 
+By default, the hugepage heap will be prefaulted by libhugetlbfs to
+guarantee enough hugepages exist and are reserved for the application
+(if this was not done, applications could receive a SIGKILL signal if
+hugepages needed for the heap are used by another application before
+they are faulted in). This leads to local-node allocations when no
+memory policy is in place for hugepages. Therefore, it is recommended to
+use
+
+  $ numactl --interleave=all <your app command line>
+
+to regain some of the performance impact of local-node allocations on
+large NUMA systems. This can still result in poor performance for those
+applications which carefully place their threads on particular nodes
+(such as by using OpenMP). In that case, thread-local allocation is
+preferred. Users can specify HUGETLB_NO_PREFAULT to prevent the
+prefaulting of hugepages and instead rely on run-time faulting of
+hugepages. NOTE: specifying HUGETLB_NO_PREFAULT on a system where
+hugepages are available to and used by many process can result in some
+applications receving SIGKILL, so its use is not recommended in
+high-availability or production environments.
+
 Using hugepage text, data, or BSS
 ---------------------------------
 
@@ -350,6 +371,7 @@ libhugetlbfs:
 
 	HUGETLB_MORECORE
 	HUGETLB_MORECORE_HEAPBASE
+	HUGETLB_NO_PREFAULT
 		Explained in "Using hugepages for malloc()
 		(morecore)"
 

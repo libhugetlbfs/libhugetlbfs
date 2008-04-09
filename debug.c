@@ -29,6 +29,7 @@
 
 int __hugetlbfs_verbose = 1;
 int __hugetlbfs_debug = 0;
+int __hugetlbfs_prefault = 1;
 char __hugetlbfs_hostname[64];
 
 static int initialized;
@@ -47,6 +48,10 @@ static void __hugetlbfs_init_debug(void)
 	env = getenv("HUGETLB_DEBUG");
 	if (env)
 		__hugetlbfs_debug = 1;
+
+	env = getenv("HUGETLB_NO_PREFAULT");
+	if (env)
+		__hugetlbfs_prefault = 0;
 
 	gethostname(__hugetlbfs_hostname, sizeof(__hugetlbfs_hostname)-1);
 
