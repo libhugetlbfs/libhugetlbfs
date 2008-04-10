@@ -39,9 +39,7 @@ int main(int argc, char **argv)
 	if (!getenv("HUGETLB_MORECORE"))
 		CONFIG("Must have HUGETLB_MORECORE=yes");
 
-	hpagesize = gethugepagesize();
-	if (hpagesize < 0)
-		CONFIG("No hugepage support in kernel");
+	hpagesize = check_hugepagesize();
 
 	freepages = read_meminfo("HugePages_Free:");
 	if (freepages < 3)

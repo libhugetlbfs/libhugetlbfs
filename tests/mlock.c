@@ -34,9 +34,7 @@ static void test_simple_mlock(int flags)
 	int fd = hugetlbfs_unlinked_fd();
 	void *p;
 	int ret;
-	long hpage_size = gethugepagesize();
-	if (hpage_size < 0)
-		CONFIG("No hugepage kernel support");
+	long hpage_size = check_hugepagesize();
 
 	p = mmap(0, hpage_size, PROT_READ|PROT_WRITE, flags, fd, 0);
 	if (p == MAP_FAILED)

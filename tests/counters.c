@@ -381,9 +381,7 @@ int main(int argc, char ** argv)
 	check_must_be_root();
 	saved_nr_hugepages = read_meminfo("HugePages_Total:");
 	verify_dynamic_pool_support();
-	hpage_size = gethugepagesize();
-	if (hpage_size < 0)
-		CONFIG("No hugepage kernel support");
+	hpage_size = check_hugepagesize();
 
 	/*
 	 * This test case should require a maximum of 3 huge pages.

@@ -187,9 +187,7 @@ int main(int argc, char *argv[])
 	if (err)
 		FAIL("Can't install SIGSEGV handler");
 
-	hpage_size = gethugepagesize();
-	if (hpage_size < 0)
-		CONFIG("No hugepage kernel support");
+	hpage_size = check_hugepagesize();
 
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)

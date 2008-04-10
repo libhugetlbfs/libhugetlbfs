@@ -115,7 +115,7 @@ int main(int argc, char ** argv)
 	iter = atoi(argv[1]);
 	nr_hugepages = atoi(argv[2]);
 
-	hpage_size = gethugepagesize();
+	hpage_size = check_hugepagesize();
 	size = nr_hugepages * hpage_size;
 
 	for (i=0; i < iter; i++) {

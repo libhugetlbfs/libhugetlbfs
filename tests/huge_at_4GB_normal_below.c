@@ -52,9 +52,7 @@ int main(int argc, char *argv[])
 
 	page_size = getpagesize();
 
-	hpage_size = gethugepagesize();
-	if (hpage_size < 0)
-		CONFIG("No hugepage kernel support");
+	hpage_size = check_hugepagesize();
 
 	if (sizeof(void *) <= 4)
 		IRRELEVANT();

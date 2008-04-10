@@ -128,7 +128,7 @@ int main(int argc, char ** argv)
 	if (wait_list == NULL)
 		CONFIG("Couldn't allocate memory for wait_list\n");
 
-	hpage_size = gethugepagesize();
+	hpage_size = check_hugepagesize();
 	/* Have to have enough available hugepages for each thread to
 	 * get its own copy, plus one for the parent/page-cache */
 	size = (nr_hugepages / (threads+1)) * hpage_size;

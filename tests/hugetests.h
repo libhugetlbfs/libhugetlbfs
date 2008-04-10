@@ -20,6 +20,8 @@
 #ifndef _HUGETESTS_H
 #define _HUGETESTS_H
 
+#include <errno.h>
+#include <string.h>
 #define DEBUG
 
 /* Test return codes */
@@ -108,5 +110,21 @@ void cleanup(void);
 
 /* stressutils.c stuff */
 int remove_shmid(int shmid);
+
+extern long gethugepagesize (void) __attribute__ ((weak));
+
+static inline long check_hugepagesize()
+{
+	long hpage_size = gethugepagesize();
+	if (hpage_size < 0) {
+		if (errno == ENOSYS)
+			CONFIG("No hugepage kernel support\n");
+		else if (errno == EOVERFLOW)
+			CONFIG("Hugepage size too large");
+		else
+			CONFIG("Hugepage size (%s)", strerror(errno));
+	}
+	return hpage_size;
+}
 
 #endif /* _HUGETESTS_H */

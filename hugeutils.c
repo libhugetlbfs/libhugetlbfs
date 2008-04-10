@@ -44,6 +44,7 @@
 
 static long hpage_size; /* = 0 */
 static char htlb_mount[PATH_MAX+1]; /* = 0 */
+static int hugepagesize_errno; /* = 0 */
 
 /********************************************************************/
 /* Internal functions                                               */
@@ -105,21 +106,34 @@ static long read_meminfo(const char *tag)
 /* Library user visible functions                                   */
 /********************************************************************/
 
+/*
+ * returns:
+ *   on success, size of a huge page in number of bytes
+ *   on failure, -1
+ *	errno set to ENOSYS if huge pages are not supported
+ *	errno set to EOVERFLOW if huge page size would overflow return type
+ */
 long gethugepagesize(void)
 {
 	long hpage_kb;
 	long max_hpage_kb = LONG_MAX / 1024;
 
-	if (hpage_size)
+	if (hpage_size) {
+		errno = hugepagesize_errno;
 		return hpage_size;
+	}
+	errno = 0;
 
 	hpage_kb = read_meminfo("Hugepagesize:");
 	if (hpage_kb < 0) {
 		hpage_size = -1;
+		errno = hugepagesize_errno = ENOSYS;
 	} else {
-		if (hpage_kb > max_hpage_kb)
+		if (hpage_kb > max_hpage_kb) {
 			/* would overflow if converted to bytes */
 			hpage_size = -1;
+			errno = hugepagesize_errno = EOVERFLOW;
+		}
 		else
 			/* convert from kb to bytes */
 			hpage_size = 1024 * hpage_kb;

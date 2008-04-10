@@ -51,7 +51,7 @@ int main(int argc, char ** argv)
 {
 	size_t size;
 	size_t i;
-	long hpage_size = gethugepagesize();
+	long hpage_size = check_hugepagesize();
 	volatile char *shmaddr;
 	char *buffer;
 	int raw_fd;

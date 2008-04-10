@@ -78,9 +78,7 @@ int main(int argc, char *argv[])
 	test_init(argc, argv);
 
 	page_size = getpagesize();
-	hpage_size = gethugepagesize();
-	if (hpage_size < 0)
-		CONFIG("No hugepage kernel support");
+	hpage_size = check_hugepagesize();
 
 	check_free_huge_pages(3);
 

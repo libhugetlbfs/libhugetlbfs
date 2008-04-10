@@ -103,7 +103,7 @@ int main(int argc, char ** argv)
 
 	check_hugetlb_shm_group();
 
-	hpage_size = gethugepagesize();
+	hpage_size = check_hugepagesize();
         size = hpage_size * nr_hugepages;
 	verbose_printf("Requesting %lu bytes\n", size);
 	if ((shmid = shmget(2, size, SHM_HUGETLB|IPC_CREAT|SHM_R|SHM_W )) < 0)

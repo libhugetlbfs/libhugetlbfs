@@ -188,9 +188,7 @@ int main(int argc, char *argv[])
 		.sa_flags = SA_SIGINFO,
 	};
 
-	hpage_size = gethugepagesize();
-	if (hpage_size < 0)
-		CONFIG("No hugepage kernel support");
+	hpage_size = check_hugepagesize();
 
 	err = sigaction(SIGILL, &sa, NULL);
 	if (err)
