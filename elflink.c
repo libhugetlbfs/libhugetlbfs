@@ -163,6 +163,7 @@ static int htlb_num_segs;
 static int minimal_copy = 1;
 static int sharing; /* =0 */
 static unsigned long force_remap; /* =0 */
+static long hpage_size;
 
 /**
  * assemble_path - handy wrapper around snprintf() for building paths
@@ -713,7 +714,6 @@ int parse_elf_partial(struct dl_phdr_info *info, size_t size, void *data)
  */
 static int prepare_segment(struct seg_info *seg)
 {
-	long hpage_size = gethugepagesize();
 	void *p;
 	unsigned long size;
 
@@ -921,7 +921,6 @@ static int obtain_prepared_file(struct seg_info *htlb_seg_info)
 
 static void remap_segments(struct seg_info *seg, int num)
 {
-	long hpage_size = gethugepagesize();
 	int i;
 	void *p;
 
@@ -1068,6 +1067,17 @@ void __hugetlbfs_setup_elflink(void)
 
 	if (parse_elf())
 		return;
+
+	hpage_size = gethugepagesize();
+	if (hpage_size <= 0) {
+		if (errno == ENOSYS)
+			ERROR("Hugepages unavailable\n");
+		else if (errno == EOVERFLOW)
+			ERROR("Hugepage size too large\n");
+		else
+			ERROR("Hugepage size (%s)\n", strerror(errno));
+		return;
+	}
 
 	DEBUG("libhugetlbfs version: %s\n", VERSION);
 

@@ -231,7 +231,12 @@ void __hugetlbfs_setup_morecore(void)
 
 	blocksize = gethugepagesize();
 	if (blocksize <= 0) {
-		ERROR("Hugepages unavailable\n");
+		if (errno == ENOSYS)
+			ERROR("Hugepages unavailable\n");
+		else if (errno == EOVERFLOW)
+			ERROR("Hugepage size too large\n");
+		else
+			ERROR("Hugepage size (%s)\n", strerror(errno));
 		return;
 	}
 
