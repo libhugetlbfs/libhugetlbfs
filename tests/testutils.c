@@ -61,6 +61,7 @@ void check_hugetlb_shm_group(void)
 {
 	int fd;
 	ssize_t ret;
+	char gid_buffer[64] = {0};
 	gid_t hugetlb_shm_group;
 	gid_t gid = getgid();
 	uid_t uid = getuid();
@@ -72,9 +73,10 @@ void check_hugetlb_shm_group(void)
 	fd = open("/proc/sys/vm/hugetlb_shm_group", O_RDONLY);
 	if (fd < 0)
 		ERROR("Unable to open /proc/sys/vm/hugetlb_shm_group");
-	ret = read(fd, &hugetlb_shm_group, sizeof(hugetlb_shm_group));
+	ret = read(fd, &gid_buffer, sizeof(gid_buffer));
 	if (ret < 0)
 		ERROR("Unable to read /proc/sys/vm/hugetlb_shm_group");
+	hugetlb_shm_group = atoi(gid_buffer);
 	close(fd);
 	if (hugetlb_shm_group != gid)
 		CONFIG("Do not have permission to use SHM_HUGETLB");
