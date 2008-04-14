@@ -102,7 +102,8 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 		p = mmap(heapbase + mapsize, delta, PROT_READ|PROT_WRITE,
 			 MAP_PRIVATE, heap_fd, mapsize);
 		if (p == MAP_FAILED) {
-			WARNING("Mapping failed in hugetlbfs_morecore()\n");
+			WARNING("New heap segment map at %p failed: %s\n",
+				heapbase+mapsize, strerror(errno));
 			return NULL;
 		}
 
@@ -119,7 +120,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 		} else if (p != (heapbase + mapsize)) {
 			/* Couldn't get the mapping where we wanted */
 			munmap(p, delta);
-			WARNING("Mapped at %p instead of %p in hugetlbfs_morecore()\n",
+			WARNING("New heap segment mapped at %p instead of %p\n",
 			      p, heapbase + mapsize);
 			if (__hugetlbfs_debug)
 				dump_proc_pid_maps();
@@ -152,8 +153,8 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 				if (ret != i) {
 					DEBUG("Got %d of %d requested; err=%d\n", ret,
 							i, ret < 0 ? errno : 0);
-					WARNING("Failed to reserve huge pages in "
-							"hugetlbfs_morecore()\n");
+					WARNING("Failed to reserve %ld huge pages "
+							"for heap\n", delta/blocksize);
 					munmap(p, delta);
 					return NULL;
 				}
@@ -166,7 +167,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 		/* shrinking the heap */
 
 		if (!mapsize) {
-			WARNING("Can't shrink empty heap!");
+			WARNING("Can't shrink empty heap!\n");
 			return NULL;
 		}
 
@@ -190,7 +191,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			heapbase + mapsize + delta);
 		ret = munmap(heapbase + mapsize + delta, -delta);
 		if (ret) {
-			WARNING("Unmapping failed in hugetlbfs_morecore(): "
+			WARNING("Unmapping failed while shrinking heap: "
 				"%s\n", strerror(errno));
 		} else {
 
@@ -200,9 +201,8 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			mapsize += delta;
 			ret = ftruncate(heap_fd, mapsize);
 			if (ret) {
-				WARNING("Couldn't truncate hugetlbfs file in "
-					"hugetlbfs_morecore(): %s\n",
-					strerror(errno));
+				WARNING("Could not truncate hugetlbfs file to "
+					"shrink heap: %s\n", strerror(errno));
 			}
 		}
 
