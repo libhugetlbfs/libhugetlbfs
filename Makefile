@@ -52,10 +52,12 @@ else
 ifeq ($(ARCH),ia64)
 CC64 = gcc
 LIB64 = lib64
+CFLAGS += -DNO_ELFLINK
 else
 ifeq ($(ARCH),sparc64)
 CC64 = gcc -m64
 LIB64 = lib64
+CFLAGS += -DNO_ELFLINK
 else
 $(error "Unrecognized architecture ($(ARCH))")
 endif

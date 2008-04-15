@@ -22,6 +22,8 @@
 static void __attribute__ ((constructor)) setup_libhugetlbfs(void)
 {
 	__hugetlbfs_setup_debug();
+#ifndef NO_ELFLINK
 	__hugetlbfs_setup_elflink();
+#endif
 	__hugetlbfs_setup_morecore();
 }
