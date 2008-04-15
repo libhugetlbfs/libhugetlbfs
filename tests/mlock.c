@@ -25,6 +25,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/mman.h>
+#include <sys/resource.h>
 
 #include <hugetlbfs.h>
 #include "hugetests.h"
@@ -57,6 +58,12 @@ static void test_simple_mlock(int flags)
 
 int main(int argc, char *argv[])
 {
+	struct rlimit limit_info;
+	if(getrlimit(RLIMIT_MEMLOCK, &limit_info))
+		ERROR("Unable to read locked memory rlimit: %s", strerror(errno));
+	if(limit_info.rlim_cur < check_hugepagesize())
+		CONFIG("Locked memory ulimit set below huge page size");
+
 	test_simple_mlock(MAP_PRIVATE);
 	test_simple_mlock(MAP_SHARED);
 	test_simple_mlock(MAP_PRIVATE|MAP_LOCKED);
