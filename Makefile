@@ -80,6 +80,9 @@ endif
 ifdef ELF64
 LIBOBJS64 = obj64/elflink.o obj64/sys-$(ELF64).o
 endif
+ifeq ($(ELF32),elf32ppclinux)
+LIBOBJS32 += obj32/$(ELF32).o
+endif
 ifeq ($(ELF64),elf64ppc)
 LIBOBJS64 += obj64/$(ELF64).o
 endif
