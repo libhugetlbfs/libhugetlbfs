@@ -502,7 +502,7 @@ static void get_extracopy(struct seg_info *seg, const Elf_Phdr *phdr, int phnum)
 	}
 
 	if (__hugetlbfs_debug)
-		check_bss(start, end_orig);
+		check_bss(end, end_orig);
 
 	if (found_sym) {
 		seg->extrasz = end - start;
