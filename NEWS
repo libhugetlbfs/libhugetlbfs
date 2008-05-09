@@ -1,3 +1,25 @@
+libhugetlbfs 1.3 "Big Jim"
+======================================================================
+
+New features
+* Add HUGETLB_NO_PREFAULT to control prefaulting of huge pages via mlock
+* Add "[hostname:pid]" to output messages
+* Setup for handling larger huge page sizes e.g. 16G huge pages
+* Update for new upstream sysctl
+* Add support for hugetlbfs_morecore to shrink the heap
+
+Bug fixes
+* Disable heap shrinking by default to avoid bug in glibc malloc
+* Skip elflink calls in setup_libhugetlbfs for IA64 and sparc64
+* Replace gethugepagesize with check_hugepagesize for error checking
+* Make morecore argument a long to handle larger page sizes
+
+Tets suite fixes
+* Check uid/gid in tests where it matters
+* tests: verify there are enough huge pages
+* Change tests to read /proc/meminfo
+* tests: verify that huge page size isn't too big for the test
+
 libhugetlbfs 1.2 "Mango Habanero"
 ======================================================================
 
