@@ -1,7 +1,10 @@
 PREFIX = /usr/local
+EXEDIR = /bin
 
 LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o
+OBJS = hugectl.o
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
+INSTALL_OBJ = hugectl
 LDSCRIPT_TYPES = B BDT
 LDSCRIPT_DIST_ELF = elf32ppclinux elf64ppc elf_i386 elf_x86_64
 INSTALL_OBJSCRIPT = ld.hugetlbfs
@@ -93,6 +96,7 @@ LIBDIR32 = $(PREFIX)/$(LIB32)
 LIBDIR64 = $(PREFIX)/$(LIB64)
 LDSCRIPTDIR = $(PREFIX)/share/libhugetlbfs/ldscripts
 BINDIR = $(PREFIX)/share/libhugetlbfs
+EXEDIR = $(PREFIX)/bin
 DOCDIR = $(PREFIX)/share/doc/libhugetlbfs
 
 EXTRA_DIST = \
@@ -121,7 +125,7 @@ export ELF64
 export LIBDIR32
 export LIBDIR64
 
-all:	libs tests
+all:	libs tests tools
 
 .PHONY:	tests libs
 
@@ -132,6 +136,8 @@ tests:	tests/all
 
 tests/%:
 	$(MAKE) -C tests $*
+
+tools:  $(INSTALL_OBJ)
 
 check:	all
 	cd tests; ./run_tests.sh
@@ -218,10 +224,19 @@ obj64/%.s:	%.c
 	@$(VECHO) CC64 -S $@
 	$(CC64) $(CPPFLAGS) $(CFLAGS) -o $@ -S $<
 
+$(OBJS):	hugectl.c
+	@$(VECHO) CPP $@
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+$(INSTALL_OBJ):	$(OBJS)
+	@$(VECHO) CC $@
+	$(CC) $(CFLAGS) -o $@ $<
+
 clean:
 	@$(VECHO) CLEAN
 	rm -f *~ *.o *.so *.a *.d *.i core a.out $(VERSION)
 	rm -rf obj*
+	rm -f $(OBJ) $(INSTALL_OBJ)
 	rm -f ldscripts/*~
 	rm -f libhugetlbfs-sock
 	$(MAKE) -C tests clean
@@ -251,11 +266,13 @@ objscript.%: %
 	@$(VECHO) OBJSCRIPT $*
 	sed "s!### SET DEFAULT LDSCRIPT PATH HERE ###!HUGETLB_LDSCRIPT_PATH=$(LDSCRIPTDIR)!" < $< > $@
 
-install: libs $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
+install: libs tools $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	@$(VECHO) INSTALL
 	$(INSTALL) -d $(DESTDIR)$(LDSCRIPTDIR)
 	$(INSTALL) -m 644 $(INSTALL_LDSCRIPTS:%=ldscripts/%) $(DESTDIR)$(LDSCRIPTDIR)
 	$(INSTALL) -d $(DESTDIR)$(BINDIR)
+	$(INSTALL) -d $(DESTDIR)$(EXEDIR)
+	$(INSTALL) -m 755 $(INSTALL_OBJ) $(DESTDIR)$(EXEDIR)
 	for x in $(INSTALL_OBJSCRIPT); do \
 		$(INSTALL) -m 755 objscript.$$x $(DESTDIR)$(BINDIR)/$$x; done
 	cd $(DESTDIR)$(BINDIR) && ln -sf ld.hugetlbfs ld
