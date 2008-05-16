@@ -708,17 +708,62 @@ int parse_elf_partial(struct dl_phdr_info *info, size_t size, void *data)
 }
 
 /*
+ * Verify that a range of memory is unoccupied and usable
+ */
+static void check_range_empty(void *addr, unsigned long len)
+{
+	void *p;
+
+	p = mmap(addr, len, PROT_READ, MAP_PRIVATE|MAP_ANON, 0, 0);
+	if (p != addr)
+		WARNING("Unable to verify address range %p - %p.  Not empty?\n",
+				addr, addr + len);
+	if (p != MAP_FAILED)
+		munmap(p, len);
+}
+
+/*
  * Copy a program segment into a huge page. If possible, try to copy the
  * smallest amount of data possible, unless the user disables this 
  * optimization via the HUGETLB_ELFMAP environment variable.
  */
 static int prepare_segment(struct seg_info *seg)
 {
-	void *p;
-	unsigned long size;
+	void *start, *p, *end, *new_end;
+	unsigned long size, offset;
+	long page_size = getpagesize();
+	long hpage_size = gethugepagesize();
 
-	size = ALIGN(seg->filesz + seg->extrasz, hpage_size);
+	/*
+	 * mmaps must begin at an address aligned to the page size.  If the
+	 * vaddr of this segment is not hpage_size aligned, align it downward
+	 * and begin the mmap there.  Note the offset so we can copy data to
+	 * the correct starting address within the temporary mmap.
+	 */
+	start = (void *) ALIGN_DOWN((unsigned long)seg->vaddr, hpage_size);
+	offset = seg->vaddr - start;
 
+	/*
+	 * Calculate the size of the temporary mapping we must create.
+	 * This includes the offset (described above) and the filesz and
+	 * extrasz portions of the segment (described below).  We must align
+	 * this total to the huge page size so it will be valid for mmap.
+	 */
+	size = ALIGN(offset + seg->filesz + seg->extrasz, hpage_size);
+
+	/*
+	 * If the segment's start or end addresses have been adjusted to align
+	 * them to the hpage_size, check to make sure nothing is mapped in the
+	 * padding before and after the segment.
+	 */
+	end = (void *) ALIGN((unsigned long)seg->vaddr + seg->memsz, page_size);
+	new_end = (void *) ALIGN((unsigned long)end, hpage_size);
+	if (offset)
+		check_range_empty(start, offset);
+	if (end != new_end)
+		check_range_empty(end, new_end - end);
+
+	/* Create the temporary huge page mmap */
 	p = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, seg->fd, 0);
 	if (p == MAP_FAILED) {
 		ERROR("Couldn't map hugepage segment to copy data: %s\n",
@@ -727,15 +772,17 @@ static int prepare_segment(struct seg_info *seg)
 	}
 
 	/* 
-	 * Subtle, copying only filesz bytes of the segment
-	 * allows for much better performance than copying all of
-	 * memsz but it requires that all data (such as the plt)
-	 * be contained in the filesz portion of the segment.
+	 * Minimizing the amount of data copied will maximize performance.
+	 * By definition, the filesz portion of the segment contains
+	 * initialized data and must be copied.  If part of the memsz portion
+	 * is known to be initialized already, extrasz will be non-zero and
+	 * that many addtional bytes will be copied from the beginning of the
+	 * memsz region.  The rest of the memsz is understood to be zeroes and
+	 * need not be copied.
 	 */
-
 	DEBUG("Mapped hugeseg at %p. Copying %#0lx bytes and %#0lx extra bytes"
 		" from %p...", p, seg->filesz, seg->extrasz, seg->vaddr);
-	memcpy(p, seg->vaddr, seg->filesz + seg->extrasz);
+	memcpy(p + offset, seg->vaddr, seg->filesz + seg->extrasz);
 	DEBUG_CONT("done\n");
 
 	munmap(p, size);
@@ -923,6 +970,9 @@ static void remap_segments(struct seg_info *seg, int num)
 {
 	int i;
 	void *p;
+	unsigned long start, offset, mapsize;
+	long page_size = getpagesize();
+	long hpage_size = gethugepagesize();
 
 	/*
 	 * XXX: The bogus call to mmap below forces ld.so to resolve the
@@ -937,23 +987,29 @@ static void remap_segments(struct seg_info *seg, int num)
 	 * black hole.  We can't call anything which uses static data
 	 * (ie. essentially any library function...)
 	 */
-	for (i = 0; i < num; i++)
-		munmap(seg[i].vaddr, seg[i].memsz);
+	for (i = 0; i < num; i++) {
+		start = ALIGN_DOWN((unsigned long)seg[i].vaddr, page_size);
+		offset = (unsigned long)(seg[i].vaddr - start);
+		mapsize = ALIGN(offset + seg[i].memsz, page_size);
+		munmap((void *) start, mapsize);
+	}
 
 	/* Step 4.  Rebuild the address space with hugetlb mappings */
 	/* NB: we can't do the remap as hugepages within the main loop
 	 * because of PowerPC: we may need to unmap all the normal
 	 * segments before the MMU segment is ok for hugepages */
 	for (i = 0; i < num; i++) {
-		unsigned long mapsize = ALIGN(seg[i].memsz, hpage_size);
+		start = ALIGN_DOWN((unsigned long)seg[i].vaddr, hpage_size);
+		offset = (unsigned long)(seg[i].vaddr - start);
+		mapsize = ALIGN(offset + seg[i].memsz, hpage_size);
 
-		p = mmap(seg[i].vaddr, mapsize, seg[i].prot,
+		p = mmap((void *) start, mapsize, seg[i].prot,
 			 MAP_PRIVATE|MAP_FIXED, seg[i].fd, 0);
 		if (p == MAP_FAILED)
 			unmapped_abort("Failed to map hugepage segment %u: "
-				       "%p-%p (errno=%u)\n", i, seg[i].vaddr,
-				       seg[i].vaddr+mapsize, errno);
-		if (p != seg[i].vaddr)
+					"%p-%p (errno=%u)\n", i, start,
+					start + mapsize, errno);
+		if (p != (void *) start)
 			unmapped_abort("Mapped hugepage segment %u (%p-%p) at "
 				       "wrong address %p\n", i, seg[i].vaddr,
 				       seg[i].vaddr+mapsize, p);
