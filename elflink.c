@@ -614,34 +614,6 @@ int save_phdr(int table_idx, int phnum, const ElfW(Phdr) *phdr)
 	return 0;
 }
 
-/*
- * Parse the phdrs of a program linked with the libhugetlbfs linker scripts
- */
-static
-int parse_elf_relinked(struct dl_phdr_info *info, size_t size, void *data)
-{
-	int i;
-
-	for (i = 0; i < info->dlpi_phnum; i++) {
-		if (info->dlpi_phdr[i].p_type != PT_LOAD)
-			continue;
-
-		if (!(info->dlpi_phdr[i].p_flags & PF_LINUX_HUGETLB))
-			continue;
-
-		if (save_phdr(htlb_num_segs, i, &info->dlpi_phdr[i]))
-			return 1;
-
-		get_extracopy(&htlb_seg_table[htlb_num_segs],
-				&info->dlpi_phdr[0], info->dlpi_phnum);
-
-		htlb_num_segs++;
-	}
-	if (__hugetlbfs_debug)
-		check_memsz();
-	return 1;
-}
-
 static int verify_segment_layout(struct seg_layout *segs, int num_segs)
 {
 	int i;
@@ -670,7 +642,7 @@ static int verify_segment_layout(struct seg_layout *segs, int num_segs)
 }
 
 static
-int parse_elf_noldscript(struct dl_phdr_info *info, size_t size, void *data)
+int parse_elf_normal(struct dl_phdr_info *info, size_t size, void *data)
 {
 	int i, num_segs;
 	unsigned long page_size, hpage_size, seg_psize, start, end;
@@ -694,6 +666,9 @@ int parse_elf_noldscript(struct dl_phdr_info *info, size_t size, void *data)
 			seg_psize = hpage_size;
 		else if (remap_writable && info->dlpi_phdr[i].p_flags & PF_W)
 			seg_psize = hpage_size;
+		else if (!remap_readonly && !remap_writable &&
+				(info->dlpi_phdr[i].p_flags & PF_LINUX_HUGETLB))
+			seg_psize = hpage_size;
 		else
 			seg_psize = page_size;
 
@@ -715,6 +690,9 @@ int parse_elf_noldscript(struct dl_phdr_info *info, size_t size, void *data)
 	}
 	if (verify_segment_layout(segments, num_segs))
 		htlb_num_segs = 0;
+
+	if (__hugetlbfs_debug)
+		check_memsz();
 
 	return 1;
 }
@@ -1176,10 +1154,8 @@ static int parse_elf()
 {
 	if (force_remap)
 		dl_iterate_phdr(parse_elf_partial, NULL);
-	else if (remap_readonly || remap_writable)
-		dl_iterate_phdr(parse_elf_noldscript, NULL);
 	else
-		dl_iterate_phdr(parse_elf_relinked, NULL);
+		dl_iterate_phdr(parse_elf_normal, NULL);
 
 	if (htlb_num_segs == 0) {
 		DEBUG("No segments were appropriate for remapping\n");
