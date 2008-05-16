@@ -148,7 +148,8 @@ static void unmapped_abort(const char *fmt, ...)
 
 static char share_path[PATH_MAX+1];
 
-#define MAX_HTLB_SEGS	2
+#define MAX_HTLB_SEGS	3
+#define MAX_SEGS	10
 
 struct seg_info {
 	void *vaddr;
@@ -158,12 +159,18 @@ struct seg_info {
 	int index;
 };
 
+struct seg_layout {
+	unsigned long start, end;
+	int huge;
+};
+
 static struct seg_info htlb_seg_table[MAX_HTLB_SEGS];
 static int htlb_num_segs;
 static int minimal_copy = 1;
 static int sharing; /* =0 */
 static unsigned long force_remap; /* =0 */
 static long hpage_size;
+static int remap_readonly, remap_writable;
 
 /**
  * assemble_path - handy wrapper around snprintf() for building paths
@@ -635,6 +642,83 @@ int parse_elf_relinked(struct dl_phdr_info *info, size_t size, void *data)
 	return 1;
 }
 
+static int verify_segment_layout(struct seg_layout *segs, int num_segs)
+{
+	int i;
+
+	for (i = 1; i < num_segs; i++) {
+		unsigned long prev_end = segs[i - 1].end;
+		unsigned long start = segs[i].start;
+
+		/* Make sure alignment hasn't caused segments to overlap */
+		if (prev_end > start) {
+			ERROR("Layout problem with segments %i and %i:\n\t"
+				"Segments would overlap\n", i - 1, i);
+			return 1;
+		}
+
+		/* Make sure page size transitions occur on slice boundaries */
+		if ((segs[i - 1].huge != segs[i].huge) &&
+				hugetlb_slice_end(prev_end) >
+				hugetlb_slice_start(start)) {
+			ERROR("Layout problem with segments %i and %i:\n\t"
+				"Only one page size per slice\n", i - 1, i);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static
+int parse_elf_noldscript(struct dl_phdr_info *info, size_t size, void *data)
+{
+	int i, num_segs;
+	unsigned long page_size, hpage_size, seg_psize, start, end;
+	struct seg_layout segments[MAX_SEGS];
+
+	page_size = getpagesize();
+	hpage_size = gethugepagesize();
+	num_segs = 0;
+
+	for (i = 0; i < info->dlpi_phnum; i++) {
+		if (info->dlpi_phdr[i].p_type != PT_LOAD)
+			continue;
+
+		if (i >= MAX_SEGS) {
+			ERROR("Maximum number of PT_LOAD segments exceeded\n");
+			return 1;
+		}
+
+		/* Determine if this segment will be remapped into huge pages */
+		if (remap_readonly && !(info->dlpi_phdr[i].p_flags & PF_W))
+			seg_psize = hpage_size;
+		else if (remap_writable && info->dlpi_phdr[i].p_flags & PF_W)
+			seg_psize = hpage_size;
+		else
+			seg_psize = page_size;
+
+		if (seg_psize == hpage_size) {
+			if (save_phdr(htlb_num_segs, i, &info->dlpi_phdr[i]))
+				return 1;
+			get_extracopy(&htlb_seg_table[htlb_num_segs],
+					&info->dlpi_phdr[0], info->dlpi_phnum);
+			htlb_num_segs++;
+		}
+		start = ALIGN_DOWN(info->dlpi_phdr[i].p_vaddr, seg_psize);
+		end = ALIGN(info->dlpi_phdr[i].p_vaddr +
+				info->dlpi_phdr[i].p_memsz, seg_psize);
+
+		segments[num_segs].huge = (seg_psize == hpage_size);
+		segments[num_segs].start = start;
+		segments[num_segs].end = end;
+		num_segs++;
+	}
+	if (verify_segment_layout(segments, num_segs))
+		htlb_num_segs = 0;
+
+	return 1;
+}
+
 /*
  * Parse the phdrs of a normal program to attempt partial segment remapping
  */
@@ -1030,6 +1114,10 @@ static int check_env(void)
 		      "segments\n", env);
 		return -1;
 	}
+	if (env && strcasestr(env, "R"))
+		remap_readonly = 1;
+	if (env && strcasestr(env, "W"))
+		remap_writable = 1;
 
 	env = getenv("LD_PRELOAD");
 	if (env && strstr(env, "libhugetlbfs")) {
@@ -1086,29 +1174,16 @@ static int check_env(void)
  */
 static int parse_elf()
 {
-	extern Elf_Ehdr __executable_start __attribute__((weak));
-
-	/* a normal, not relinked binary */
-	if (! (&__executable_start)) {
-		if (force_remap) {
-			dl_iterate_phdr(parse_elf_partial, NULL);
-			if (htlb_num_segs == 0) {
-				DEBUG("No segments were appropriate for "
-						"partial remapping\n");
-				return -1;
-			}
-		} else {
-			DEBUG("Couldn't locate __executable_start, "
-				"not attempting to remap segments\n");
-			return -1;
-		}
-	} else {
+	if (force_remap)
+		dl_iterate_phdr(parse_elf_partial, NULL);
+	else if (remap_readonly || remap_writable)
+		dl_iterate_phdr(parse_elf_noldscript, NULL);
+	else
 		dl_iterate_phdr(parse_elf_relinked, NULL);
-		if (htlb_num_segs == 0) {
-			DEBUG("No segments were appropriate for "
-					"remapping\n");
-			return -1;
-		}
+
+	if (htlb_num_segs == 0) {
+		DEBUG("No segments were appropriate for remapping\n");
+		return -1;
 	}
 
 	return 0;
