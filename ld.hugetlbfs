@@ -45,6 +45,9 @@ while [ -n "$1" ]; do
 	--hugetlbfs-script-path=*)
 	    HUGETLB_LDSCRIPT_PATH="${arg#--hugetlbfs-script-path=}"
 	    ;;
+	--hugetlbfs-align)
+	    HTLB_ALIGN="slice"
+	    ;;
 	--)
 	    args=("${args[@]}" "$@")
 	    break
@@ -58,8 +61,20 @@ while [ -n "$1" ]; do
 done
 
 if [ -n "$HTLB_LINK" ]; then
+    HTLB_ALIGN="" # --hugetlbfs-link overrides --hugetlbfs-align
     LDSCRIPT="$EMU.x$HTLB_LINK"
     HTLBOPTS="-T${HUGETLB_LDSCRIPT_PATH}/${LDSCRIPT}"
+fi
+
+MB=$((1024*1024))
+case "$EMU" in
+elf32ppclinux|elf64ppc)	HPAGE_SIZE=$((16*$MB)) SLICE_SIZE=$((256*$MB)) ;;
+elf_i386|elf_x86_64)	HPAGE_SIZE=$((4*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
+esac
+
+if [ "$HTLB_ALIGN" == "slice" ]; then
+	HTLBOPTS="-zcommon-page-size=$SLICE_SIZE -zmax-page-size=$SLICE_SIZE"
+	HTLBOPTS="$HTLBOPTS -lhugetlbfs"
 fi
 
 ${LD} "${args[@]}" ${HTLBOPTS}
