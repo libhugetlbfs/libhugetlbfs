@@ -2,7 +2,7 @@ libhugetlbfs HOWTO
 ==================
 
 Author: David Gibson <dwg@au1.ibm.com>, Adam Litke <agl@us.ibm.com>, and others
-Last updated: Tuesday, May 13th, 2008
+Last updated: Wednesday, May 21st, 2008
 
 Introduction
 ============
@@ -94,10 +94,11 @@ the size of the hugepage heap will be limited (to around 256M for
 Toolchain prerequisites
 -----------------------
 
-The library uses a number of GNU specific features, so you will need
-to use both gcc and GNU binutils.  For PowerPC and AMD64 systems you
-will need a "biarch" compiler, which can build both 32-bit and 64-bit
-binaries.
+The library uses a number of GNU specific features, so you will need to use
+both gcc and GNU binutils.  For PowerPC and AMD64 systems you will need a
+"biarch" compiler, which can build both 32-bit and 64-bit binaries.  To use
+hugepage text and data segments, GNU binutils version 2.17 (or later) is
+recommended.  Older versions will work with restricted functionality.
 
 Configuration prerequisites
 ---------------------------
@@ -277,19 +278,47 @@ unexpected behavior from glibc's malloc when this is enabled.
 Using hugepage text, data, or BSS
 ---------------------------------
 
-To use the hugepage text, data, or BSS segments feature, you need to
-specially link your application.
+To use the hugepage text, data, or BSS segments feature, you need to specially
+link your application.  How this is done depends on the version of GNU ld.  To
+support ld versions older than 2.17, libhugetlbfs provides custom linker
+scripts that must be used to achieve the required binary layout.  With version
+2.17 or later, the system default linker scripts should be used.
 
-	Linking the application:
-	------------------------
+To link an application for hugepages, you should use the the ld.hugetlbfs
+script included with libhugetlbfs in place of your normal linker.  Without any
+special options this will simply invoke GNU ld with the same parameters.  When
+it is invoked with options detailed in the following sections, ld.hugetlbfs
+will call the system linker with all of the options necessary to link for
+hugepages.  If a custom linker script is required, it will also be selected.
 
-To link an application for hugepages, you should use the the
-ld.hugetlbfs script included with libhugetlbfs in place of your normal
-linker.  Without any special options this will simply invoke GNU ld
-with the same parameters.  
+If you installed ld.hugetlbfs using "make install", or if you run it
+from the place where you built libhugetlbfs, it should automatically
+be able to find the libhugetlbfs linker scripts.  Otherwise you may
+need to explicitly instruct it where to find the scripts with the
+option:
+	--hugetlbfs-script-path=/path/to/scripts
+(The linker scripts are in the ldscripts/ subdirectory of the
+libhugetlbfs source tree).
 
-To link a program for hugepages, one of the following options should
-be specified:
+	Linking the application with binutils-2.17 or later:
+	----------------------------------------------------
+
+This method will use the system default linker scripts.  Only one linker option
+is required to prepare the application for hugepages:
+
+	--hugetlbfs-align
+
+will instruct ld.hugetlbfs to call GNU ld with two options that increase the
+alignment of the resulting binary.  For reference, the options passed to ld are:
+
+	-z common-page-size=<value>	and
+	-z max-page-size=<value>
+
+	Linking the application with binutils-2.16 or older:
+	----------------------------------------------------
+
+To link a program with a custom linker script, one of the following linker
+options should be specified:
 
 	--hugetlbfs-link=B
 
@@ -300,20 +329,7 @@ will link the application to store BSS data (only) into hugepages
 will link the application to store text, initialized data and BSS data
 into hugepages.
 
-These are the only supported linking options.
-
-The ld.hugetlbfs script will invoke the system linker with all the
-necessary options to link for hugepages, in particular selecting the
-right linker script.
-
-If you installed ld.hugetlbfs using "make install", or if you run it
-from the place where you built libhugetlbfs, it should automatically
-be able to find the libhugetlbfs linker scripts.  Otherwise you may
-need to explicitly instruct it where to find the scripts with the
-option:
-	--hugetlbfs-script-path=/path/to/scripts
-(The linker scripts are in the ldscripts/ subdirectory of the
-libhugetlbfs source tree).
+These are the only two available options when using custom linker scripts.
 
 	Linking via gcc:
 	----------------
@@ -336,12 +352,13 @@ This option tells gcc to look in a non-standard location for the
 linker, thus finding our script rather than the normal linker. This
 can optionally be set in the CFLAGS environment variable.
 
-	-Wl,--hugetlbfs-link=B
+	-Wl,--hugetlbfs-align
+OR	-Wl,--hugetlbfs-link=B
 OR	-Wl,--hugetlbfs-link=BDT
 
-This option instructs gcc to pass the --hugetblfs-link option down to
-the linker, thus invoking the special behaviour of the ld.hugetblfs
-script. This can optionally be set in the LDFLAGS environment variable.
+This option instructs gcc to pass the option after the comma down to the
+linker, thus invoking the special behaviour of the ld.hugetblfs script. This
+can optionally be set in the LDFLAGS environment variable.
 
 If you use a compiler other than gcc, you will need to consult its
 documentation to see how to convince it to invoke ld.hugetlbfs in
@@ -352,12 +369,31 @@ place of the system linker.
 
 The specially-linked application needs the libhugetlbfs library, so
 you might need to set the LD_LIBRARY_PATH environment variable so the
-application can locate libhugetlbfs.so.  Other than that, after you
-link the application with the correct script, it should only be
-necessary to run it normally to activate the text, data, or BSS
-hugepage feature.  Upon initialization, libhugetlbfs will detect the
-special flags placed in the application's ELF header by the linker,
-and remap the requested program segments into hugepages.
+application can locate libhugetlbfs.so.  Depending on the method used to link
+the application, the HUGETLB_ELFMAP environment variable can be used to control
+how hugepages will be used.
+
+	When using --hugetlbfs-link:
+	----------------------------
+
+The custom linker script determines which segments may be remapped into
+hugepages and this remapping will occur by default.  The following setting will
+disable remapping entirely:
+
+	HUGETLB_ELFMAP=no
+
+	When using --hugetlbfs-align:
+	-----------------------------
+
+This method of linking an application permits greater flexibility at runtime.
+Using HUGETLB_ELFMAP, it is possible to control which program segments are
+placed in hugepages.  The following four settings will cause the indicated
+segments to be placed in hugepages:
+
+	HUGETLB_ELFMAP=R	Read-only segments (text)
+	HUGETLB_ELFMAP=W	Writable segments (data/BSS)
+	HUGETLB_ELFMAP=RW	All segments (text/data/BSS)
+	HUGETLB_ELFMAP=no	No segments
 
 	Environment variables:
 	----------------------
@@ -365,8 +401,8 @@ and remap the requested program segments into hugepages.
 There are a number of private environment variables which can affect
 libhugetlbfs:
 	HUGETLB_ELFMAP
-		If equal to "no", segment remapping is disabled;
-		otherwise, it is enabled (default)
+		Control or disable segment remapping (see above)
+
 	HUGETLB_MINIMAL_COPY
 		If equal to "no", the entire segment will be copied;
 		otherwise, only the necessary parts will be, which can
