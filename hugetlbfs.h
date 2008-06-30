@@ -33,4 +33,17 @@ long dump_proc_pid_maps(void);
 
 #define PF_LINUX_HUGETLB	0x100000
 
+/*
+ * Direct alloc flags and types
+ *
+ * GHP_DEFAULT - Use a combination of flags deemed to be a sensible default
+ * 		by the current implementation of the library
+ */
+typedef unsigned long ghp_t;
+#define GHP_DEFAULT	(0)
+
+/* Direct alloc functions */
+void *get_huge_pages(size_t len, ghp_t flags);
+void free_huge_pages(void *ptr);
+
 #endif /* _HUGETLBFS_H */

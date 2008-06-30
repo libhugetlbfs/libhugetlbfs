@@ -7,3 +7,9 @@ VERS_1.0 {
 	local:
 		*;
 };
+
+HTLBFS_2.0 {
+	global:
+		get_huge_pages;
+		free_huge_pages;
+};

@@ -1,10 +1,11 @@
 PREFIX = /usr/local
 EXEDIR = /bin
 
-LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o
+LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o alloc.o
 OBJS = hugectl.o
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
 INSTALL_OBJ = hugectl
+INSTALL_HEADERS = hugetlbfs.h
 LDSCRIPT_TYPES = B BDT
 LDSCRIPT_DIST_ELF = elf32ppclinux elf64ppc elf_i386 elf_x86_64
 INSTALL_OBJSCRIPT = ld.hugetlbfs
@@ -92,6 +93,7 @@ endif
 LIBOBJS32 += $(LIBOBJS:%=obj32/%)
 LIBOBJS64 += $(LIBOBJS:%=obj64/%)
 
+HEADERDIR = $(PREFIX)/include
 LIBDIR32 = $(PREFIX)/$(LIB32)
 LIBDIR64 = $(PREFIX)/$(LIB64)
 LDSCRIPTDIR = $(PREFIX)/share/libhugetlbfs/ldscripts
@@ -269,6 +271,7 @@ objscript.%: %
 install: libs tools $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	@$(VECHO) INSTALL
 	$(INSTALL) -d $(DESTDIR)$(LDSCRIPTDIR)
+	$(INSTALL) -m 644 $(INSTALL_HEADERS) $(HEADERDIR)
 	$(INSTALL) -m 644 $(INSTALL_LDSCRIPTS:%=ldscripts/%) $(DESTDIR)$(LDSCRIPTDIR)
 	$(INSTALL) -d $(DESTDIR)$(BINDIR)
 	$(INSTALL) -d $(DESTDIR)$(EXEDIR)
