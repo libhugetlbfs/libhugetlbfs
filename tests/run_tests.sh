@@ -207,6 +207,9 @@ functional_tests () {
     run_test truncate_reserve_wraparound
     run_test truncate_sigbus_versus_oom
 
+# Test direct allocation API
+    run_test get_huge_pages
+
 # Test hugetlbfs filesystem quota accounting
     run_test quota
 
