@@ -47,6 +47,8 @@ run_test () {
     done
 }
 
+# To manually disable a test (e.g., one that panics an older kernel),
+# replace "run_test <options>" with "skip_test <options>".
 skip_test () {
     echo "$@:	SKIPPED"
 }
