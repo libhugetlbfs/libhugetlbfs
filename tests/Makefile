@@ -1,7 +1,7 @@
 PREFIX = /usr/local
 
 LIB_TESTS = gethugepagesize test_root find_path unlinked_fd misalign \
-	readback truncate shared private empty_mounts meminfo_nohuge \
+	readback truncate shared private fork-cow empty_mounts meminfo_nohuge \
 	ptrace-write-hugepage icache-hygiene slbpacaflush \
 	chunk-overcommit mprotect alloc-instantiate-race mlock \
 	truncate_reserve_wraparound truncate_sigbus_versus_oom \
