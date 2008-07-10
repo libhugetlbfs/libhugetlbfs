@@ -62,6 +62,8 @@ void print_usage()
 	OPTION("--text", "Requests remapping of the program text");
 	OPTION("--data", "Requests remapping of the program data");
 	OPTION("--bss", "Requests remapping of the program bss");
+	OPTION("--heap", "Requests remapping of the program heap");
+	CONT("(malloc space)");
 }
 
 int verbose_level = VERBOSITY_DEFAULT;
@@ -99,6 +101,7 @@ void setup_environment(char *var, char *val)
 #define MAP_TEXT	0x0002
 #define MAP_DATA	0x0004
 #define MAP_BSS		0x0008
+#define MAP_HEAP	0x0010
 
 void setup_mappings(int which)
 {
@@ -127,6 +130,9 @@ void setup_mappings(int which)
 
 	if (n)
 		setup_environment("HUGETLB_ELFMAP", remap);
+
+	if (which & MAP_HEAP)
+		setup_environment("HUGETLB_MORECORE", "yes");
 }
 
 int main(int argc, char** argv)
@@ -142,6 +148,7 @@ int main(int argc, char** argv)
 		{"text",       no_argument, NULL, MAP_BASE|MAP_TEXT},
 		{"data",       no_argument, NULL, MAP_BASE|MAP_DATA},
 		{"bss",        no_argument, NULL, MAP_BASE|MAP_BSS},
+		{"heap",       no_argument, NULL, MAP_BASE|MAP_HEAP},
 
 		{0},
 	};
