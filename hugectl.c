@@ -58,6 +58,10 @@ void print_usage()
 	fprintf(stderr, "options:\n");
 
 	OPTION("--help, -h", "Prints this message");
+
+	OPTION("--text", "Requests remapping of the program text");
+	OPTION("--data", "Requests remapping of the program data");
+	OPTION("--bss", "Requests remapping of the program bss");
 }
 
 int verbose_level = VERBOSITY_DEFAULT;
@@ -74,12 +78,71 @@ void verbose_init(void)
 		verbose_level = VERBOSITY_MAX;
 }
 
+void setup_environment(char *var, char *val)
+{
+	setenv(var, val, 1);
+	DEBUG("%s='%s'\n", var, val);
+}
+
+
+/*
+ * getopts return values for options which are long only.
+ */
+#define MAP_BASE	0x1000
+
+/*
+ * Mapping selectors, one bit per remappable/backable area as requested
+ * by the user.  These are also used as returns from getopts where they
+ * are offset from MAP_BASE, which must be removed before they are compared.
+ */
+#define MAP_DISABLE	0x0001
+#define MAP_TEXT	0x0002
+#define MAP_DATA	0x0004
+#define MAP_BSS		0x0008
+
+void setup_mappings(int which)
+{
+	char remap[3] = { 0, 0, 0 };
+	int n = 0;
+
+	/*
+	 * HUGETLB_ELFMAP should be set to either a combination of 'R' and 'W'
+	 * which indicate which segments should be remapped.  It may also be
+	 * set to 'no' to prevent remapping.
+	 */
+	if (which & MAP_TEXT)
+		remap[n++] = 'R';
+	if (which & (MAP_DATA|MAP_BSS)) {
+		if ((which & (MAP_DATA|MAP_BSS)) != (MAP_DATA|MAP_BSS))
+			WARNING("data and bss remapped together\n");
+		remap[n++] = 'W';
+	}
+	if (which & MAP_DISABLE) {
+		if (which != MAP_DISABLE)
+			WARNING("--disable masks requested remap\n");
+		n = 0;
+		remap[n++] = 'n';
+		remap[n++] = 'o';
+	}
+
+	if (n)
+		setup_environment("HUGETLB_ELFMAP", remap);
+}
+
 int main(int argc, char** argv)
 {
+	int opt_mappings = 0;
+
 	char opts[] = "+h";
 	int ret = 0, index = 0;
 	struct option long_opts[] = {
 		{"help",       no_argument, NULL, 'h'},
+
+		{"disable",    no_argument, NULL, MAP_BASE|MAP_DISABLE},
+		{"text",       no_argument, NULL, MAP_BASE|MAP_TEXT},
+		{"data",       no_argument, NULL, MAP_BASE|MAP_DATA},
+		{"bss",        no_argument, NULL, MAP_BASE|MAP_BSS},
+
 		{0},
 	};
 
@@ -87,6 +150,10 @@ int main(int argc, char** argv)
 
 	while (ret != -1) {
 		ret = getopt_long(argc, argv, opts, long_opts, &index);
+		if (ret > 0 && (ret & MAP_BASE)) {
+			opt_mappings |= ret;
+			continue;
+		}
 		switch (ret) {
 		case '?':
 			print_usage();
@@ -103,11 +170,15 @@ int main(int argc, char** argv)
 		}
 	}
 	index = optind;
+	opt_mappings &= ~MAP_BASE;
 
 	if ((argc - index) < 1) {
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
+
+	if (opt_mappings)
+		setup_mappings(opt_mappings);
 
 	execvp(argv[index], &argv[index]);
 	ERROR("exec failed: %s\n", strerror(errno));
