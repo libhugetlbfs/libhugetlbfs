@@ -1035,6 +1035,7 @@ static void remap_segments(struct seg_info *seg, int num)
 	unsigned long start, offset, mapsize;
 	long page_size = getpagesize();
 	long hpage_size = gethugepagesize();
+	int mmap_flags;
 
 	/*
 	 * XXX: The bogus call to mmap below forces ld.so to resolve the
@@ -1064,9 +1065,19 @@ static void remap_segments(struct seg_info *seg, int num)
 		start = ALIGN_DOWN((unsigned long)seg[i].vaddr, hpage_size);
 		offset = (unsigned long)(seg[i].vaddr - start);
 		mapsize = ALIGN(offset + seg[i].memsz, hpage_size);
+		mmap_flags = MAP_PRIVATE|MAP_FIXED;
+
+		/*
+		 * If HUGETLB_SHARE is enabled and this is a read-only
+		 * segment, then use MAP_NORESERVE. The assumption is that
+		 * the pages already exist in the hugetlbfs file and that
+		 * mprotect() will not be called requiring a COW
+		 */
+		if (sharing && !(seg[i].prot & PROT_WRITE))
+			mmap_flags |= MAP_NORESERVE;
 
 		p = mmap((void *) start, mapsize, seg[i].prot,
-			 MAP_PRIVATE|MAP_FIXED, seg[i].fd, 0);
+			 mmap_flags, seg[i].fd, 0);
 		if (p == MAP_FAILED)
 			unmapped_abort("Failed to map hugepage segment %u: "
 					"%p-%p (errno=%u)\n", i, start,
