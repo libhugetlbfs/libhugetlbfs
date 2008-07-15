@@ -49,9 +49,9 @@ void print_usage()
 
 int main(int argc, char** argv)
 {
-	char opts [] = "+h";
+	char opts[] = "+h";
 	int ret = 0, index = 0;
-	struct option long_opts [] = {
+	struct option long_opts[] = {
 		{"help",       0, 0, 'h'},
 		{0,            0, 0, 0},
 	};
@@ -64,17 +64,17 @@ int main(int argc, char** argv)
 	while (ret != -1) {
 		ret = getopt_long(argc, argv, opts, long_opts, &index);
 		switch (ret) {
-			case '?':
-			case 'h':
-				print_usage();
-				return 0;
+		case '?':
+		case 'h':
+			print_usage();
+			return 0;
 
-			case -1:
-				break;
+		case -1:
+			break;
 
-			default:
-				ret = -1;
-				break;
+		default:
+			ret = -1;
+			break;
 		}
 	}
 	index = optind;
