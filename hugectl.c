@@ -56,11 +56,6 @@ int main(int argc, char** argv)
 		{0,            0, 0, 0},
 	};
 
-	if (argc < 2) {
-		print_usage();
-		exit(1);
-	}
-
 	while (ret != -1) {
 		ret = getopt_long(argc, argv, opts, long_opts, &index);
 		switch (ret) {
@@ -75,6 +70,11 @@ int main(int argc, char** argv)
 		}
 	}
 	index = optind;
+
+	if ((argc - index) < 1) {
+		print_usage();
+		exit(1);
+	}
 
 	execvp(argv[index], &argv[index]);
 	fprintf(stderr, "Error calling execvp: '%s'\n", strerror(errno));
