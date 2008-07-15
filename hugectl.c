@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 
 	if (argc < 2) {
 		print_usage();
-		return 0;
+		exit(1);
 	}
 
 	while (ret != -1) {
@@ -67,10 +67,7 @@ int main(int argc, char** argv)
 		case '?':
 		case 'h':
 			print_usage();
-			return 0;
-
-		case -1:
-			break;
+			exit(1);
 
 		default:
 			ret = -1;
@@ -79,11 +76,7 @@ int main(int argc, char** argv)
 	}
 	index = optind;
 
-	if (execvp(argv[index], &argv[index]) == -1) {
-		ret = errno;
-		fprintf(stderr, "Error calling execvp: '%s'\n", strerror(ret));
-		return ret;
-	}
-
-	return 0;
+	execvp(argv[index], &argv[index]);
+	fprintf(stderr, "Error calling execvp: '%s'\n", strerror(errno));
+	exit(1);
 }
