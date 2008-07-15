@@ -52,8 +52,8 @@ int main(int argc, char** argv)
 	char opts[] = "+h";
 	int ret = 0, index = 0;
 	struct option long_opts[] = {
-		{"help",       0, 0, 'h'},
-		{0,            0, 0, 0},
+		{"help",       no_argument, NULL, 'h'},
+		{0},
 	};
 
 	while (ret != -1) {
