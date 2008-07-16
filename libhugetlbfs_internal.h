@@ -48,37 +48,25 @@ extern void __hugetlbfs_setup_morecore();
 extern void __hugetlbfs_setup_debug();
 extern char __hugetlbfs_hostname[];
 
-#define ERROR(format, ...) \
+#define REPORT(level, prefix, format, ...) \
 	do { \
-		if (__hugetlbfs_debug || __hugetlbfs_verbose >= 1) { \
-			fprintf(stderr, "libhugetlbfs [%s:%d]: ERROR: " format, __hugetlbfs_hostname, getpid(), ##__VA_ARGS__); \
+		if (__hugetlbfs_debug || __hugetlbfs_verbose >= level) { \
+			fprintf(stderr, "libhugetlbfs [%s:%d]: " prefix ": " \
+				format, __hugetlbfs_hostname, getpid(), \
+				##__VA_ARGS__); \
 			fflush(stderr); \
 		} \
 	} while (0)
 
-#define WARNING(format, ...) \
+#define REPORT_CONT(level, prefix, ...) \
 	do { \
-		if (__hugetlbfs_debug || __hugetlbfs_verbose >= 2) { \
-			fprintf(stderr, "libhugetlbfs [%s:%d]: WARNING: " format, __hugetlbfs_hostname, getpid(), ##__VA_ARGS__); \
+		if (__hugetlbfs_debug || __hugetlbfs_verbose >= level) { \
+			fprintf(stderr, ##__VA_ARGS__); \
 			fflush(stderr); \
 		} \
 	} while (0)
 
-#define DEBUG(format, ...) \
-	do { \
-		if (__hugetlbfs_debug || __hugetlbfs_verbose >= 3) { \
-			fprintf(stderr, "libhugetlbfs [%s:%d]: " format, __hugetlbfs_hostname, getpid(), ##__VA_ARGS__); \
-			fflush(stderr); \
-		} \
-	} while (0)
-
-#define DEBUG_CONT(...) \
-	do { \
-		if (__hugetlbfs_debug || __hugetlbfs_verbose >= 3) { \
-			fprintf(stderr, __VA_ARGS__); \
-			fflush(stderr); \
-		} \
-	} while (0)
+#include "libhugetlbfs_debug.h"
 
 #if defined(__powerpc64__) && !defined(__LP64__)
 /* Older binutils fail to provide this symbol */
