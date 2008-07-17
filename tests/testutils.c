@@ -39,6 +39,7 @@
 
 #define HUGETLBFS_MAGIC	0x958458f6
 #define BUF_SZ 1024
+#define MEMINFO_SZ 2048
 
 int verbose_test = 1;
 char *test_name;
@@ -205,7 +206,7 @@ int test_addr_huge(void *p)
 long read_meminfo(const char *tag)
 {
 	int fd;
-	char buf[BUF_SZ];
+	char buf[MEMINFO_SZ];
 	int len, readerr;
 	char *p, *q;
 	long val;
