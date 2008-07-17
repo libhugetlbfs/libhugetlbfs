@@ -13,6 +13,7 @@ LIB_TESTS_64 = straddle_4GB huge_at_4GB_normal_below \
 NOLIB_TESTS = malloc malloc_manysmall dummy heapshrink
 LDSCRIPT_TESTS = zero_filesize_segment
 HUGELINK_TESTS = linkhuge linkhuge_nofd linkshare
+HUGELINK_RW_TESTS = linkhuge_rw
 STRESS_TESTS = mmap-gettest mmap-cow shm-gettest shm-getraw shm-fork
 HELPERS = get_hugetlbfs_path
 HELPER_LIBS = libheapshrink.so
@@ -28,7 +29,7 @@ INSTALL = install
 TESTS = $(LIB_TESTS) $(NOLIB_TESTS) $(STRESS_TESTS)
 ifdef ELF32
 TESTS += $(LDSCRIPT_TESTS) $(HUGELINK_TESTS) $(HUGELINK_TESTS:%=xB.%) \
-	$(HUGELINK_TESTS:%=xBDT.%)
+	$(HUGELINK_TESTS:%=xBDT.%) $(HUGELINK_RW_TESTS)
 else
 ifdef ELF64
 TESTS += $(LDSCRIPT_TESTS) $(HUGELINK_TESTS) $(HUGELINK_TESTS:%=xB.%) \
@@ -127,6 +128,18 @@ $(HUGELINK_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 $(HUGELINK_TESTS:%=obj64/%): %: %.o obj64/testutils.o
 	@$(VECHO) LD64 "(hugelink test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS)
+
+$(HUGELINK_RW_TESTS:%=obj32/%): %: %.o $(HUGETLBFS_LD) obj32/testutils.o
+	@$(VECHO) LD32 "(hugelink_rw test)" $@
+	@mkdir -p obj32
+	@ln -sf ../$(HUGETLBFS_LD) obj32/ld
+	$(CC32) -B./obj32 $(LDFLAGS) $(LDFLAGS32) -o $@ $(LDLIBS) -Wl,--hugetlbfs-align $(filter %.o,$^)
+
+$(HUGELINK_RW_TESTS:%=obj64/%): %: %.o $(HUGETLBFS_LD) obj64/testutils.o
+	@$(VECHO) LD64 "(hugelink_rw test)" $@
+	@mkdir -p obj64
+	@ln -sf ../$(HUGETLBFS_LD) obj64/ld
+	$(CC64) -B./obj64 $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,--hugetlbfs-align $(filter %.o,$^)
 
 $(STRESS_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 	@$(VECHO) LD32 "(lib test)" $@

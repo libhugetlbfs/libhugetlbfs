@@ -76,6 +76,20 @@ elflink_test () {
     run_test HUGETLB_ELFMAP=no "$@" "xBDT.$baseprog"
 }
 
+elflink_rw_test() {
+    # Basic tests: None, Read-only, Write-only, Read-Write, exlicit disable
+    run_test linkhuge_rw
+    run_test HUGETLB_ELFMAP=R linkhuge_rw
+    run_test HUGETLB_ELFMAP=W linkhuge_rw
+    run_test HUGETLB_ELFMAP=RW linkhuge_rw
+    run_test HUGETLB_ELFMAP=no linkhuge_rw
+
+    # Test we don't blow up if HUGETLB_MINIMAL_COPY is disabled
+    run_test HUGETLB_MINIMAL_COPY=no HUGETLB_ELFMAP=R linkhuge_rw
+    run_test HUGETLB_MINIMAL_COPY=no HUGETLB_ELFMAP=W linkhuge_rw
+    run_test HUGETLB_MINIMAL_COPY=no HUGETLB_ELFMAP=RW linkhuge_rw
+}
+
 elfshare_test () {
     args=("$@")
     N="$[$#-1]"
@@ -109,6 +123,19 @@ elflink_and_share_test () {
     clear_hpages
     run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
     run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
+    clear_hpages
+}
+
+elflink_rw_and_share_test () {
+    clear_hpages
+    run_test HUGETLB_ELFMAP=R HUGETLB_SHARE=1 linkhuge_rw
+    run_test HUGETLB_ELFMAP=R HUGETLB_SHARE=1 linkhuge_rw
+    clear_hpages
+    run_test HUGETLB_ELFMAP=W HUGETLB_SHARE=1 linkhuge_rw
+    run_test HUGETLB_ELFMAP=W HUGETLB_SHARE=1 linkhuge_rw
+    clear_hpages
+    run_test HUGETLB_ELFMAP=RW HUGETLB_SHARE=1 linkhuge_rw
+    run_test HUGETLB_ELFMAP=RW HUGETLB_SHARE=1 linkhuge_rw
     clear_hpages
 }
 
@@ -198,9 +225,13 @@ functional_tests () {
     elflink_test HUGETLB_VERBOSE=0 linkhuge_nofd # Lib error msgs expected
     elflink_test linkhuge
 
+    # Test RW-style remapping mechanism
+    elflink_rw_test
+
 # Sharing tests
     elfshare_test linkshare
     elflink_and_share_test linkhuge
+    elflink_rw_and_share_test
 
 # Accounting bug tests
 # reset free hpages because sharing will have held some
