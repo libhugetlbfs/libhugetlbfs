@@ -31,6 +31,20 @@ HPAGE_SIZE=$(grep 'Hugepagesize:' /proc/meminfo | awk '{print $2}')
 [ -z "$HPAGE_SIZE" ] && HPAGE_SIZE=0
 HPAGE_SIZE=$(( $HPAGE_SIZE * 1024 ))
 
+# Up-front checks for the remapping test cases:
+function check_linkhuge_tests() {
+    # In some circumstances, our linker scripts are known to be broken and
+    # they will produce binaries with undefined runtime behavior.  In those
+    # cases don't bother running the xNNN.linkhuge tests.  This checks if the
+    # system linker scripts use the SPECIAL keyword (for placing the got and
+    # plt).  Our linker scripts do not use SPECIAL and are thus broken when the
+    # system scripts use it.
+    ld --verbose | grep -q SPECIAL
+    if [ $? -eq 0 ]; then
+        LINKHUGE_SKIP=1
+    fi
+}
+
 run_test_bits () {
     BITS=$1
     shift
@@ -53,6 +67,14 @@ skip_test () {
     echo "$@:	SKIPPED"
 }
 
+maybe_run_linkhuge_test () {
+    if [ "$LINKHUGE_SKIP" != "1" ]; then
+        run_test "$@"
+    else
+        skip_test "$@"
+    fi
+}
+
 preload_test () {
     run_test LD_PRELOAD=libhugetlbfs.so "$@"
 }
@@ -66,14 +88,14 @@ elflink_test () {
     run_test "$@" "$baseprog"
     # Test we don't blow up if not linked for hugepage
     preload_test "$@" "$baseprog"
-    run_test "$@" "xB.$baseprog"
-    run_test "$@" "xBDT.$baseprog"
+    maybe_run_linkhuge_test "$@" "xB.$baseprog"
+    maybe_run_linkhuge_test "$@" "xBDT.$baseprog"
     # Test we don't blow up if HUGETLB_MINIMAL_COPY is diabled
-    run_test HUGETLB_MINIMAL_COPY=no "$@" "xB.$baseprog"
-    run_test HUGETLB_MINIMAL_COPY=no "$@" "xBDT.$baseprog"
+    maybe_run_linkhuge_test HUGETLB_MINIMAL_COPY=no "$@" "xB.$baseprog"
+    maybe_run_linkhuge_test HUGETLB_MINIMAL_COPY=no "$@" "xBDT.$baseprog"
     # Test that HUGETLB_ELFMAP=no inhibits remapping as intended
-    run_test HUGETLB_ELFMAP=no "$@" "xB.$baseprog"
-    run_test HUGETLB_ELFMAP=no "$@" "xBDT.$baseprog"
+    maybe_run_linkhuge_test HUGETLB_ELFMAP=no "$@" "xB.$baseprog"
+    maybe_run_linkhuge_test HUGETLB_ELFMAP=no "$@" "xBDT.$baseprog"
 }
 
 elflink_rw_test() {
@@ -100,12 +122,12 @@ elfshare_test () {
     # sharefiles before and after in the first set of runs, but leave
     # them there in the second:
     clear_hpages
-    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog"
+    maybe_run_linkhuge_test HUGETLB_SHARE=1 "$@" "xB.$baseprog"
     clear_hpages
-    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
+    maybe_run_linkhuge_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
     clear_hpages
-    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog"
-    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
+    maybe_run_linkhuge_test HUGETLB_SHARE=1 "$@" "xB.$baseprog"
+    maybe_run_linkhuge_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
     clear_hpages
 }
 
@@ -118,11 +140,11 @@ elflink_and_share_test () {
     # Run each elflink test pair independently - clean up the sharefiles
     # before and after each pair
     clear_hpages
-    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog"
-    run_test HUGETLB_SHARE=1 "$@" "xB.$baseprog"
+    maybe_run_linkhuge_test HUGETLB_SHARE=1 "$@" "xB.$baseprog"
+    maybe_run_linkhuge_test HUGETLB_SHARE=1 "$@" "xB.$baseprog"
     clear_hpages
-    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
-    run_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
+    maybe_run_linkhuge_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
+    maybe_run_linkhuge_test HUGETLB_SHARE=1 "$@" "xBDT.$baseprog"
     clear_hpages
 }
 
@@ -222,15 +244,19 @@ functional_tests () {
     preload_test HUGETLB_MORECORE=yes HUGETLB_MORECORE_SHRINK=yes heapshrink
     run_test LD_PRELOAD="libhugetlbfs.so libheapshrink.so" HUGETLB_MORECORE=yes HUGETLB_MORECORE_SHRINK=yes heapshrink
     run_test HUGETLB_VERBOSE=1 HUGETLB_MORECORE=yes heap-overflow # warnings expected
+
+# Run the remapping tests' up-front checks
+check_linkhuge_tests
+# Original elflink tests
     elflink_test HUGETLB_VERBOSE=0 linkhuge_nofd # Lib error msgs expected
     elflink_test linkhuge
-
-    # Test RW-style remapping mechanism
-    elflink_rw_test
-
-# Sharing tests
+# Original elflink sharing tests
     elfshare_test linkshare
     elflink_and_share_test linkhuge
+
+# elflink_rw tests
+    elflink_rw_test
+# elflink_rw sharing tests
     elflink_rw_and_share_test
 
 # Accounting bug tests
