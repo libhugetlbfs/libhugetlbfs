@@ -821,7 +821,7 @@ static int prepare_segment(struct seg_info *seg)
 	end = (void *) ALIGN((unsigned long)seg->vaddr + seg->memsz, page_size);
 	new_end = (void *) ALIGN((unsigned long)end, hpage_size);
 	if (offset)
-		check_range_empty(start, offset);
+		check_range_empty(start, ALIGN_DOWN(offset, page_size));
 	if (end != new_end)
 		check_range_empty(end, new_end - end);
 
