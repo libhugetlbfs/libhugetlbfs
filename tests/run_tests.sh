@@ -1,9 +1,13 @@
 #! /bin/bash
 
 export QUIET_TEST=1
-export HUGETLB_VERBOSE=2
 unset HUGETLB_ELF
 unset HUGETLB_MORECORE
+
+if [ -z "$HUGETLB_VERBOSE" ]; then
+	HUGETLB_VERBOSE=0
+fi
+export HUGETLB_VERBOSE
 
 ENV=/usr/bin/env
 
@@ -312,6 +316,7 @@ while getopts "vVdt:b:" ARG ; do
     case $ARG in
 	"v")
 	    unset QUIET_TEST
+            export HUGETLB_VERBOSE=2
 	    ;;
 	"V")
 	    export HUGETLB_VERBOSE=99
