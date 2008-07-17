@@ -624,7 +624,7 @@ static int verify_segment_layout(struct seg_layout *segs, int num_segs)
 
 		/* Make sure alignment hasn't caused segments to overlap */
 		if (prev_end > start) {
-			ERROR("Layout problem with segments %i and %i:\n\t"
+			WARNING("Layout problem with segments %i and %i:\n\t"
 				"Segments would overlap\n", i - 1, i);
 			return 1;
 		}
@@ -633,7 +633,7 @@ static int verify_segment_layout(struct seg_layout *segs, int num_segs)
 		if ((segs[i - 1].huge != segs[i].huge) &&
 				hugetlb_slice_end(prev_end) >
 				hugetlb_slice_start(start)) {
-			ERROR("Layout problem with segments %i and %i:\n\t"
+			WARNING("Layout problem with segments %i and %i:\n\t"
 				"Only one page size per slice\n", i - 1, i);
 			return 1;
 		}

@@ -100,7 +100,7 @@ void bad_value(int line, const char *name, long expect, long actual)
 	if (actual == -1)
 		ERROR("%s not found in /proc/meminfo", name);
 	else
-		FAIL("Line %i: Bad %s: expected %li, actual %li\n",
+		FAIL("Line %i: Bad %s: expected %li, actual %li",
 			line, name, expect, actual);
 }
 

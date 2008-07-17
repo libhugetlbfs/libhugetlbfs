@@ -196,14 +196,14 @@ int main(int argc, char *argv[])
 	for (i = 0; i < NUM_TESTS; i++) {
 		if (testtab[i].writable) {
 			if (elfmap_writable && !testtab[i].is_huge)
-				FAIL("%s is not hugepage\n", testtab[i].name);
+				FAIL("%s is not hugepage", testtab[i].name);
 			if (!elfmap_writable && testtab[i].is_huge)
-				FAIL("%s is hugepage\n", testtab[i].name);
+				FAIL("%s is hugepage", testtab[i].name);
 		} else if (!testtab[i].writable) {
 			if (elfmap_readonly && !testtab[i].is_huge)
-				FAIL("%s is not hugepage\n", testtab[i].name);
+				FAIL("%s is not hugepage", testtab[i].name);
 			if (!elfmap_readonly && testtab[i].is_huge)
-				FAIL("%s is hugepage\n", testtab[i].name);
+				FAIL("%s is hugepage", testtab[i].name);
 		}
 	}
 	PASS();
