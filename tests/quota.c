@@ -54,6 +54,10 @@ extern int errno;
 static long hpage_size;
 static char mountpoint[17];
 
+/* map action flags */
+#define ACTION_COW		0x0001
+#define ACTION_TOUCH		0x0002
+
 /* Testlet results */
 #define GOOD 0
 #define BAD_SIG  1
@@ -71,15 +75,16 @@ void cleanup(void)
  * Debugging function:  Verify the counters in the hugetlbfs superblock that
  * are used to implement the filesystem quotas.
  */
-void verify_stat(int line, long tot, long free, long avail)
+void _verify_stat(int line, long tot, long free, long avail)
 {
 	struct statfs s;
 	statfs(mountpoint, &s);
 
 	if (s.f_blocks != tot || s.f_bfree != free || s.f_bavail != avail)
-		printf("Bad quota counters at line %i: total: %li free: %li"
+		FAIL("Bad quota counters at line %i: total: %li free: %li "
 		       "avail: %li\n", line, s.f_blocks, s.f_bfree, s.f_bavail);
 }
+#define verify_stat(t, f, a) _verify_stat(__LINE__, t, f, a)
 
 void get_quota_fs(unsigned long size)
 {
@@ -106,7 +111,7 @@ void get_quota_fs(unsigned long size)
 	verbose_printf("Using %s as temporary mount point.\n", mountpoint);
 }
 
-void map(unsigned long size, int flags, int cow)
+void map(unsigned long size, int mmap_flags, int action_flags)
 {
 	int fd;
 	char *a, *b, *c;
@@ -117,17 +122,18 @@ void map(unsigned long size, int flags, int cow)
 		exit(1);
 	}
 
-	a = mmap(0, size, PROT_READ|PROT_WRITE, flags, fd, 0);
+	a = mmap(0, size, PROT_READ|PROT_WRITE, mmap_flags, fd, 0);
 	if (a == MAP_FAILED) {
 		verbose_printf("mmap failed\n");
 		exit(1);
 	}
 
 
-	for (b = a; b < a + size; b += hpage_size)
-		*(b) = 1;
+	if (action_flags & ACTION_TOUCH)
+		for (b = a; b < a + size; b += hpage_size)
+			*(b) = 1;
 
-	if (cow) {
+	if (action_flags & ACTION_COW) {
 		c = mmap(0, size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
 		if ((*c) !=  1) {
 			verbose_printf("Data mismatch when setting up COW");
@@ -151,8 +157,8 @@ void do_unexpected_result(int line, int expected, int actual)
 		line, result_str[expected], result_str[actual]);
 }
 
-void _spawn(int l, int expected_result, unsigned long size, int flags,
-							int cow)
+void _spawn(int l, int expected_result, unsigned long size, int mmap_flags,
+							int action_flags)
 {
 	pid_t pid;
 	int status;
@@ -160,7 +166,7 @@ void _spawn(int l, int expected_result, unsigned long size, int flags,
 
 	pid = fork();
 	if (pid == 0) {
-		map(size, flags, cow);
+		map(size, mmap_flags, action_flags);
 		exit(0);
 	} else if (pid < 0) {
 		FAIL("fork()");
@@ -179,7 +185,7 @@ void _spawn(int l, int expected_result, unsigned long size, int flags,
 			do_unexpected_result(l, expected_result, actual_result);
 	}
 }
-#define spawn(e,s,f,c) _spawn(__LINE__, e, s, f, c)
+#define spawn(e,s,mf,af) _spawn(__LINE__, e, s, mf, af)
 
 int main(int argc, char ** argv)
 {
@@ -199,39 +205,48 @@ int main(int argc, char ** argv)
 	close(fd);
 
 	/*
+	 * Check that unused quota is cleared when untouched mmaps are
+	 * cleaned up.
+	 */
+	spawn(GOOD, hpage_size, MAP_PRIVATE, 0);
+	verify_stat(1, 1, 1);
+	spawn(GOOD, hpage_size, MAP_SHARED, 0);
+	verify_stat(1, 1, 1);
+
+	/*
 	 * Check that simple page instantiation works within quota limits
 	 * for private and shared mappings.
 	 */
-	spawn(GOOD, hpage_size, MAP_PRIVATE, 0);
-	spawn(GOOD, hpage_size, MAP_SHARED, 0);
+	spawn(GOOD, hpage_size, MAP_PRIVATE, ACTION_TOUCH);
+	spawn(GOOD, hpage_size, MAP_SHARED, ACTION_TOUCH);
 
 	/*
 	 * Page instantiation should be refused if doing so puts the fs
 	 * over quota.
 	 */
-	spawn(BAD_EXIT, 2 * hpage_size, MAP_SHARED, 0);
+	spawn(BAD_EXIT, 2 * hpage_size, MAP_SHARED, ACTION_TOUCH);
 
 	/*
 	 * If private mappings are reserved, the quota is checked up front
 	 * (as is the case for shared mappings).
 	 */
 	if (private_resv)
-		spawn(BAD_EXIT, 2 * hpage_size, MAP_PRIVATE, 0);
+		spawn(BAD_EXIT, 2 * hpage_size, MAP_PRIVATE, ACTION_TOUCH);
 	else
-		spawn(BAD_SIG, 2 * hpage_size, MAP_PRIVATE, 0);
+		spawn(BAD_SIG, 2 * hpage_size, MAP_PRIVATE, ACTION_TOUCH);
 
 	/*
 	 * COW should not be allowed if doing so puts the fs over quota.
 	 */
-	spawn(BAD_SIG, hpage_size, MAP_SHARED, 1);
-	spawn(BAD_SIG, hpage_size, MAP_PRIVATE, 1);
+	spawn(BAD_SIG, hpage_size, MAP_SHARED, ACTION_TOUCH|ACTION_COW);
+	spawn(BAD_SIG, hpage_size, MAP_PRIVATE, ACTION_TOUCH|ACTION_COW);
 
 	/*
 	 * Make sure that operations within the quota will succeed after
 	 * some failures.
 	 */
-	spawn(GOOD, hpage_size, MAP_SHARED, 0);
-	spawn(GOOD, hpage_size, MAP_PRIVATE, 0);
+	spawn(GOOD, hpage_size, MAP_SHARED, ACTION_TOUCH);
+	spawn(GOOD, hpage_size, MAP_PRIVATE, ACTION_TOUCH);
 
 	PASS();
 }
