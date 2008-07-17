@@ -127,4 +127,7 @@ static inline long check_hugepagesize()
 	return hpage_size;
 }
 
+/* WARNING: Racy -- use for test cases only! */
+int kernel_has_private_reservations(int fd);
+
 #endif /* _HUGETESTS_H */

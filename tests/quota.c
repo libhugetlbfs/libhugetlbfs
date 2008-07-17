@@ -183,12 +183,20 @@ void _spawn(int l, int expected_result, unsigned long size, int flags,
 
 int main(int argc, char ** argv)
 {
+	int fd, private_resv;
+
 	test_init(argc, argv);
 	check_must_be_root();
 	mountpoint[0] = '\0';
 	hpage_size = check_hugepagesize();
 
+	check_free_huge_pages(1);
 	get_quota_fs(hpage_size);
+
+	fd = hugetlbfs_unlinked_fd();
+	if ((private_resv = kernel_has_private_reservations(fd)) == -1)
+		FAIL("kernel_has_private_reservations() failed\n");
+	close(fd);
 
 	/*
 	 * Check that simple page instantiation works within quota limits
@@ -202,7 +210,15 @@ int main(int argc, char ** argv)
 	 * over quota.
 	 */
 	spawn(BAD_EXIT, 2 * hpage_size, MAP_SHARED, 0);
-	spawn(BAD_SIG, 2 * hpage_size, MAP_PRIVATE, 0);
+
+	/*
+	 * If private mappings are reserved, the quota is checked up front
+	 * (as is the case for shared mappings).
+	 */
+	if (private_resv)
+		spawn(BAD_EXIT, 2 * hpage_size, MAP_PRIVATE, 0);
+	else
+		spawn(BAD_SIG, 2 * hpage_size, MAP_PRIVATE, 0);
 
 	/*
 	 * COW should not be allowed if doing so puts the fs over quota.

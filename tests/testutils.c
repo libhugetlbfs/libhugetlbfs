@@ -33,6 +33,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <fcntl.h>
 
 #include "hugetests.h"
@@ -286,4 +287,65 @@ int remove_shmid(int shmid)
 		}
 	}
 	return 0;
+}
+
+/* WARNING: This function relies on the hugetlb pool counters in a way that
+ * is known to be racy.  Due to the expected usage of hugetlbfs test cases, the
+ * risk of a race is acceptible.  This function should NOT be used for real
+ * applications.
+ */
+int kernel_has_private_reservations(int fd)
+{
+	long t, f, r, s;
+	long nt, nf, nr, ns;
+	void *map;
+
+	/* Read pool counters */
+	t = read_meminfo("HugePages_Total:");
+	f = read_meminfo("HugePages_Free:");
+	r = read_meminfo("HugePages_Rsvd:");
+	s = read_meminfo("HugePages_Surp:");
+
+	if (fd < 0) {
+		ERROR("kernel_has_private_reservations: hugetlbfs_unlinked_fd: "
+			"%s\n", strerror(errno));
+		return -1;
+	}
+	map = mmap(NULL, gethugepagesize(), PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
+	if (map == MAP_FAILED) {
+		ERROR("kernel_has_private_reservations: mmap: %s\n",
+			strerror(errno));
+		return -1;
+	}
+
+	/* Recheck the counters */
+	nt = read_meminfo("HugePages_Total:");
+	nf = read_meminfo("HugePages_Free:");
+	nr = read_meminfo("HugePages_Rsvd:");
+	ns = read_meminfo("HugePages_Surp:");
+
+	munmap(map, gethugepagesize());
+
+	/*
+	 * There are only three valid cases:
+	 * 1) If a surplus page was allocated to create a reservation, all
+	 *    four pool counters increment
+	 * 2) All counters remain the same except for Hugepages_Rsvd, then
+	 *    a reservation was created using an existing pool page.
+	 * 3) All counters remain the same, indicates that no reservation has
+	 *    been created
+	 */
+	if ((nt == t + 1) && (nf == f + 1) && (ns == s + 1) && (nr == r + 1)) {
+		return 1;
+	} else if ((nt == t) && (nf == f) && (ns == s)) {
+		if (nr == r + 1)
+			return 1;
+		else if (nr == r)
+			return 0;
+	} else {
+		ERROR("kernel_has_private_reservations: bad counter state - "
+		      "T:%li F:%li R:%li S:%li -> T:%li F:%li R:%li S:%li\n",
+			t, f, r, s, nt, nf, nr, ns);
+	}
+	return -1;
 }

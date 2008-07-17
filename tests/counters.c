@@ -47,6 +47,7 @@ extern int errno;
 #define DYNAMIC_SYSCTL "/proc/sys/vm/nr_overcommit_hugepages"
 static long saved_nr_hugepages;
 static long hpage_size;
+static int private_resv;
 
 /* State arrays for our mmaps */
 #define NR_SLOTS	2
@@ -222,8 +223,12 @@ void _map(int s, int hpages, int flags, int line)
 	 * satisfy the reservation, surplus pages are added to the pool.
 	 * NOTE: This code assumes that the whole mapping needs to be
 	 * reserved and hence, will not work with partial reservations.
+	 *
+	 * If the kernel supports private reservations, then MAP_PRIVATE
+	 * mappings behave like MAP_SHARED at mmap time.  Otherwise,
+	 * no counter updates will occur.
 	 */
-	if (flags & MAP_SHARED) {
+	if ((flags & MAP_SHARED) || private_resv) {
 		unsigned long shortfall = 0;
 		if (hpages + prev_resv > prev_free)
 			shortfall = hpages - prev_free + prev_resv;
@@ -232,7 +237,6 @@ void _map(int s, int hpages, int flags, int line)
 		er = prev_resv + hpages;
 		es = prev_surp + shortfall;
 	}
-	/* MAP_PRIVATE mappings do not alter the counters in any way. */
 
 	verify_counters(line, et, ef, er, es);
 }
@@ -273,7 +277,7 @@ void _unmap(int s, int hpages, int flags, int line)
 	 * reservation.  If those pages were not touched, then they will
 	 * not have been freed by the code above.  Free them here.
 	 */
-	if (flags & MAP_SHARED) {
+	if ((flags & MAP_SHARED) || private_resv) {
 		int unused_surplus = min(hpages - touched[s], es);
 		et -= unused_surplus;
 		ef -= unused_surplus;
@@ -304,15 +308,15 @@ void _touch(int s, int hpages, int flags, int line)
 	touched[s] = max(touched[s], hpages);
 
 	/*
-	 * Shared mappings consume resv pages that were previously
-	 * allocated.  Also deduct them from the free count.
+	 * Shared (and private when supported) mappings and consume resv pages
+	 * that were previously allocated. Also deduct them from the free count.
 	 *
-	 * Private mappings may need to allocate surplus pages to
+	 * Unreserved private mappings may need to allocate surplus pages to
 	 * satisfy the fault.  The surplus pages become part of the pool
 	 * which could elevate total, free, and surplus counts.  resv is
 	 * unchanged but free must be decreased.
 	 */
-	if (flags & MAP_SHARED) {
+	if (flags & MAP_SHARED || private_resv) {
 		et = prev_total;
 		ef = prev_free - hpages;
 		er = prev_resv - hpages;
@@ -375,12 +379,18 @@ void run_test(char *desc, int base_nr)
 
 int main(int argc, char ** argv)
 {
-	int base_nr;
+	int fd, base_nr;
 
 	test_init(argc, argv);
 	check_must_be_root();
 	saved_nr_hugepages = read_meminfo("HugePages_Total:");
 	verify_dynamic_pool_support();
+
+	fd = hugetlbfs_unlinked_fd();
+	if ((private_resv = kernel_has_private_reservations(fd)) == -1)
+		FAIL("kernel_has_private_reservations() failed\n");
+	close(fd);
+
 	hpage_size = check_hugepagesize();
 
 	/*
