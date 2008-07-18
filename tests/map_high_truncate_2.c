@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 
 	/* First mapping */
 	p = mmap(0, MAP_LENGTH + TRUNCATE_POINT, PROT_READ | PROT_WRITE,
-		 MAP_PRIVATE, fd, 0);
+		 MAP_PRIVATE | MAP_NORESERVE, fd, 0);
 	if (p == MAP_FAILED)
 		FAIL("mmap() 1");
 
