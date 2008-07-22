@@ -35,10 +35,10 @@
 
 #define BUF_SIZE 4096
 #define FILLER "tmpfs /var/run tmpfs rw,nosuid,nodev,noexec,mode=755 0 0\n"
+#define TMP_MOUNTS "hugetlbfs_large_mounts-XXXXXX"
 
-int mountsfd; /* = 0; */
-int readcount; /* = 0; */
-int filler_sz; /* = 0; */
+int in_test; /* = 0; */
+int tmp_mounts_fd; /* = 0; */
 
 /*
  * We override the normal open, so we can remember the fd for the
@@ -48,60 +48,52 @@ int open(const char *path, int flags, ...)
 {
 	int (*old_open)(const char *, int, ...);
 	int fd;
+	va_list ap;
 
 	old_open = dlsym(RTLD_NEXT, "open");
-	if (flags & O_CREAT) {
-		va_list ap;
-
-		va_start(ap, flags);
-		fd = (*old_open)(path, flags, va_arg(ap, mode_t));
-		va_end(ap);
-		return fd;
-	} else {
-		fd = (*old_open)(path, flags);
-		if (strcmp(path, "/proc/mounts") == 0)
-			mountsfd = fd;
-		return fd;
-	}
+	if (in_test && strcmp(path, "/proc/mounts") == 0)
+		return tmp_mounts_fd;
+	va_start(ap, flags);
+	fd = (old_open)(path, flags, va_arg(ap, mode_t));
+	va_end(ap);
+	return fd;
 }
 
-/*
- * We override read so that we can pad the mounts file to ensure that the
- * hugetlb mount point is beyond 4kb.
- */
-ssize_t read(int fd, void *buf, size_t count)
+void make_test_mounts()
 {
-	int (*old_read)(int fd, void *buf, size_t count);
-	int out = 0;
-	int num_filler;
+	char buf[BUF_SIZE];
+	char tmp_mounts[] = TMP_MOUNTS;
+	int mounts_fd;
+	unsigned int written = 0;
+	int ret;
+	int filler_sz;
 
-	old_read = dlsym(RTLD_NEXT, "read");
-	/*
-	 * Pass through to libc read if we aren't looking at /proc/mounts or
-	 * if we have padded the mounts file with enough stuff to ensure that
-	 * the hugetlb mount is beyond 4kb.
-	 */
-	if (fd != mountsfd || readcount >= BUF_SIZE - filler_sz)
-		return (*old_read)(fd, buf, count);
+	mounts_fd = open("/proc/mounts", O_RDONLY);
+	tmp_mounts_fd = mkstemp(tmp_mounts);
+	if (mounts_fd < 0 || tmp_mounts_fd < 0)
+		FAIL("Unable to open /proc/mounts or %s", TMP_MOUNTS);
 
-	num_filler = (count < BUF_SIZE - readcount ?
-			count : BUF_SIZE - readcount) / filler_sz;
+	filler_sz = strlen(FILLER);
 
-	for (; num_filler > 0; num_filler--) {
-		memcpy(buf + out, FILLER, filler_sz);
-		out += filler_sz;
-		readcount += filler_sz;
+	while (written < BUF_SIZE) {
+		write(tmp_mounts_fd, FILLER, filler_sz);
+		written += filler_sz;
 	}
-	return (ssize_t)out;
+
+	while ((ret = read(mounts_fd, buf, BUF_SIZE)) > 0)
+		write(tmp_mounts_fd, buf, ret);
+
+	close(mounts_fd);
+	lseek(tmp_mounts_fd, 0, SEEK_SET);
 }
 
 int main(int argc, char *argv[])
 {
 	int fd;
 
+	make_test_mounts();
 	test_init(argc, argv);
-	filler_sz = strlen(FILLER);
-	check_hugepagesize();
+	in_test = 1;
 
 	fd = hugetlbfs_unlinked_fd();
 
