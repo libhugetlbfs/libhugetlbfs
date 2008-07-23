@@ -64,6 +64,8 @@ void print_usage()
 	OPTION("--bss", "Requests remapping of the program bss");
 	OPTION("--heap", "Requests remapping of the program heap");
 	CONT("(malloc space)");
+
+	OPTION("--no-preload", "Disable preloading the libhugetlbfs library");
 }
 
 int verbose_level = VERBOSITY_DEFAULT;
@@ -91,6 +93,9 @@ void setup_environment(char *var, char *val)
  * getopts return values for options which are long only.
  */
 #define MAP_BASE	0x1000
+#define LONG_BASE	0x2000
+
+#define LONG_NO_PRELOAD	(LONG_BASE | 'p')
 
 /*
  * Mapping selectors, one bit per remappable/backable area as requested
@@ -135,14 +140,26 @@ void setup_mappings(int which)
 		setup_environment("HUGETLB_MORECORE", "yes");
 }
 
+void ldpreload(int which)
+{
+	if (which == MAP_HEAP) {
+		setup_environment("LD_PRELOAD", "libhugetlbfs.so");
+		WARNING("LD_PRELOAD in use for lone --heap\n");
+	} else {
+		DEBUG("LD_PRELOAD not appropriate for this map combination\n");
+	}
+}
+
 int main(int argc, char** argv)
 {
 	int opt_mappings = 0;
+	int opt_preload = 1;
 
 	char opts[] = "+h";
 	int ret = 0, index = 0;
 	struct option long_opts[] = {
 		{"help",       no_argument, NULL, 'h'},
+		{"no-preload", no_argument, NULL, LONG_NO_PRELOAD},
 
 		{"disable",    no_argument, NULL, MAP_BASE|MAP_DISABLE},
 		{"text",       no_argument, NULL, MAP_BASE|MAP_TEXT},
@@ -170,6 +187,11 @@ int main(int argc, char** argv)
 			print_usage();
 			exit(EXIT_SUCCESS);
 
+		case LONG_NO_PRELOAD:
+			opt_preload = 0;
+			DEBUG("LD_PRELOAD disabled\n");
+			break;
+
 		default:
 			WARNING("unparsed option %08x\n", ret);
 			ret = -1;
@@ -186,6 +208,9 @@ int main(int argc, char** argv)
 
 	if (opt_mappings)
 		setup_mappings(opt_mappings);
+
+	if (opt_preload)
+		ldpreload(opt_mappings);
 
 	execvp(argv[index], &argv[index]);
 	ERROR("exec failed: %s\n", strerror(errno));
