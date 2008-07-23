@@ -1068,12 +1068,15 @@ static void remap_segments(struct seg_info *seg, int num)
 		mmap_flags = MAP_PRIVATE|MAP_FIXED;
 
 		/*
-		 * If HUGETLB_SHARE is enabled and this is a read-only
-		 * segment, then use MAP_NORESERVE. The assumption is that
-		 * the pages already exist in the hugetlbfs file and that
-		 * mprotect() will not be called requiring a COW
+		 * If this is a read-only mapping whose contents are
+		 * entirely contained within the file, then use MAP_NORESERVE.
+		 * The assumption is that the pages already exist in the
+		 * page cache for the hugetlbfs file since it was prepared
+		 * earlier and that mprotect() will not be called which would
+		 * require a COW
 		 */
-		if (sharing && !(seg[i].prot & PROT_WRITE))
+		if (!(seg[i].prot & PROT_WRITE) &&
+				seg[i].filesz == seg[i].memsz)
 			mmap_flags |= MAP_NORESERVE;
 
 		p = mmap((void *) start, mapsize, seg[i].prot,
