@@ -66,8 +66,11 @@ void print_usage()
 	CONT("(malloc space)");
 
 	OPTION("--no-preload", "Disable preloading the libhugetlbfs library");
+
+	OPTION("--dry-run", "describe what would be done without doing it");
 }
 
+int opt_dry_run = 0;
 int verbose_level = VERBOSITY_DEFAULT;
 
 void verbose_init(void)
@@ -86,6 +89,9 @@ void setup_environment(char *var, char *val)
 {
 	setenv(var, val, 1);
 	DEBUG("%s='%s'\n", var, val);
+
+	if (opt_dry_run)
+		printf("%s='%s'\n", var, val);
 }
 
 
@@ -96,6 +102,8 @@ void setup_environment(char *var, char *val)
 #define LONG_BASE	0x2000
 
 #define LONG_NO_PRELOAD	(LONG_BASE | 'p')
+
+#define LONG_DRY_RUN	(LONG_BASE | 'd')
 
 /*
  * Mapping selectors, one bit per remappable/backable area as requested
@@ -160,6 +168,7 @@ int main(int argc, char** argv)
 	struct option long_opts[] = {
 		{"help",       no_argument, NULL, 'h'},
 		{"no-preload", no_argument, NULL, LONG_NO_PRELOAD},
+		{"dry-run",    no_argument, NULL, LONG_DRY_RUN},
 
 		{"disable",    no_argument, NULL, MAP_BASE|MAP_DISABLE},
 		{"text",       no_argument, NULL, MAP_BASE|MAP_TEXT},
@@ -192,6 +201,10 @@ int main(int argc, char** argv)
 			DEBUG("LD_PRELOAD disabled\n");
 			break;
 
+		case LONG_DRY_RUN:
+			opt_dry_run = 1;
+			break;
+
 		default:
 			WARNING("unparsed option %08x\n", ret);
 			ret = -1;
@@ -201,7 +214,7 @@ int main(int argc, char** argv)
 	index = optind;
 	opt_mappings &= ~MAP_BASE;
 
-	if ((argc - index) < 1) {
+	if (!opt_dry_run && (argc - index) < 1) {
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
@@ -211,6 +224,9 @@ int main(int argc, char** argv)
 
 	if (opt_preload)
 		ldpreload(opt_mappings);
+
+	if (opt_dry_run)
+		exit(EXIT_SUCCESS);
 
 	execvp(argv[index], &argv[index]);
 	ERROR("exec failed: %s\n", strerror(errno));
