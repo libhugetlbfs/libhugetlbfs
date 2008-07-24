@@ -40,11 +40,15 @@ extern int errno;
 extern int optind;
 extern char *optarg;
 
+#define OPTION(opts, text)	fprintf(stderr, " %-25s  %s\n", opts, text)
+#define CONT(text) 		fprintf(stderr, " %-25s  %s\n", "", text)
+
 void print_usage()
 {
 	fprintf(stderr, "hugectl [options] target\n");
 	fprintf(stderr, "options:\n");
-	fprintf(stderr, " --help,                   -h          Prints this message.\n");
+
+	OPTION("--help, -h", "Prints this message");
 }
 
 int main(int argc, char** argv)
