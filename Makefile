@@ -2,9 +2,9 @@ PREFIX = /usr/local
 EXEDIR = /bin
 
 LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o alloc.o
-OBJS = hugectl.o
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
-INSTALL_OBJ = hugectl
+BIN_OBJ_DIR=obj
+INSTALL_BIN = hugectl
 INSTALL_HEADERS = hugetlbfs.h
 LDSCRIPT_TYPES = B BDT
 LDSCRIPT_DIST_ELF = elf32ppclinux elf64ppc elf_i386 elf_x86_64
@@ -139,7 +139,7 @@ tests:	tests/all
 tests/%:
 	$(MAKE) -C tests $*
 
-tools:  $(INSTALL_OBJ)
+tools:  $(foreach file,$(INSTALL_BIN),$(BIN_OBJ_DIR)/$(file))
 
 check:	all
 	cd tests; ./run_tests.sh
@@ -230,15 +230,15 @@ $(OBJS):	hugectl.c
 	@$(VECHO) CPP $@
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-$(INSTALL_OBJ):	$(OBJS)
+$(INSTALL_BIN:%=$(BIN_OBJ_DIR)/%): $(BIN_OBJ_DIR)/%: %.c
 	@$(VECHO) CC $@
-	$(CC) $(CFLAGS) -o $@ $<
+	mkdir -p $(BIN_OBJ_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^
 
 clean:
 	@$(VECHO) CLEAN
 	rm -f *~ *.o *.so *.a *.d *.i core a.out $(VERSION)
 	rm -rf obj*
-	rm -f $(OBJ) $(INSTALL_OBJ)
 	rm -f ldscripts/*~
 	rm -f libhugetlbfs-sock
 	$(MAKE) -C tests clean
@@ -275,7 +275,9 @@ install: libs tools $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	$(INSTALL) -m 644 $(INSTALL_LDSCRIPTS:%=ldscripts/%) $(DESTDIR)$(LDSCRIPTDIR)
 	$(INSTALL) -d $(DESTDIR)$(BINDIR)
 	$(INSTALL) -d $(DESTDIR)$(EXEDIR)
-	$(INSTALL) -m 755 $(INSTALL_OBJ) $(DESTDIR)$(EXEDIR)
+	@$(VECHO) INSTALLBIN $(DESTDIR)$(EXEDIR)
+	for x in $(INSTALL_BIN); do \
+		$(INSTALL) -m 755 $(BIN_OBJ_DIR)/$$x $(DESTDIR)$(EXEDIR); done
 	for x in $(INSTALL_OBJSCRIPT); do \
 		$(INSTALL) -m 755 objscript.$$x $(DESTDIR)$(BINDIR)/$$x; done
 	cd $(DESTDIR)$(BINDIR) && ln -sf ld.hugetlbfs ld
