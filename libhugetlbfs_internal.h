@@ -48,6 +48,7 @@ extern void __hugetlbfs_setup_morecore();
 extern void __hugetlbfs_setup_debug();
 extern char __hugetlbfs_hostname[];
 
+#ifndef REPORT
 #define REPORT(level, prefix, format, ...) \
 	do { \
 		if (__hugetlbfs_debug || __hugetlbfs_verbose >= level) { \
@@ -65,6 +66,7 @@ extern char __hugetlbfs_hostname[];
 			fflush(stderr); \
 		} \
 	} while (0)
+#endif
 
 #include "libhugetlbfs_debug.h"
 
