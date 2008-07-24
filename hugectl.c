@@ -36,6 +36,15 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#define REPORT(level, prefix, format, ...)				      \
+	do {								      \
+		if (verbose_level >= level)				      \
+			fprintf(stderr, "hugectl: " prefix ": " format,	      \
+				##__VA_ARGS__);				      \
+	} while (0);
+
+#include "libhugetlbfs_debug.h"
+
 extern int errno;
 extern int optind;
 extern char *optarg;
@@ -51,6 +60,20 @@ void print_usage()
 	OPTION("--help, -h", "Prints this message");
 }
 
+int verbose_level = VERBOSITY_DEFAULT;
+
+void verbose_init(void)
+{
+	char *env;
+
+	env = getenv("HUGETLB_VERBOSE");
+	if (env)
+		verbose_level = atoi(env);
+	env = getenv("HUGETLB_DEBUG");
+	if (env)
+		verbose_level = VERBOSITY_MAX;
+}
+
 int main(int argc, char** argv)
 {
 	char opts[] = "+h";
@@ -59,6 +82,8 @@ int main(int argc, char** argv)
 		{"help",       no_argument, NULL, 'h'},
 		{0},
 	};
+
+	verbose_init();
 
 	while (ret != -1) {
 		ret = getopt_long(argc, argv, opts, long_opts, &index);
@@ -72,7 +97,7 @@ int main(int argc, char** argv)
 			exit(EXIT_SUCCESS);
 
 		default:
-			fprintf(stderr, "unparsed option %08x\n", ret);
+			WARNING("unparsed option %08x\n", ret);
 			ret = -1;
 			break;
 		}
@@ -85,6 +110,6 @@ int main(int argc, char** argv)
 	}
 
 	execvp(argv[index], &argv[index]);
-	fprintf(stderr, "Error calling execvp: '%s'\n", strerror(errno));
+	ERROR("exec failed: %s\n", strerror(errno));
 	exit(EXIT_FAILURE);
 }
