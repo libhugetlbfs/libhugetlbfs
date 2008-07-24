@@ -60,11 +60,15 @@ int main(int argc, char** argv)
 		ret = getopt_long(argc, argv, opts, long_opts, &index);
 		switch (ret) {
 		case '?':
+			print_usage();
+			exit(EXIT_FAILURE);
+
 		case 'h':
 			print_usage();
-			exit(1);
+			exit(EXIT_SUCCESS);
 
 		default:
+			fprintf(stderr, "unparsed option %08x\n", ret);
 			ret = -1;
 			break;
 		}
@@ -73,10 +77,10 @@ int main(int argc, char** argv)
 
 	if ((argc - index) < 1) {
 		print_usage();
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	execvp(argv[index], &argv[index]);
 	fprintf(stderr, "Error calling execvp: '%s'\n", strerror(errno));
-	exit(1);
+	exit(EXIT_FAILURE);
 }
