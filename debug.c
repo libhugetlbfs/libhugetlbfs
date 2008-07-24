@@ -27,7 +27,7 @@
 
 #include "libhugetlbfs_internal.h"
 
-int __hugetlbfs_verbose = 1;
+int __hugetlbfs_verbose = VERBOSITY_DEFAULT;
 int __hugetlbfs_debug = 0;
 int __hugetlbfs_prefault = 1;
 char __hugetlbfs_hostname[64];

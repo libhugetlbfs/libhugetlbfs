@@ -27,4 +27,7 @@
 #define DEBUG(...)		REPORT(3, "DEBUG", ##__VA_ARGS__)
 #define DEBUG_CONT(...)		REPORT_CONT(3, "DEBUG", ##__VA_ARGS__)
 
+#define VERBOSITY_MAX 3
+#define VERBOSITY_DEFAULT 1
+
 #endif
