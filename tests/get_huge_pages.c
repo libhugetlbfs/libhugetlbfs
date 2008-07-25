@@ -25,6 +25,14 @@
 
 #include "hugetests.h"
 
+/* Confirm a region really frees, only really important for GHP_FALLBACK */
+void free_and_confirm_region_free(void *p, int line) {
+	unsigned char vec = 0;
+	free_huge_pages(p);
+	if (mincore(p, 4, &vec) == 0 || vec)
+		FAIL("free_huge_pages did not free region at line %d", line);
+}
+
 void test_get_huge_pages(int num_hugepages)
 {
 	int err;
@@ -39,10 +47,58 @@ void test_get_huge_pages(int num_hugepages)
 	if (err != 1)
 		FAIL("Returned page is not hugepage");
 
-	free_huge_pages(p);
+	free_and_confirm_region_free(p, __LINE__);
 	err = test_addr_huge(p);
 	if (err == 1)
 		FAIL("hugepage was not correctly freed");
+}
+
+void test_GHP_FALLBACK(void)
+{
+	int err;
+	long hpage_size = check_hugepagesize();
+	long rsvd_hugepages = read_meminfo("HugePages_Rsvd:");
+	long num_hugepages = read_meminfo("HugePages_Total:") - rsvd_hugepages;
+
+	/* We should be able to allocate the whole pool */
+	void *p = get_huge_pages(num_hugepages * hpage_size, GHP_DEFAULT);
+	if (p == NULL)
+		FAIL("test_GHP_FALLBACK(GHP_DEFAULT) failed for %ld hugepages",
+			num_hugepages);
+	memset(p, 1, hpage_size);
+	err = test_addr_huge(p + (num_hugepages - 1) * hpage_size);
+	if (err != 1)
+		FAIL("Returned page is not hugepage");
+	free_and_confirm_region_free(p, __LINE__);
+
+	/* We should fail allocating too much */
+	num_hugepages++;
+	p = get_huge_pages(num_hugepages * hpage_size, GHP_DEFAULT);
+	if (p != NULL)
+		FAIL("test_GHP_FALLBACK() for %ld expected fail, got success", num_hugepages);
+
+	/* GHP_FALLBACK should succeed by allocating base pages */
+	p = get_huge_pages(num_hugepages * hpage_size, GHP_FALLBACK);
+	if (p == NULL)
+		FAIL("test_GHP_FALLBACK(GHP_FALLBACK) failed for %ld hugepages",
+			num_hugepages);
+	memset(p, 1, hpage_size);
+	err = test_addr_huge(p + (num_hugepages - 1) * hpage_size);
+	if (err == 1)
+		FAIL("Returned page is not a base page");
+
+	/*
+	 * We allocate a second fallback region to see can they be told apart
+	 * on free. Merging VMAs would cause problems
+	 */
+	void *pb = get_huge_pages(num_hugepages * hpage_size, GHP_FALLBACK);
+	if (pb == NULL)
+		FAIL("test_GHP_FALLBACK(GHP_FALLBACK) x2 failed for %ld hugepages",
+			num_hugepages);
+	memset(pb, 1, hpage_size);
+
+	free_and_confirm_region_free(pb, __LINE__);
+	free_and_confirm_region_free(p, __LINE__);
 }
 
 int main(int argc, char *argv[])
@@ -51,6 +107,7 @@ int main(int argc, char *argv[])
 	check_free_huge_pages(4);
 	test_get_huge_pages(1);
 	test_get_huge_pages(4);
+	test_GHP_FALLBACK();
 
 	PASS();
 }

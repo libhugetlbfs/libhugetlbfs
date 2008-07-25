@@ -38,8 +38,11 @@ long dump_proc_pid_maps(void);
  *
  * GHP_DEFAULT - Use a combination of flags deemed to be a sensible default
  * 		by the current implementation of the library
+ * GHP_FALLBACK - Use the default hugepage size if possible but fallback to
+ * 		smaller pages if necessary
  */
 typedef unsigned long ghp_t;
+#define GHP_FALLBACK	(0x01UL)
 #define GHP_DEFAULT	(0)
 
 /* Direct alloc functions */

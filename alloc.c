@@ -18,6 +18,7 @@
  */
 
 #define _GNU_SOURCE
+#include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +29,39 @@
 
 #include "hugetlbfs.h"
 #include "libhugetlbfs_internal.h"
+
+/* Allocate base pages if huge page allocation fails */
+static void *fallback_base_pages(size_t len, ghp_t flags)
+{
+	int fd;
+	void *buf;
+	DEBUG("get_huge_pages: Falling back to base pages\n");
+
+	/*
+	 * Map /dev/zero instead of MAP_ANONYMOUS avoid VMA mergings. Freeing
+	 * pages depends on /proc/pid/maps to find lengths of allocations.
+	 * This is a bit lazy and if found to be costly due to either the
+	 * extra open() or virtual address space usage, we could track active
+	 * mappings in a lock-protected list instead.
+	 */
+	fd = open("/dev/zero", O_RDWR);
+	if (fd == -1) {
+		ERROR("get_huge_pages: Failed to open /dev/zero for fallback");
+		return NULL;
+	}
+
+	buf = mmap(NULL, len,
+			PROT_READ|PROT_WRITE,
+			MAP_PRIVATE,
+			fd, 0);
+	if (buf == MAP_FAILED) {
+		WARNING("Base page fallback failed: %s\n", strerror(errno));
+		buf = NULL;
+	}
+	close(fd);
+
+	return buf;
+}
 
 /**
  * get_huge_pages - Allocate an amount of memory backed by huge pages
@@ -58,7 +92,13 @@ void *get_huge_pages(size_t len, ghp_t flags)
 		 MAP_PRIVATE, heap_fd, len);
 	if (buf == MAP_FAILED) {
 		close(heap_fd);
-		WARNING("New heap segment map failed: %s\n", strerror(errno));
+
+		/* Try falling back to base pages if allowed */
+		if (flags & GHP_FALLBACK)
+			return fallback_base_pages(len, flags);
+
+		WARNING("get_huge_pages: New region mapping failed (flags: 0x%lX): %s\n",
+			flags, strerror(errno));
 		return NULL;
 	}
 
