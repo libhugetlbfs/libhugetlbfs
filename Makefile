@@ -63,7 +63,15 @@ CC64 = gcc -m64
 LIB64 = lib64
 CFLAGS += -DNO_ELFLINK
 else
+ifeq ($(ARCH),s390x)
+CC64 = gcc -m64
+CC32 = gcc -m31
+LIB64 = lib64
+LIB32 = lib
+CFLAGS += -DNO_ELFLINK
+else
 $(error "Unrecognized architecture ($(ARCH))")
+endif
 endif
 endif
 endif
