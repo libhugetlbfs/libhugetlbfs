@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <limits.h>
 
 #define _GNU_SOURCE /* for getopt_long */
 #include <unistd.h>
@@ -68,6 +69,16 @@ void print_usage()
 	OPTION("--no-preload", "Disable preloading the libhugetlbfs library");
 
 	OPTION("--dry-run", "describe what would be done without doing it");
+
+	OPTION("--library-path <path>", "Select a library prefix");
+	CONT("(Default: "
+#ifdef LIBDIR32
+		LIBDIR32 ":"
+#endif
+#ifdef LIBDIR32
+		LIBDIR32 ":"
+#endif
+		")");
 }
 
 int opt_dry_run = 0;
@@ -104,6 +115,8 @@ void setup_environment(char *var, char *val)
 #define LONG_NO_PRELOAD	(LONG_BASE | 'p')
 
 #define LONG_DRY_RUN	(LONG_BASE | 'd')
+
+#define LONG_LIBRARY	(LONG_BASE | 'l')
 
 /*
  * Mapping selectors, one bit per remappable/backable area as requested
@@ -148,6 +161,60 @@ void setup_mappings(int which)
 		setup_environment("HUGETLB_MORECORE", "yes");
 }
 
+void library_path(char *path)
+{
+	char val[NAME_MAX] = "";
+	char *env;
+
+	env = getenv("LD_LIBRARY_PATH");
+
+	/*
+	 * Select which libraries we wish to use.  If the path is NULL
+	 * use the libraries included with hugectl.  If the path is valid
+	 * and points to a directory including a libhugetlbfs.so use it
+	 * directly.  Else path is assumed to be a prefix to the 32/64 bit
+	 * directories both of which are added, where available.
+	 */
+	if (path) {
+		snprintf(val, sizeof(val), "%s/libhugetlbfs.so", path);
+		if (access(val, F_OK) == 0) {
+			/* $PATH */
+			snprintf(val, sizeof(val), "%s:%s",
+				path, env ? env : "");
+
+		} else {
+			/* [$PATH/LIB32:][$PATH/LIB64:]$LD_LIBRARY_PATH */
+			snprintf(val, sizeof(val), ""
+#ifdef LIBDIR32
+				"%s/" LIB32 ":"
+#endif
+#ifdef LIBDIR64
+				"%s/" LIB64 ":"
+#endif
+				"%s",
+#ifdef LIBDIR32
+				path,
+#endif
+#ifdef LIBDIR64
+				path,
+#endif
+				env ? env : "");
+		}
+
+	} else {
+		/* [LIBDIR32:][LIBDIR64:]$LD_LIBRARY_PATH */
+		snprintf(val, sizeof(val), ""
+#ifdef LIBDIR32
+			LIBDIR32 ":"
+#endif
+#ifdef LIBDIR64
+			LIBDIR64 ":"
+#endif
+			"%s", env ? env : "");
+	}
+	setup_environment("LD_LIBRARY_PATH", val);
+}
+
 void ldpreload(int which)
 {
 	if (which == MAP_HEAP) {
@@ -162,6 +229,7 @@ int main(int argc, char** argv)
 {
 	int opt_mappings = 0;
 	int opt_preload = 1;
+	char *opt_library = NULL;
 
 	char opts[] = "+h";
 	int ret = 0, index = 0;
@@ -169,6 +237,8 @@ int main(int argc, char** argv)
 		{"help",       no_argument, NULL, 'h'},
 		{"no-preload", no_argument, NULL, LONG_NO_PRELOAD},
 		{"dry-run",    no_argument, NULL, LONG_DRY_RUN},
+		{"library-path",
+			       required_argument, NULL, LONG_LIBRARY},
 
 		{"disable",    no_argument, NULL, MAP_BASE|MAP_DISABLE},
 		{"text",       no_argument, NULL, MAP_BASE|MAP_TEXT},
@@ -205,6 +275,10 @@ int main(int argc, char** argv)
 			opt_dry_run = 1;
 			break;
 
+		case LONG_LIBRARY:
+			opt_library = optarg;
+			break;
+
 		default:
 			WARNING("unparsed option %08x\n", ret);
 			ret = -1;
@@ -218,6 +292,8 @@ int main(int argc, char** argv)
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
+
+	library_path(opt_library);
 
 	if (opt_mappings)
 		setup_mappings(opt_mappings);

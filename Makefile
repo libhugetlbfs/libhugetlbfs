@@ -109,6 +109,13 @@ BINDIR = $(PREFIX)/share/libhugetlbfs
 EXEDIR = $(PREFIX)/bin
 DOCDIR = $(PREFIX)/share/doc/libhugetlbfs
 
+ifdef LIB32
+LIBPATHS += -DLIB32='"$(LIB32)"' -DLIBDIR32='"$(LIBDIR32)"'
+endif
+ifdef LIB64
+LIBPATHS += -DLIB64='"$(LIB64)"' -DLIBDIR64='"$(LIBDIR64)"'
+endif
+
 EXTRA_DIST = \
 	README \
 	HOWTO \
@@ -237,7 +244,7 @@ obj64/%.s:	%.c
 $(INSTALL_BIN:%=$(BIN_OBJ_DIR)/%): $(BIN_OBJ_DIR)/%: %.c
 	@$(VECHO) CC $@
 	mkdir -p $(BIN_OBJ_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
 
 clean:
 	@$(VECHO) CLEAN
