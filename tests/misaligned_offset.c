@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
 	/* First get arena of three hpages size, at file offset 4GB */
 	p = mmap(NULL, 2*hpage_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap() offset 4GB");
+		FAIL("mmap() offset 4GB: %s", strerror(errno));
 	verbose_printf("%p-%p\n", p, p+2*hpage_size-1);
 
 	verbose_printf("Free hugepages: %lld\n", read_free());
@@ -119,7 +119,8 @@ int main(int argc, char *argv[])
 	 * can get thrown away by a pud_clear() */
 	err = mprotect(p, hpage_size, PROT_READ);
 	if (err)
-		FAIL("mprotect(%p, 0x%lx, PROT_READ)", p, hpage_size);
+		FAIL("mprotect(%p, 0x%lx, PROT_READ): %s", p, hpage_size,
+							strerror(errno));
 
 	/* Replace top hpage by hpage mapping at confusing file offset */
 	buggy_offset = page_size;
@@ -128,7 +129,7 @@ int main(int argc, char *argv[])
 	q = mmap(p + hpage_size, hpage_size, PROT_READ|PROT_WRITE,
 		 MAP_FIXED|MAP_PRIVATE, fd, buggy_offset);
 	if (q != MAP_FAILED)
-		FAIL("bogus offset mmap() succeeded at %p\n", q);
+		FAIL("bogus offset mmap() succeeded at %p: %s", q, strerror(errno));
 	if (errno != EINVAL)
 		FAIL("bogus mmap() failed with \"%s\" instead of \"%s\"",
 		     strerror(errno), strerror(EINVAL));

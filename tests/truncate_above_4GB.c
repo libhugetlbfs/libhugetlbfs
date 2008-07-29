@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 	q = mmap64(NULL, 3*hpage_size, PROT_READ|PROT_WRITE,
 		 MAP_PRIVATE, fd, truncate_point);
 	if (q == MAP_FAILED)
-		FAIL("mmap() offset 4GB");
+		FAIL("mmap() offset 4GB: %s", strerror(errno));
 	verbose_printf("mapped at %p\n", q);
 	qi = q;
 	/* Touch the high page */
@@ -141,14 +141,14 @@ int main(int argc, char *argv[])
 
 	err = sigaction(SIGBUS, &sa_fail, NULL);
 	if (err)
-		FAIL("sigaction() fail");
+		FAIL("sigaction() fail: %s", strerror(errno));
 
 	if (*pi != 1)
 		FAIL("Data 1 has changed to %u", *pi);
 
 	err = sigaction(SIGBUS, &sa_pass, NULL);
 	if (err)
-		FAIL("sigaction() pass");
+		FAIL("sigaction() pass: %s", strerror(errno));
 
 	*qi;
 

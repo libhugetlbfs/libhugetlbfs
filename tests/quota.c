@@ -94,7 +94,8 @@ void get_quota_fs(unsigned long size)
 
 	sprintf(mountpoint, "/tmp/huge-XXXXXX");
 	if (!mkdtemp(mountpoint))
-		FAIL("Cannot create directory for mountpoint");
+		FAIL("Cannot create directory for mountpoint: %s",
+							strerror(errno));
 
 	if (mount("none", mountpoint, "hugetlbfs", 0, size_str)) {
 		perror("mount");
@@ -106,7 +107,8 @@ void get_quota_fs(unsigned long size)
 	 * will use this mountpoint.
 	 */
 	if (setenv("HUGETLB_PATH", mountpoint, 1))
-		FAIL("Cannot set HUGETLB_PATH environment variable");
+		FAIL("Cannot set HUGETLB_PATH environment variable: %s",
+							strerror(errno));
 
 	verbose_printf("Using %s as temporary mount point.\n", mountpoint);
 }
@@ -118,13 +120,13 @@ void map(unsigned long size, int mmap_flags, int action_flags)
 
 	fd = hugetlbfs_unlinked_fd();
 	if (!fd) {
-		verbose_printf("hugetlbfs_unlinked_fd () failed");
+		verbose_printf("hugetlbfs_unlinked_fd () failed\n");
 		exit(1);
 	}
 
 	a = mmap(0, size, PROT_READ|PROT_WRITE, mmap_flags, fd, 0);
 	if (a == MAP_FAILED) {
-		verbose_printf("mmap failed\n");
+		verbose_printf("mmap failed: %s\n", strerror(errno));
 		exit(1);
 	}
 
@@ -135,12 +137,12 @@ void map(unsigned long size, int mmap_flags, int action_flags)
 
 	if (action_flags & ACTION_COW) {
 		c = mmap(0, size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
-		if ((*c) !=  1) {
-			verbose_printf("Data mismatch when setting up COW");
+		if (c == MAP_FAILED) {
+			verbose_printf("Creating COW mapping failed: %s\n", strerror(errno));
 			exit(1);
 		}
-		if (c == MAP_FAILED) {
-			verbose_printf("Creating COW mapping failed");
+		if ((*c) !=  1) {
+			verbose_printf("Data mismatch when setting up COW");
 			exit(1);
 		}
 		(*c) = 0;
@@ -169,7 +171,7 @@ void _spawn(int l, int expected_result, unsigned long size, int mmap_flags,
 		map(size, mmap_flags, action_flags);
 		exit(0);
 	} else if (pid < 0) {
-		FAIL("fork()");
+		FAIL("fork(): %s", strerror(errno));
 	} else {
 		waitpid(pid, &status, 0);
 		if (WIFEXITED(status)) {

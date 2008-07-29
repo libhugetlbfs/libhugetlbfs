@@ -153,7 +153,7 @@ static void test_once(int fd)
 	p = mmap(NULL, 2*hpage_size, PROT_READ|PROT_WRITE|PROT_EXEC,
 		 MAP_SHARED, fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap() 1");
+		FAIL("mmap() 1: %s", strerror(errno));
 
 	ftruncate(fd, hpage_size);
 
@@ -165,7 +165,7 @@ static void test_once(int fd)
 	p = mmap(p, hpage_size, PROT_READ|PROT_WRITE|PROT_EXEC,
 		 MAP_SHARED|MAP_FIXED, fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap() 2");
+		FAIL("mmap() 2: %s", strerror(errno));
 
 	q = p + hpage_size - COPY_SIZE;
 	sig_expected = q;
@@ -192,15 +192,15 @@ int main(int argc, char *argv[])
 
 	err = sigaction(SIGILL, &sa, NULL);
 	if (err)
-		FAIL("Can't install SIGILL handler");
+		FAIL("Can't install SIGILL handler: %s", strerror(errno));
 
 	err = sigaction(SIGBUS, &sa, NULL);
 	if (err)
-		FAIL("Can't install SIGBUS handler");
+		FAIL("Can't install SIGBUS handler: %s", strerror(errno));
 
 	err = sigaction(SIGSEGV, &sa, NULL);
 	if (err)
-		FAIL("Can't install SIGSEGV handler");
+		FAIL("Can't install SIGSEGV handler: %s", strerror(errno));
 
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)

@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED,
 		 fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap()");
+		FAIL("mmap(): %s", strerror(errno));
 
 	q = p;
 	for (i = 0; i < (hpage_size / sizeof(*q)); i++) {

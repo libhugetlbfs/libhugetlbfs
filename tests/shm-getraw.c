@@ -69,8 +69,7 @@ int main(int argc, char ** argv)
 
 	buffer = malloc(hpage_size*sizeof(char));
 	if (!buffer)
-		FAIL("malloc(%li): %s", hpage_size*sizeof(char),
-			strerror(errno));
+		FAIL("malloc(%li)", hpage_size*sizeof(char));
 
 	raw_fd = open(argv[2], O_RDONLY);
 	if (!raw_fd)

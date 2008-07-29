@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED,
 		 fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap()");
+		FAIL("mmap(): %s", strerror(errno));
 
 	q = p;
 
@@ -65,12 +65,12 @@ int main(int argc, char *argv[])
 
 	err = sigaction(SIGBUS, &sa, NULL);
 	if (err)
-		FAIL("sigaction()");
+		FAIL("sigaction(): %s", strerror(errno));
 
 
 	err = ftruncate(fd, 0);
 	if (err)
-		FAIL("ftruncate()");
+		FAIL("ftruncate(): %s", strerror(errno));
 
 	*q;
 

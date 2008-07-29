@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 
 	err = sigaction(SIGSEGV, &sa, NULL);
 	if (err)
-		FAIL("Can't install SIGSEGV handler");
+		FAIL("Can't install SIGSEGV handler: %s", strerror(errno));
 
 	hpage_size = check_hugepagesize();
 

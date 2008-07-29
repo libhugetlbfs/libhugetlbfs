@@ -43,7 +43,7 @@ static unsigned long find_last_mapped(void)
 
 	f = fopen("/proc/self/maps", "r");
 	if (!f) {
-		ERROR("Failed to open /proc/self/maps\n");
+		ERROR("Failed to open /proc/self/maps: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -54,6 +54,9 @@ static unsigned long find_last_mapped(void)
 
 	verbose_printf("Last map: %s", line);
 	ret = sscanf(line, "%lx-%lx %*s %lx %*s %ld %*s", &start, &end, &off, &ino);
+	if (ret == EOF)
+		FAIL("Couldn't parse /proc/self/maps line: %s: %s\n", line,
+							strerror(errno));
 	if (ret != 4)
 		FAIL("Couldn't parse /proc/self/maps line: %s\n", line);
 

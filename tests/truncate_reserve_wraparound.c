@@ -62,7 +62,8 @@ static unsigned long long read_reserved(void)
 
 	ret = fscanf(f, "HugePages_Rsvd: %llu", &count);
 	if (ret != 1)
-		CONFIG("Couldn't parse HugePages_Rsvd information");
+		CONFIG("Couldn't parse HugePages_Rsvd information: %s",
+							strerror(errno));
 
 	return count;
 }
@@ -95,7 +96,7 @@ int main(int argc, char *argv[])
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED,
 		 fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap()");
+		FAIL("mmap(): %s", strerror(errno));
 	q = p;
 
 	verbose_printf("Reserve count after map: %llu\n", read_reserved());
@@ -105,7 +106,7 @@ int main(int argc, char *argv[])
 
 	err = ftruncate(fd, 0);
 	if (err)
-		FAIL("ftruncate()");
+		FAIL("ftruncate(): %s", strerror(errno));
 
 	rsvd = read_reserved();
 	verbose_printf("Reserve count after truncate: %llu\n", rsvd);
@@ -115,7 +116,7 @@ int main(int argc, char *argv[])
 
 	err = sigaction(SIGBUS, &sa, NULL);
 	if (err)
-		FAIL("sigaction()");
+		FAIL("sigaction(): %s", strerror(errno));
 
 	if (sigsetjmp(sig_escape, 1) == 0)
 		*q; /* Fault, triggering a SIGBUS */

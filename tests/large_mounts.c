@@ -69,9 +69,11 @@ void make_test_mounts()
 	int filler_sz;
 
 	mounts_fd = open("/proc/mounts", O_RDONLY);
+	if (mounts_fd < 0)
+		FAIL("Unable to open /proc/mounts: %s", strerror(errno));
 	tmp_mounts_fd = mkstemp(tmp_mounts);
-	if (mounts_fd < 0 || tmp_mounts_fd < 0)
-		FAIL("Unable to open /proc/mounts or %s", TMP_MOUNTS);
+	if (tmp_mounts_fd < 0)
+		FAIL("Failed to create temporary file: %s", strerror(errno));
 
 	filler_sz = strlen(FILLER);
 

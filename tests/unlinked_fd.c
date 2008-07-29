@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED,
 		 fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap()");
+		FAIL("mmap(): %s", strerror(errno));
 
 	err = test_addr_huge(p);
 	if (err != 1)
@@ -51,10 +51,10 @@ int main(int argc, char *argv[])
 
 	err = munmap(p, hpage_size);
 	if (err != 0)
-		FAIL("munmap()");
+		FAIL("munmap(): %s", strerror(errno));
 
 	if (close(fd))
-		FAIL("close()");
+		FAIL("close(): %s", strerror(errno));
 
 	PASS();
 }

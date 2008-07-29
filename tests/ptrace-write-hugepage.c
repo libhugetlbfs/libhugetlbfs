@@ -65,8 +65,10 @@ static void child(int hugefd, int pipefd)
 	verbose_printf("Child mapped data at %p\n", p);
 
 	err = write(pipefd, &p, sizeof(p));
+	if (err == -1)
+		FAIL("Writing to pipe: %s", strerror(errno));
 	if (err != sizeof(p))
-		FAIL("Writing to pipe");
+		FAIL("Short write to pipe");
 
 	pause();
 }
@@ -115,15 +117,15 @@ int main(int argc, char *argv[])
 
 	err = sigaction(SIGCHLD, &sa, &old_sa);
 	if (err)
-		FAIL("Can't install SIGCHLD handler");
+		FAIL("Can't install SIGCHLD handler: %s", strerror(errno));
 
 	err = pipe(pipefd);
 	if (err)
-		FAIL("pipe()");
+		FAIL("pipe(): %s", strerror(errno));
 
 	cpid = fork();
 	if (cpid < 0)
-		FAIL("fork()\n");
+		FAIL("fork(): %s", strerror(errno));
 
 
 	if (cpid == 0) {
@@ -133,8 +135,10 @@ int main(int argc, char *argv[])
 
 	/* Parent */
 	err = read(pipefd[0], &p, sizeof(p));
+	if (err == -1)
+		FAIL("Reading pipe: %s\n", strerror(errno));
 	if (err != sizeof(p))
-		FAIL("Reading pipe");
+		FAIL("Short read over pipe");
 
 	verbose_printf("Parent received address %p\n", p);
 
@@ -150,7 +154,7 @@ int main(int argc, char *argv[])
 
 	err = sigaction(SIGCHLD, &old_sa, NULL);
 	if (err)
-		FAIL("Clearing SIGCHLD handler");
+		FAIL("Clearing SIGCHLD handler: %s", strerror(errno));
 
 	ptrace(PTRACE_KILL, cpid, NULL, NULL);
 

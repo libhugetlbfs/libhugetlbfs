@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 	p = mmap((void *)lowaddr, hpage_size, PROT_READ|PROT_WRITE,
 		 MAP_SHARED|MAP_FIXED, fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap() huge");
+		FAIL("mmap() huge: %s", strerror(errno));
 	if (p != (void *)lowaddr)
 		FAIL("Wrong address with MAP_FIXED huge");
 	verbose_printf("done\n");
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 	q = mmap((void *)highaddr, page_size, PROT_READ|PROT_WRITE,
 		 MAP_SHARED|MAP_FIXED|MAP_ANONYMOUS, 0, 0);
 	if (q == MAP_FAILED)
-		FAIL("mmap() normal 1");
+		FAIL("mmap() normal 1: %s", strerror(errno));
 	if (q != (void *)highaddr)
 		FAIL("Wrong address with MAP_FIXED normal 2");
 	verbose_printf("done\n");
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 	q = mmap((void *)highaddr, page_size, PROT_READ|PROT_WRITE,
 		 MAP_SHARED|MAP_FIXED|MAP_ANONYMOUS, 0, 0);
 	if (q == MAP_FAILED)
-		FAIL("mmap() normal 2");
+		FAIL("mmap() normal 2: %s", strerror(errno));
 	if (q != (void *)highaddr)
 		FAIL("Wrong address with MAP_FIXED normal 2");
 	verbose_printf("done\n");

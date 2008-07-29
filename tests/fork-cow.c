@@ -80,8 +80,7 @@ int main(int argc, char ** argv)
 
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)
-		CONFIG("hugetlbfs_unlinked_fd() failed: %s\n",
-		       strerror(errno));
+		CONFIG("hugetlbfs_unlinked_fd() failed\n");
 
 	verbose_printf("Mapping hugepage area...");
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);

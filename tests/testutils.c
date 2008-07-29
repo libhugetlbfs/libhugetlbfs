@@ -74,10 +74,12 @@ void check_hugetlb_shm_group(void)
 
 	fd = open("/proc/sys/vm/hugetlb_shm_group", O_RDONLY);
 	if (fd < 0)
-		ERROR("Unable to open /proc/sys/vm/hugetlb_shm_group");
+		ERROR("Unable to open /proc/sys/vm/hugetlb_shm_group: %s",
+							strerror(errno));
 	ret = read(fd, &gid_buffer, sizeof(gid_buffer));
 	if (ret < 0)
-		ERROR("Unable to read /proc/sys/vm/hugetlb_shm_group");
+		ERROR("Unable to read /proc/sys/vm/hugetlb_shm_group: %s",
+							strerror(errno));
 	hugetlb_shm_group = atoi(gid_buffer);
 	close(fd);
 	if (hugetlb_shm_group != gid)
@@ -114,7 +116,7 @@ void test_init(int argc, char *argv[])
 
 	err = sigaction(SIGINT, &sa_int, NULL);
 	if (err)
-		FAIL("Can't install SIGINT handler");
+		FAIL("Can't install SIGINT handler: %s", strerror(errno));
 
 	if (getenv("QUIET_TEST"))
 		verbose_test = 0;
@@ -133,7 +135,7 @@ static int read_maps(unsigned long addr, char *buf)
 
 	f = fopen("/proc/self/maps", "r");
 	if (!f) {
-		ERROR("Failed to open /proc/self/maps\n");
+		ERROR("Failed to open /proc/self/maps: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -214,7 +216,7 @@ long read_meminfo(const char *tag)
 
 	fd = open("/proc/meminfo", O_RDONLY);
 	if (fd < 0) {
-		ERROR("Couldn't open /proc/meminfo (%s)\n", strerror(errno));
+		ERROR("Couldn't open /proc/meminfo: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -222,7 +224,7 @@ long read_meminfo(const char *tag)
 	readerr = errno;
 	close(fd);
 	if (len < 0) {
-		ERROR("Error reading /proc/meminfo (%s)\n", strerror(readerr));
+		ERROR("Error reading /proc/meminfo: %s\n", strerror(readerr));
 		return -1;
 	}
 	if (len == sizeof(buf)) {

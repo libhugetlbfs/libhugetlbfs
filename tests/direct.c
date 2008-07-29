@@ -52,41 +52,43 @@ int main(int argc, char *argv[])
 		FAIL("hugetlbfs_unlinked_fd()");
 
 	dfd = open(TMPFILE, O_CREAT|O_EXCL|O_DIRECT|O_RDWR, 0600);
-	if (dfd < 0) {
-		if (errno == EEXIST)
-			CONFIG("Temp file " TMPFILE " already exists");
-		else
-			CONFIG("Falied to open direct-IO file");
-	}
+	if (dfd < 0)
+		CONFIG("Failed to open direct-IO file: %s", strerror(errno));
 	unlink(TMPFILE);
 
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap hugetlbfs file");
+		FAIL("mmap hugetlbfs file: %s", strerror(errno));
 
 	memcpy(p, P0, 8);
 
 	/* Direct write from huge page */
 	ret = write(dfd, p, IOSZ);
+	if (ret == -1)
+		FAIL("Direct-IO write from huge page: %s", strerror(errno));
 	if (ret != IOSZ)
-		FAIL("Direct-IO write from huge page");
+		FAIL("Short direct-IO write from huge page");
 	if (lseek(dfd, 0, SEEK_SET) == -1)
-		FAIL("lseek");
+		FAIL("lseek: %s", strerror(errno));
 
 	/* Check for accuracy */
 	ret = read(dfd, buf, IOSZ);
+	if (ret == -1)
+		FAIL("Direct-IO read to normal memory: %s", strerror(errno));
 	if (ret != IOSZ)
-		FAIL("Direct-IO read to normal memory");
+		FAIL("Short direct-IO read to normal memory");
 	if (memcmp(P0, buf, 8))
 		FAIL("Memory mismatch after Direct-IO write");
 	if (lseek(dfd, 0, SEEK_SET) == -1)
-		FAIL("lseek");
+		FAIL("lseek: %s", strerror(errno));
 
 	/* Direct read to huge page */
 	memset(p, 0, IOSZ);
 	ret = read(dfd, p, IOSZ);
+	if (ret == -1)
+		FAIL("Direct-IO read to huge page: %s\n", strerror(errno));
 	if (ret != IOSZ)
-		FAIL("Direct-IO read to huge page");
+		FAIL("Short direct-IO read to huge page");
 
 	/* Check for accuracy */
 	if (memcmp(p, P0, 8))
@@ -94,6 +96,6 @@ int main(int argc, char *argv[])
 
 	close(dfd);
 	unlink(TMPFILE);
-	
+
 	PASS();
 }

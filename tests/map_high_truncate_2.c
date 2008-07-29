@@ -75,14 +75,14 @@ int main(int argc, char *argv[])
 	p = mmap(0, MAP_LENGTH + TRUNCATE_POINT, PROT_READ | PROT_WRITE,
 		 MAP_PRIVATE | MAP_NORESERVE, fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap() 1");
+		FAIL("mmap() 1: %s", strerror(errno));
 
 	munmap(p, 4*hpage_size + TRUNCATE_POINT);
 
 	q = mmap((void *)HIGH_ADDR, MAP_LENGTH, PROT_READ | PROT_WRITE,
 		 MAP_PRIVATE, fd, 0);
 	if (q == MAP_FAILED)
-		FAIL("mmap() 2");
+		FAIL("mmap() 2: %s", strerror(errno));
 
 	verbose_printf("High map at %p\n", q);
 
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 
 	err = ftruncate(fd, TRUNCATE_POINT);
 	if (err != 0)
-		FAIL("ftruncate()");
+		FAIL("ftruncate(): %s", strerror(errno));
 
 	if (q[0] != 1)
 		FAIL("data mismatch");

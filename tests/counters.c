@@ -86,11 +86,11 @@ void verify_dynamic_pool_support(void)
 
 	fd = open(DYNAMIC_SYSCTL, O_RDONLY);
 	if (fd < 0)
-		CONFIG("Unable to find %s: No dynamic hugetlb pool support?",
-				DYNAMIC_SYSCTL);
+		CONFIG("Unable to find %s: %s", DYNAMIC_SYSCTL,
+							strerror(errno));
 
 	if (read(fd, &value, 1) != 1)
-		FAIL("Unable to read %s", DYNAMIC_SYSCTL);
+		FAIL("Unable to read %s: %s", DYNAMIC_SYSCTL, strerror(errno));
 	if (value == '0')
 		CONFIG("Dynamic hugetlb pool support present, but disabled");
 	close(fd);
@@ -152,7 +152,8 @@ void _set_nr_hugepages(unsigned long count, int line)
 
 	f = fopen("/proc/sys/vm/nr_hugepages", "w");
 	if (!f)
-		CONFIG("Cannot open /proc/sys/vm/nr_hugepages for writing");
+		CONFIG("Cannot open /proc/sys/vm/nr_hugepages "
+					"for writing: %s", strerror(errno));
 
 	fprintf(f, "%lu", count);
 	fclose(f);

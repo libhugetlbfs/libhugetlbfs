@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 
 	ret = getrlimit(RLIMIT_STACK, &r);
 	if (ret)
-		CONFIG("getrlimit failed");
+		CONFIG("getrlimit failed: %s", strerror(errno));
 
 	if (r.rlim_cur != RLIM_INFINITY)
 		CONFIG("Stack rlimit must be 'unlimited'");
@@ -106,10 +106,10 @@ int main(int argc, char *argv[])
 	} while (b == MAP_FAILED);
 
 	if (b == MAP_FAILED)
-		FAIL("mmap");
+		FAIL("mmap: %s", strerror(errno));
 
 	if ((pid = fork()) < 0)
-		FAIL("fork");
+		FAIL("fork: %s", strerror(errno));
 
 	if (pid == 0) {
 		do_child(mmap_address);
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 
 	ret = waitpid(pid, &s, 0);
 	if (ret == -1)
-		FAIL("waitpid");
+		FAIL("waitpid: %s", strerror(errno));
 
 	/*
 	 * The child grows its stack until a failure occurs.  We expect

@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED,
 		 fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap() SHARED");
+		FAIL("mmap() SHARED: %s", strerror(errno));
 
 	pl = p;
 	for (i = 0; i < (hpage_size / sizeof(*pl)); i++) {
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 	q = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_PRIVATE,
 		 fd, 0);
 	if (q == MAP_FAILED)
-		FAIL("mmap() PRIVATE");
+		FAIL("mmap() PRIVATE: %s", strerror(errno));
 
 	ql = q;
 	for (i = 0; i < (hpage_size / sizeof(*ql)); i++) {

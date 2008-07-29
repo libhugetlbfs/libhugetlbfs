@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap()");
+		FAIL("mmap(): %s", strerror(errno));
 
 	err = sched_setaffinity(getpid(), CPU_SETSIZE/8, &cpu0);
 	if (err != 0)

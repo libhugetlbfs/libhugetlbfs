@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 	p = mmap((void *)straddle_addr, 2*hpage_size, PROT_READ|PROT_WRITE,
 		 MAP_SHARED|MAP_FIXED, fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap() FIXED");
+		FAIL("mmap() FIXED: %s", strerror(errno));
 	if (p != (void *)straddle_addr) {
 		verbose_printf("got %p instead\n", p);
 		FAIL("Wrong address with MAP_FIXED");

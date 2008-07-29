@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 	 * bad addresses and so forth */
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
 	if (p == MAP_FAILED)
-		FAIL("mmap() without hint failed");
+		FAIL("mmap() without hint failed: %s", strerror(errno));
 	if (((unsigned long)p % hpage_size) != 0)
 		FAIL("mmap() without hint at misaligned address");
 
@@ -69,20 +69,20 @@ int main(int argc, char *argv[])
 
 	err = munmap(p, hpage_size);
 	if (err != 0)
-		FAIL("munmap() without hint failed");
+		FAIL("munmap() without hint failed: %s", strerror(errno));
 
 	/* 1) Try a misaligned hint address */
 	q = mmap(p + page_size, hpage_size, PROT_READ|PROT_WRITE,
 		 MAP_PRIVATE, fd, 0);
 	if (q == MAP_FAILED)
 		/* Bad hint shouldn't fail, just ignore the hint */
-		FAIL("mmap() with hint failed");
+		FAIL("mmap() with hint failed: %s", strerror(errno));
 	if (((unsigned long)q % hpage_size) != 0)
 		FAIL("mmap() with hint at misaligned address");
 
 	err = munmap(q, hpage_size);
 	if (err != 0)
-		FAIL("munmap() with hint failed");
+		FAIL("munmap() with hint failed: %s", strerror(errno));
 
 	/* 2) Try a misaligned address with MAP_FIXED */
 	q = mmap(p + page_size, hpage_size, PROT_READ|PROT_WRITE,
