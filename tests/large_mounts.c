@@ -35,10 +35,10 @@
 
 #define BUF_SIZE 4096
 #define FILLER "tmpfs /var/run tmpfs rw,nosuid,nodev,noexec,mode=755 0 0\n"
-#define TMP_MOUNTS "hugetlbfs_large_mounts-XXXXXX"
 
 int in_test; /* = 0; */
 int tmp_mounts_fd; /* = 0; */
+FILE *tmp_stream; /* = NULL; */
 
 /*
  * We override the normal open, so we can remember the fd for the
@@ -62,7 +62,6 @@ int open(const char *path, int flags, ...)
 void make_test_mounts()
 {
 	char buf[BUF_SIZE];
-	char tmp_mounts[] = TMP_MOUNTS;
 	int mounts_fd;
 	unsigned int written = 0;
 	int ret;
@@ -71,9 +70,11 @@ void make_test_mounts()
 	mounts_fd = open("/proc/mounts", O_RDONLY);
 	if (mounts_fd < 0)
 		FAIL("Unable to open /proc/mounts: %s", strerror(errno));
-	tmp_mounts_fd = mkstemp(tmp_mounts);
-	if (tmp_mounts_fd < 0)
-		FAIL("Failed to create temporary file: %s", strerror(errno));
+	tmp_stream = tmpfile();
+	if (!tmp_stream)
+		FAIL("Unable to open temporary mounts file\n");
+
+	tmp_mounts_fd = fileno(tmp_stream);
 
 	filler_sz = strlen(FILLER);
 
@@ -99,6 +100,7 @@ int main(int argc, char *argv[])
 
 	fd = hugetlbfs_unlinked_fd();
 
+	fclose(tmp_stream);
 	if (fd < 0)
 		FAIL("Unable to find mount point\n");
 
