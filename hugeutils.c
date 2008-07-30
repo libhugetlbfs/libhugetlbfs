@@ -157,14 +157,56 @@ int hugetlbfs_test_path(const char *mount)
 	return (sb.f_type == HUGETLBFS_MAGIC);
 }
 
-#define MOUNTS_SZ	4096
+#define LINE_MAXLEN	2048
+void find_mounts(void)
+{
+	int fd;
+	char path[PATH_MAX+1];
+	char line[LINE_MAXLEN + 1];
+	char *eol;
+	int bytes, err;
+	off_t offset;
+
+	fd = open("/proc/mounts", O_RDONLY);
+	if (fd < 0) {
+		fd = open("/etc/mtab", O_RDONLY);
+		if (fd < 0) {
+			ERROR("Couldn't open /proc/mounts or /etc/mtab (%s)\n",
+				strerror(errno));
+			return;
+		}
+	}
+
+	while ((bytes = read(fd, line, LINE_MAXLEN)) > 0) {
+		line[LINE_MAXLEN] = '\0';
+		eol = strchr(line, '\n');
+		if (!eol) {
+			ERROR("Line too long when parsing mounts\n");
+			break;
+		}
+
+		/*
+		 * Truncate the string to just one line and reset the file
+		 * to begin reading at the start of the next line.
+		 */
+		*eol = '\0';
+		offset = bytes - (eol + 1 - line);
+		lseek(fd, -offset, SEEK_CUR);
+
+		err = sscanf(line, "%*s %" stringify(PATH_MAX) "s hugetlbfs ",
+			path);
+		if ((err == 1) && (hugetlbfs_test_path(path) == 1)) {
+			strncpy(htlb_mount, path, sizeof(htlb_mount)-1);
+			break;
+		}
+	}
+	close(fd);
+}
 
 const char *hugetlbfs_find_path(void)
 {
-	int err, readerr;
+	int err;
 	char *tmp;
-	int fd, len;
-	char buf[MOUNTS_SZ];
 
 	/* Have we already located a mount? */
 	if (*htlb_mount)
@@ -187,44 +229,9 @@ const char *hugetlbfs_find_path(void)
 	}
 
 	/* Oh well, let's go searching for a mountpoint */
-	fd = open("/proc/mounts", O_RDONLY);
-	if (fd < 0) {
-		fd = open("/etc/mtab", O_RDONLY);
-		if (fd < 0) {
-			ERROR("Couldn't open /proc/mounts or /etc/mtab (%s)\n",
-			      strerror(errno));
-			return NULL;
-		}
-	}
-
-	len = read(fd, buf, sizeof(buf));
-	readerr = errno;
-	close(fd);
-	if (len < 0) {
-		ERROR("Error reading mounts (%s)\n", strerror(errno));
-		return NULL;
-	}
-	if (len >= sizeof(buf)) {
-		ERROR("/proc/mounts is too long\n");
-		return NULL;
-	}
-	buf[sizeof(buf)-1] = '\0';
-
-	tmp = buf;
-	while (tmp) {
-		err = sscanf(tmp,
-			     "%*s %" stringify(PATH_MAX)
-			     "s hugetlbfs ",
-			     htlb_mount);
-		if ((err == 1) && (hugetlbfs_test_path(htlb_mount) == 1))
-			return htlb_mount;
-
-		memset(htlb_mount, 0, sizeof(htlb_mount));
-
-		tmp = strchr(tmp, '\n');
-		if (tmp)
-			tmp++;
-	}
+	find_mounts();
+	if (*htlb_mount)
+		return htlb_mount;
 
 	WARNING("Could not find hugetlbfs mount point in /proc/mounts. "
 			"Is it mounted?\n");
