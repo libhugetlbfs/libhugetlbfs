@@ -395,6 +395,26 @@ segments to be placed in hugepages:
 	HUGETLB_ELFMAP=RW	All segments (text/data/BSS)
 	HUGETLB_ELFMAP=no	No segments
 
+	Default remapping behavior:
+	---------------------------
+
+If --hugetlbfs-link was used to link an application, the chosen remapping mode
+is saved in the binary and becomes the default behavior.  Setting
+HUGETLB_ELFMAP=no will disable all remapping and is the only way to modify the
+default behavior.
+
+For applications linked with --hugetlbfs-align, the default behavior is to not
+remap any segments into huge pages.  To set or display the default remapping
+mode for a binary, the included hugeedit command can be used:
+
+hugeedit [options] target-executable
+   options:
+   --text,--data	Remap the specified segment into huge pages by default
+   --disable		Do not remap any segments by default
+
+When target-executable is the only argument, hugeedit will display the default
+remapping mode without making any modifications.
+
 	Environment variables:
 	----------------------
 
