@@ -70,6 +70,7 @@ void print_usage()
 
 	OPTION("--dry-run", "describe what would be done without doing it");
 
+	OPTION("--library-use-path", "Use the system library path");
 	OPTION("--library-path <path>", "Select a library prefix");
 	CONT("(Default: "
 #ifdef LIBDIR32
@@ -116,6 +117,7 @@ void setup_environment(char *var, char *val)
 
 #define LONG_DRY_RUN	(LONG_BASE | 'd')
 
+#define LONG_NO_LIBRARY	(LONG_BASE | 'L')
 #define LONG_LIBRARY	(LONG_BASE | 'l')
 
 /*
@@ -160,6 +162,8 @@ void setup_mappings(int which)
 	if (which & MAP_HEAP)
 		setup_environment("HUGETLB_MORECORE", "yes");
 }
+
+#define LIBRARY_DISABLE ((void *)-1)
 
 void library_path(char *path)
 {
@@ -239,6 +243,8 @@ int main(int argc, char** argv)
 		{"dry-run",    no_argument, NULL, LONG_DRY_RUN},
 		{"library-path",
 			       required_argument, NULL, LONG_LIBRARY},
+		{"library-use-path",
+			       no_argument, NULL, LONG_NO_LIBRARY},
 
 		{"disable",    no_argument, NULL, MAP_BASE|MAP_DISABLE},
 		{"text",       no_argument, NULL, MAP_BASE|MAP_TEXT},
@@ -275,6 +281,11 @@ int main(int argc, char** argv)
 			opt_dry_run = 1;
 			break;
 
+		case LONG_NO_LIBRARY:
+			opt_library = LIBRARY_DISABLE;
+			DEBUG("using LD_LIBRARY_PATH to find library\n");
+			break;
+
 		case LONG_LIBRARY:
 			opt_library = optarg;
 			break;
@@ -293,7 +304,8 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	library_path(opt_library);
+	if (opt_library != LIBRARY_DISABLE)
+		library_path(opt_library);
 
 	if (opt_mappings)
 		setup_mappings(opt_mappings);
