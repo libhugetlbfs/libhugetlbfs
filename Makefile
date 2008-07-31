@@ -234,10 +234,6 @@ obj64/%.s:	%.c
 	@$(VECHO) CC64 -S $@
 	$(CC64) $(CPPFLAGS) $(CFLAGS) -o $@ -S $<
 
-$(OBJS):	hugectl.c
-	@$(VECHO) CPP $@
-	$(CC) $(CFLAGS) -o $@ -c $<
-
 $(INSTALL_BIN:%=$(BIN_OBJ_DIR)/%): $(BIN_OBJ_DIR)/%: %.c
 	@$(VECHO) CC $@
 	mkdir -p $(BIN_OBJ_DIR)
