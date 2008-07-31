@@ -61,8 +61,8 @@ extern char *optarg;
 
 void print_usage()
 {
-	printf("hugeedit [options] target\n");
-	printf("options:\n");
+	fprintf(stderr, "hugeedit [options] target\n");
+	fprintf(stderr, "options:\n");
 	OPTION("--text", "Remap program text into huge pages by default");
 	OPTION("--data", "Remap program data into huge pages by default");
 	OPTION("--disable", "Remap no segments into huge pages by default");
