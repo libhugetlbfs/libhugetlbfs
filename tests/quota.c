@@ -197,6 +197,7 @@ int main(int argc, char ** argv)
 	check_must_be_root();
 	mountpoint[0] = '\0';
 	hpage_size = check_hugepagesize();
+	int bad_priv_resv;
 
 	check_free_huge_pages(1);
 	get_quota_fs(hpage_size);
@@ -205,6 +206,7 @@ int main(int argc, char ** argv)
 	if ((private_resv = kernel_has_private_reservations(fd)) == -1)
 		FAIL("kernel_has_private_reservations() failed\n");
 	close(fd);
+	bad_priv_resv = private_resv ? BAD_EXIT : BAD_SIG;
 
 	/*
 	 * Check that unused quota is cleared when untouched mmaps are
@@ -232,16 +234,13 @@ int main(int argc, char ** argv)
 	 * If private mappings are reserved, the quota is checked up front
 	 * (as is the case for shared mappings).
 	 */
-	if (private_resv)
-		spawn(BAD_EXIT, 2 * hpage_size, MAP_PRIVATE, ACTION_TOUCH);
-	else
-		spawn(BAD_SIG, 2 * hpage_size, MAP_PRIVATE, ACTION_TOUCH);
+	spawn(bad_priv_resv, 2 * hpage_size, MAP_PRIVATE, ACTION_TOUCH);
 
 	/*
 	 * COW should not be allowed if doing so puts the fs over quota.
 	 */
-	spawn(BAD_SIG, hpage_size, MAP_SHARED, ACTION_TOUCH|ACTION_COW);
-	spawn(BAD_SIG, hpage_size, MAP_PRIVATE, ACTION_TOUCH|ACTION_COW);
+	spawn(bad_priv_resv, hpage_size, MAP_SHARED, ACTION_TOUCH|ACTION_COW);
+	spawn(bad_priv_resv, hpage_size, MAP_PRIVATE, ACTION_TOUCH|ACTION_COW);
 
 	/*
 	 * Make sure that operations within the quota will succeed after
