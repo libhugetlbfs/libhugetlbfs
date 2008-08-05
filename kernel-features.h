@@ -1,6 +1,6 @@
 /*
  * libhugetlbfs - Easy use of Linux hugepages
- * Copyright (C) 2008 Nishanth Aravamudan, IBM Corporation
+ * Copyright (C) 2008 Adam Litke, IBM Corporation.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -16,15 +16,15 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
+struct kernel_version {
+	unsigned int major;
+	unsigned int minor;
+	unsigned int release;
+	unsigned int post;
+	unsigned int pre;
+};
 
-#include "libhugetlbfs_internal.h"
-
-static void __attribute__ ((constructor)) setup_libhugetlbfs(void)
-{
-	__hugetlbfs_setup_debug();
-	__lh_setup_features();
-#ifndef NO_ELFLINK
-	__hugetlbfs_setup_elflink();
-#endif
-	__hugetlbfs_setup_morecore();
-}
+struct feature {
+	char *name;
+	char *required_version;
+};

@@ -49,4 +49,13 @@ typedef unsigned long ghp_t;
 void *get_huge_pages(size_t len, ghp_t flags);
 void free_huge_pages(void *ptr);
 
+/* Kernel feature testing */
+/* This enum defines the bits in a feature bitmask */
+enum {
+	/* Reservations are created for private mappings */
+	HUGETLB_FEATURE_PRIVATE_RESV,
+	HUGETLB_FEATURE_NR,
+};
+int hugetlbfs_test_feature(int feature_code);
+
 #endif /* _HUGETLBFS_H */
