@@ -28,6 +28,7 @@
 #include <fcntl.h>
 #include <dlfcn.h>
 #include <stdarg.h>
+#include <errno.h>
 
 #include <hugetlbfs.h>
 
@@ -72,22 +73,30 @@ void make_test_mounts()
 		FAIL("Unable to open /proc/mounts: %s", strerror(errno));
 	tmp_stream = tmpfile();
 	if (!tmp_stream)
-		FAIL("Unable to open temporary mounts file\n");
+		FAIL("Unable to open temporary mounts file: %s", strerror(errno));
 
 	tmp_mounts_fd = fileno(tmp_stream);
+	if (tmp_mounts_fd < 0)
+		FAIL("Unable to get file descriptor from stream.");
 
 	filler_sz = strlen(FILLER);
 
 	while (written < BUF_SIZE) {
-		write(tmp_mounts_fd, FILLER, filler_sz);
+		if (write(tmp_mounts_fd, FILLER, filler_sz) < 0)
+			FAIL("Unable to write to temp mounts file: %s",
+				strerror(errno));
 		written += filler_sz;
 	}
 
 	while ((ret = read(mounts_fd, buf, BUF_SIZE)) > 0)
-		write(tmp_mounts_fd, buf, ret);
+		if (write(tmp_mounts_fd, buf, ret) < 0)
+			FAIL("Unable to write to temp mounts file: %s",
+				strerror(errno));
 
 	close(mounts_fd);
-	lseek(tmp_mounts_fd, 0, SEEK_SET);
+	if (lseek(tmp_mounts_fd, 0, SEEK_SET) < 0)
+		FAIL("Unable to move temp mounts stream to beginning of file: %s",
+			strerror(errno));
 }
 
 int main(int argc, char *argv[])
