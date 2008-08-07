@@ -275,6 +275,10 @@ check_linkhuge_tests
 # Test direct allocation API
     run_test get_huge_pages
 
+# Test overriding of shmget()
+    run_test shmoverride_linked
+    run_test LD_PRELOAD=libhugetlbfs.so shmoverride_unlinked
+
 # Test hugetlbfs filesystem quota accounting
     run_test quota
 

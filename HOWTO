@@ -275,6 +275,38 @@ By default, the hugepage heap does not shrink.  To enable hugepage heap
 shrinking, set HUGETLB_MORECORE_SHRINK=yes.  NB: We have been seeing some
 unexpected behavior from glibc's malloc when this is enabled.
 
+Using hugepage shared memory
+----------------------------
+
+Hugepages are used for shared memory segments if the SHM_HUGETLB flag is
+set when calling shmget() and the pool is large enough. For hugepage-unaware
+applications, libhugetlbfs overrides shmget and adds the SHM_HUGETLB if the
+environment variable HUGETLB_SHM is set to "yes". The steps to use hugepages
+with applications not linked to libhugetlbfs are similar to morecore except
+for step 3.
+
+1. Set LD_PRELOAD=libhugetlbfs.so
+  This tells the dynamic linker to load the libhugetlbfs shared
+  library, even though the program wasn't originally linked against it.
+
+  Note: If the program is linked against libhugetlbfs, preloading the
+        library may lead to application crashes. You should skip this
+        step in that case.
+
+2. Set LD_LIBRARY_PATH to the directory containing libhugetlbfs.so
+  This is only necessary if you haven't installed libhugetlbfs.so to a
+  system default path.  If you set LD_LIBRARY_PATH, make sure the
+  directory referenced contains the right version of the library
+  (32-bit or 64-bit) as appropriate to the binary you want to run.
+
+3. Set HUGETLB_SHM=yes
+   The shmget() call is overridden whether the application is linked or the
+   libhugetlbfs library is preloaded. When this environment variable is set,
+   the SHM_HUGETLB flag is added to the call and the size parameter is aligned
+   to back the shared memory segment with huge pages. In the event hugepages
+   cannot be used, small pages will be used instead and a warning will be
+   printed to explain the failure.
+
 Using hugepage text, data, or BSS
 ---------------------------------
 
