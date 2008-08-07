@@ -114,7 +114,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 				WARNING("Heap originates at %p instead of %p\n",
 					p, heapbase);
 				if (__hugetlbfs_debug)
-					dump_proc_pid_maps();
+					__lh_dump_proc_pid_maps();
 			}
 			/* then setup the heap variables */
 			heapbase = heaptop = p;
@@ -124,7 +124,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			WARNING("New heap segment mapped at %p instead of %p\n",
 			      p, heapbase + mapsize);
 			if (__hugetlbfs_debug)
-				dump_proc_pid_maps();
+				__lh_dump_proc_pid_maps();
 			return NULL;
 		}
 
@@ -224,7 +224,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	return p;
 }
 
-void __hugetlbfs_setup_morecore(void)
+void __lh_hugetlbfs_setup_morecore(void)
 {
 	char *env, *ep;
 	unsigned long heapaddr;

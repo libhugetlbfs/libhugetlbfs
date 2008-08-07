@@ -581,7 +581,7 @@ static unsigned long hugetlb_prev_slice_end(unsigned long addr)
 /*
  * Store a copy of the given program header 
  */
-int save_phdr(int table_idx, int phnum, const ElfW(Phdr) *phdr)
+static int save_phdr(int table_idx, int phnum, const ElfW(Phdr) *phdr)
 {
 	int prot = 0;
 
@@ -1182,7 +1182,7 @@ static int parse_elf()
 	return 0;
 }
 
-void __hugetlbfs_setup_elflink(void)
+void __lh_hugetlbfs_setup_elflink(void)
 {
 	int i, ret;
 

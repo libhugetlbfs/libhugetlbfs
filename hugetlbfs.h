@@ -27,9 +27,7 @@ const char *hugetlbfs_find_path(void);
 int hugetlbfs_unlinked_fd(void);
 
 /* Diagnoses/debugging only functions */
-long hugetlbfs_num_free_pages(void);
-long hugetlbfs_num_pages(void);
-long dump_proc_pid_maps(void);
+long __lh_dump_proc_pid_maps(void);
 
 #define PF_LINUX_HUGETLB	0x100000
 

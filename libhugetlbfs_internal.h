@@ -43,9 +43,9 @@
 extern int __hugetlbfs_verbose;
 extern int __hugetlbfs_debug;
 extern int __hugetlbfs_prefault;
-extern void __hugetlbfs_setup_elflink();
-extern void __hugetlbfs_setup_morecore();
-extern void __hugetlbfs_setup_debug();
+extern void __lh_hugetlbfs_setup_elflink();
+extern void __lh_hugetlbfs_setup_morecore();
+extern void __lh_hugetlbfs_setup_debug();
 extern char __hugetlbfs_hostname[];
 
 #ifndef REPORT

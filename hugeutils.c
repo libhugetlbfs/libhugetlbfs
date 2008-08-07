@@ -271,18 +271,8 @@ int hugetlbfs_unlinked_fd(void)
 /* Library user visible DIAGNOSES/DEBUGGING ONLY functions          */
 /********************************************************************/
 
-long hugetlbfs_num_free_pages(void)
-{
-	return read_meminfo("HugePages_Free:");
-}
-
-long hugetlbfs_num_pages(void)
-{
-	return read_meminfo("HugePages_Total:");
-}
-
 #define MAPS_BUF_SZ 4096
-long dump_proc_pid_maps()
+long __lh_dump_proc_pid_maps()
 {
 	FILE *f;
 	char line[MAPS_BUF_SZ];
