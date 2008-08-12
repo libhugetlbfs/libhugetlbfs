@@ -777,9 +777,12 @@ static void check_range_empty(void *addr, unsigned long len)
 	void *p;
 
 	p = mmap(addr, len, PROT_READ, MAP_PRIVATE|MAP_ANON, 0, 0);
-	if (p != addr)
+	if (p != addr) {
 		WARNING("Unable to verify address range %p - %p.  Not empty?\n",
 				addr, addr + len);
+		if (__hugetlbfs_debug)
+			dump_proc_pid_maps();
+	}
 	if (p != MAP_FAILED)
 		munmap(p, len);
 }
