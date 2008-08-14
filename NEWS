@@ -1,3 +1,20 @@
+libhugetlbfs 2.0 "Sandia Red"
+======================================================================
+
+New Features
+* New scriptless relinking for binutils >= 2.17
+* Added direct allocator API for huge pages
+
+Bug Fixes
+* /proc/mounts is parsed line at a time to handle file larger than 4kb
+* Read-only mappings use MAP_NORESERVE
+
+Test suite fixes
+* Add test for /proc/mounts file larger than 4kb
+* Fix quota test with private reservations
+* Output strerror on failure
+* linkhuge tests are skipped when known to be broken
+
 libhugetlbfs 1.3 "Big Jim"
 ======================================================================
 
@@ -14,7 +31,7 @@ Bug fixes
 * Replace gethugepagesize with check_hugepagesize for error checking
 * Make morecore argument a long to handle larger page sizes
 
-Tets suite fixes
+Test suite fixes
 * Check uid/gid in tests where it matters
 * tests: verify there are enough huge pages
 * Change tests to read /proc/meminfo
