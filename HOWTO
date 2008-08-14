@@ -331,6 +331,31 @@ into hugepages.
 
 These are the only two available options when using custom linker scripts.
 
+	A note about the custom libhugetlbfs linker scripts:
+	----------------------------------------------------
+
+Linker scripts are usually distributed with GNU binutils and they may contain a
+partial implementation of new linker features.  As binutils evolves, the linker
+scripts supplied with previous versions become obsolete and are upgraded.
+
+Libhugetlbfs distributes one set of linker scripts that must work across
+several Linux distributions and binutils versions.  This has worked well for
+some time but binutils-2.17 (including some late 2.16 builds) have made changes
+that are impossible to accomodate without breaking the libhugetlbfs linker
+scripts for older versions of binutils.  This is why the linker scripts (and
+the --hugetlbfs-link ld.hugetlbfs option) have been deprecated for binutils >=
+2.17 configurations.
+
+If you are using a late 2.16 binutils version (such as 2.16.91) and are
+experiencing problems with huge page text, data, and bss, you can check
+binutils for the incompatibility with the following command:
+
+	ld --verbose | grep SPECIAL
+
+If any matches are returned, then the libhugetlbfs linker scripts may not work
+correctly.  In this case you should upgrade to binutils >= 2.17 and use the
+--hugetlbfs-align linking method.
+
 	Linking via gcc:
 	----------------
 
