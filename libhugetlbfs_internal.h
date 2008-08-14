@@ -21,6 +21,7 @@
 
 #include <elf.h>
 #include <link.h>
+#include <limits.h>
 
 #ifndef __LIBHUGETLBFS__
 #error This header should not be included by library users.
@@ -46,6 +47,7 @@ extern int __hugetlbfs_prefault;
 extern void __hugetlbfs_setup_elflink();
 extern void __hugetlbfs_setup_morecore();
 extern void __hugetlbfs_setup_debug();
+extern void __lh_setup_mounts();
 extern char __hugetlbfs_hostname[];
 
 #ifndef REPORT
@@ -74,6 +76,12 @@ extern char __hugetlbfs_hostname[];
 /* Older binutils fail to provide this symbol */
 #define __LP64__
 #endif
+
+/* Multiple huge page size support */
+struct hpage_size {
+	unsigned long pagesize_kb;
+	char mount[PATH_MAX+1];
+};
 
 /* Arch-specific callbacks */
 extern int direct_syscall(int sysnum, ...);
