@@ -102,6 +102,16 @@ void *get_huge_pages(size_t len, ghp_t flags)
 		return NULL;
 	}
 
+	/* Fault the region to ensure accesses succeed */
+	if (__lh_hugetlbfs_prefault(heap_fd, buf, len) != 0) {
+		munmap(buf, len);
+		close(heap_fd);
+
+		/* Try falling back to base pages if allowed */
+		if (flags & GHP_FALLBACK)
+			return fallback_base_pages(len, flags);
+	}
+
 	/* Close the file so we do not have to track the descriptor */
 	if (close(heap_fd) != 0) {
 		WARNING("Failed to close new heap fd: %s\n", strerror(errno));
