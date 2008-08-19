@@ -47,6 +47,7 @@ extern void __lh_hugetlbfs_setup_elflink();
 extern void __lh_hugetlbfs_setup_morecore();
 extern void __lh_hugetlbfs_setup_debug();
 extern char __hugetlbfs_hostname[];
+extern int __lh_hugetlbfs_prefault(int fd, void *addr, size_t length);
 
 #ifndef REPORT
 #define REPORT(level, prefix, format, ...) \

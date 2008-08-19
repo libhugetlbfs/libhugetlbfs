@@ -28,7 +28,6 @@
 #include <dlfcn.h>
 #include <string.h>
 #include <fcntl.h>
-#include <sys/uio.h>
 
 #include "hugetlbfs.h"
 
@@ -37,7 +36,6 @@
 static int heap_fd;
 static int shrink_ok;		/* default = 0; no shrink */
 static int zero_fd;
-static long blocksize;
 
 static void *heapbase;
 static void *heaptop;
@@ -69,13 +67,8 @@ static long hugetlbfs_next_addr(long addr)
  * Luckily, if it does not do so and we error out malloc will happily
  * go back to small pages and use mmap to get them.  Hurrah.
  */
-#define IOV_LEN	64
-
 static void *hugetlbfs_morecore(ptrdiff_t increment)
 {
-	unsigned long offset;
-	int i;
-	struct iovec iov[IOV_LEN];
 	int ret;
 	void *p;
 	long delta;
@@ -92,7 +85,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	      heapbase, heaptop, mapsize, delta);
 
 	/* align to multiple of hugepagesize. */
-	delta = ALIGN(delta, blocksize);
+	delta = ALIGN(delta, gethugepagesize());
 
 	if (delta > 0) {
 		/* growing the heap */
@@ -128,38 +121,10 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			return NULL;
 		}
 
-		/* The NUMA users of libhugetlbfs' malloc feature are
-		 * expected to use the numactl program to specify an
-		 * appropriate policy for hugepage allocation */
-
-		/*
-		 * Use readv(2) to instantiate the hugepages.  If we
-		 * can't get all that were requested, release the entire
-		 * mapping and return NULL.  Glibc malloc will then fall back
-		 * to using mmap of base pages.
-		 *
-		 * If we instead returned a hugepage mapping with insufficient
-		 * hugepages, the VM system would kill the process when the
-		 * process tried to access the missing memory.
-		 */
-
-		if (__hugetlbfs_prefault) {
-			for (offset = 0; offset < delta; ) {
-				for (i = 0; i < IOV_LEN && offset < delta; i++) {
-					iov[i].iov_base = p + offset;
-					iov[i].iov_len = 1;
-					offset += blocksize;
-				}
-				ret = readv(zero_fd, iov, i);
-				if (ret != i) {
-					DEBUG("Got %d of %d requested; err=%d\n", ret,
-							i, ret < 0 ? errno : 0);
-					WARNING("Failed to reserve %ld huge pages "
-							"for heap\n", delta/blocksize);
-					munmap(p, delta);
-					return NULL;
-				}
-			}
+		/* Fault the region to ensure accesses succeed */
+		if (__lh_hugetlbfs_prefault(zero_fd, p, delta) != 0) {
+			munmap(p, delta);
+			return NULL;
 		}
 
 		/* we now have mmap'd further */
@@ -257,8 +222,7 @@ void __lh_hugetlbfs_setup_morecore(void)
 	if (env && strcasecmp(env, "yes") == 0)
 		shrink_ok = 1;
 
-	blocksize = gethugepagesize();
-	if (blocksize <= 0) {
+	if (gethugepagesize() <= 0) {
 		if (errno == ENOSYS)
 			ERROR("Hugepages unavailable\n");
 		else if (errno == EOVERFLOW)
@@ -296,10 +260,10 @@ void __lh_hugetlbfs_setup_morecore(void)
 	/* Set some allocator options more appropriate for hugepages */
 	
 	if (shrink_ok)
-		mallopt(M_TRIM_THRESHOLD, blocksize / 2);
+		mallopt(M_TRIM_THRESHOLD, gethugepagesize() / 2);
 	else
 		mallopt(M_TRIM_THRESHOLD, -1);
-	mallopt(M_TOP_PAD, blocksize / 2);
+	mallopt(M_TOP_PAD, gethugepagesize() / 2);
 	/* we always want to use our morecore, not ordinary mmap().
 	 * This doesn't appear to prohibit malloc() from falling back
 	 * to mmap() if we run out of hugepages. */

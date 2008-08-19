@@ -38,6 +38,7 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/file.h>
+#include <sys/uio.h>
 
 #include "libhugetlbfs_internal.h"
 #include "hugetlbfs.h"
@@ -265,6 +266,52 @@ int hugetlbfs_unlinked_fd(void)
 	unlink(name);
 
 	return fd;
+}
+
+#define IOV_LEN 64
+int __lh_hugetlbfs_prefault(int fd, void *addr, size_t length)
+{
+	/*
+	 * The NUMA users of libhugetlbfs' malloc feature are
+	 * expected to use the numactl program to specify an
+	 * appropriate policy for hugepage allocation
+	 *
+	 * Use readv(2) to instantiate the hugepages unless HUGETLB_NO_PREFAULT
+	 * is set. If we instead returned a hugepage mapping with insufficient
+	 * hugepages, the VM system would kill the process when the
+	 * process tried to access the missing memory.
+	 *
+	 * The value of this environment variable is read during library
+	 * initialisation and sets __hugetlbfs_prefault accordingly. If 
+	 * prefaulting is enabled and we can't get all that were requested,
+	 * -ENOMEM is returned. The caller is expected to release the entire
+	 * mapping and optionally it may recover by mapping base pages instead.
+	 */
+	if (__hugetlbfs_prefault) {
+		int i;
+		size_t offset;
+		struct iovec iov[IOV_LEN];
+		int ret;
+
+		for (offset = 0; offset < length; ) {
+			for (i = 0; i < IOV_LEN && offset < length; i++) {
+				iov[i].iov_base = addr + offset;
+				iov[i].iov_len = 1;
+				offset += gethugepagesize();
+			}
+			ret = readv(fd, iov, i);
+			if (ret != i) {
+				DEBUG("Got %d of %d requested; err=%d\n", ret,
+						i, ret < 0 ? errno : 0);
+				WARNING("Failed to reserve %ld huge pages "
+						"for new region\n",
+						length / gethugepagesize());
+				return -ENOMEM;
+			}
+		}
+	}
+
+	return 0;
 }
 
 /********************************************************************/
