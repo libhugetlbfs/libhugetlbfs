@@ -3,6 +3,7 @@
 export QUIET_TEST=1
 unset HUGETLB_ELF
 unset HUGETLB_MORECORE
+HUGETLBFS_MOUNTS=""
 
 if [ -z "$HUGETLB_VERBOSE" ]; then
 	HUGETLB_VERBOSE=0
@@ -17,16 +18,43 @@ function free_hpages() {
 	echo "$H"
 }
 
-function get_and_set_hugetlbfs_path() {
-	HUGETLB_PATH=$(PATH="obj32:obj64:$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH:../obj32:../obj64" get_hugetlbfs_path)
-    	if [ $? != 0 ]; then
-		echo "run_tests.sh: unable to find hugetlbfs mountpoint"
-		exit 1
-    	fi
+# Check for valid hugetlbfs mountpoints
+# On error, adjust tests to be run or exit immediately.  We must check for
+# mounts using both the 32 bit and 64 bit helpers because it is possible that
+# a mount point will only be usable with a certain word size.  For example, a
+# mount with a 16GB configured page size is usable by 64 bit programs only.
+function check_hugetlbfs_path() {
+    newbits=""
+    skipbits=""
+
+    for b in $WORDSIZES; do
+        MP=$(PATH="obj$b:$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH:../obj$b" \
+            get_hugetlbfs_path)
+        if [ $? -ne 0 ]; then
+            skipbits="$skipbits $b"
+        else
+            HUGETLBFS_MOUNTS="$HUGETLBFS_MOUNTS $MP"
+            newbits="$newbits $b"
+        fi
+    done
+
+    if [ -z "$newbits" ]; then
+        echo "run_tests.sh: unable to find hugetlbfs mountpoint"
+        exit 1
+    fi
+    for b in $skipbits; do
+        echo -n "run_tests.sh: No suitable mountpoint exists for $b bit "
+        echo "programs.  Disabling the $b word size."
+    done
+    WORDSIZES="$newbits"
 }
 
 function clear_hpages() {
-    rm -rf "$HUGETLB_PATH"/elflink-uid-`id -u`
+    # It is not straightforward to know which mountpoint was used so clean
+    # up share files in all possible mount points
+    for dir in $HUGETLBFS_MOUNTS; do
+        rm -rf "$dir"/elflink-uid-`id -u`
+    done
 }
 
 TOTAL_HPAGES=$(grep 'HugePages_Total:' /proc/meminfo | cut -f2 -d:)
@@ -338,7 +366,7 @@ if [ -z "$WORDSIZES" ]; then
     WORDSIZES="32 64"
 fi
 
-get_and_set_hugetlbfs_path
+check_hugetlbfs_path
 
 for set in $TESTSETS; do
     case $set in
