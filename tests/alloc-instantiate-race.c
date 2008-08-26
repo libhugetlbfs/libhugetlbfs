@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
 	if (argc != 2)
 		CONFIG("Usage: alloc-instantiate-race <private|shared>");
 
-	totpages = read_meminfo("HugePages_Free:");
+	totpages = get_pool_counter(HUGEPAGES_FREE, 0);
 
 	if (strcmp(argv[1], "shared") == 0) {
 		race_type = MAP_SHARED;

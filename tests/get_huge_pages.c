@@ -57,8 +57,9 @@ void test_GHP_FALLBACK(void)
 {
 	int err;
 	long hpage_size = check_hugepagesize();
-	long rsvd_hugepages = read_meminfo("HugePages_Rsvd:");
-	long num_hugepages = read_meminfo("HugePages_Total:") - rsvd_hugepages;
+	long rsvd_hugepages = get_pool_counter(HUGEPAGES_RSVD, 0);
+	long num_hugepages = get_pool_counter(HUGEPAGES_TOTAL, 0)
+		- rsvd_hugepages;
 
 	/* We should be able to allocate the whole pool */
 	void *p = get_huge_pages(num_hugepages * hpage_size, GHP_DEFAULT);

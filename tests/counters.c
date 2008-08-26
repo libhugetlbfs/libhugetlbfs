@@ -69,31 +69,18 @@ static long prev_surp;
 
 /* Restore original nr_hugepages */
 void cleanup(void) {
-	int fd;
-	char buf[10];
-
-	snprintf(buf, 10, "%li", saved_nr_hugepages);
-	fd = open("/proc/sys/vm/nr_hugepages", O_WRONLY);
-	if (fd > 0)
-		write(fd, buf, 10);
-	close(fd);
+	set_pool_counter(HUGEPAGES_TOTAL, saved_nr_hugepages, 0);
 }
 
 void verify_dynamic_pool_support(void)
 {
-	int fd;
-	char value;
+	unsigned long val;
 
-	fd = open(DYNAMIC_SYSCTL, O_RDONLY);
-	if (fd < 0)
-		CONFIG("Unable to find %s: %s", DYNAMIC_SYSCTL,
-							strerror(errno));
-
-	if (read(fd, &value, 1) != 1)
-		FAIL("Unable to read %s: %s", DYNAMIC_SYSCTL, strerror(errno));
-	if (value == '0')
+	val = get_pool_counter(HUGEPAGES_OC, 0);
+	if (val < 0)
+		FAIL("Unable to test for dynamic hugetlb pool support");
+	if (val == 0)
 		CONFIG("Dynamic hugetlb pool support present, but disabled");
-	close(fd);
 }
 
 void bad_value(int line, const char *name, long expect, long actual)
@@ -109,10 +96,10 @@ void verify_counters(int line, long et, long ef, long er, long es)
 {
 	long t, f, r, s;
 
-	t = read_meminfo("HugePages_Total:");
-	f = read_meminfo("HugePages_Free:");
-	r = read_meminfo("HugePages_Rsvd:");
-	s = read_meminfo("HugePages_Surp:");
+	t = get_pool_counter(HUGEPAGES_TOTAL, 0);
+	f = get_pool_counter(HUGEPAGES_FREE, 0);
+	r = get_pool_counter(HUGEPAGES_RSVD, 0);
+	s = get_pool_counter(HUGEPAGES_SURP, 0);
 
 	/* Invariant checks */
 	if (t < 0 || f < 0 || r < 0 || s < 0)
@@ -146,17 +133,11 @@ void verify_counters(int line, long et, long ef, long er, long es)
 #define persistent_huge_pages (et - es)
 void _set_nr_hugepages(unsigned long count, int line)
 {
-	FILE *f;
 	long min_size;
 	long et, ef, er, es;
 
-	f = fopen("/proc/sys/vm/nr_hugepages", "w");
-	if (!f)
-		CONFIG("Cannot open /proc/sys/vm/nr_hugepages "
-					"for writing: %s", strerror(errno));
-
-	fprintf(f, "%lu", count);
-	fclose(f);
+	if (set_pool_counter(HUGEPAGES_TOTAL, count, 0))
+		FAIL("Cannot set nr_hugepages");
 
 	/* The code below is based on set_max_huge_pages in mm/hugetlb.c */
 	es = prev_surp;
@@ -384,7 +365,7 @@ int main(int argc, char ** argv)
 
 	test_init(argc, argv);
 	check_must_be_root();
-	saved_nr_hugepages = read_meminfo("HugePages_Total:");
+	saved_nr_hugepages = get_pool_counter(HUGEPAGES_TOTAL, 0);
 	verify_dynamic_pool_support();
 
 	fd = hugetlbfs_unlinked_fd();

@@ -50,22 +50,9 @@ static void sigbus_handler(int signum, siginfo_t *si, void *uc)
 	siglongjmp(sig_escape, 17);
 }
 
-static unsigned long long read_reserved(void)
+static unsigned long read_reserved(void)
 {
-	FILE *f;
-	unsigned long long count;
-	int ret;
-
-	f = popen("grep HugePages_Rsvd /proc/meminfo", "r");
-	if (!f || ferror(f))
-		CONFIG("Couldn't read Rsvd information: %s", strerror(errno));
-
-	ret = fscanf(f, "HugePages_Rsvd: %llu", &count);
-	if (ret != 1)
-		CONFIG("Couldn't parse HugePages_Rsvd information: %s",
-							strerror(errno));
-
-	return count;
+	return get_pool_counter(HUGEPAGES_RSVD, 0);
 }
 
 int main(int argc, char *argv[])
@@ -76,7 +63,7 @@ int main(int argc, char *argv[])
 	volatile unsigned int *q;
 	int err;
 	int sigbus_count = 0;
-	unsigned long long initial_rsvd, rsvd;
+	unsigned long initial_rsvd, rsvd;
 	struct sigaction sa = {
 		.sa_sigaction = sigbus_handler,
 		.sa_flags = SA_SIGINFO,
@@ -91,7 +78,7 @@ int main(int argc, char *argv[])
 		FAIL("hugetlbfs_unlinked_fd()");
 
 	initial_rsvd = read_reserved();
-	verbose_printf("Reserve count before map: %llu\n", initial_rsvd);
+	verbose_printf("Reserve count before map: %lu\n", initial_rsvd);
 
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED,
 		 fd, 0);
@@ -99,19 +86,19 @@ int main(int argc, char *argv[])
 		FAIL("mmap(): %s", strerror(errno));
 	q = p;
 
-	verbose_printf("Reserve count after map: %llu\n", read_reserved());
+	verbose_printf("Reserve count after map: %lu\n", read_reserved());
 
 	*q = 0;
-	verbose_printf("Reserve count after touch: %llu\n", read_reserved());
+	verbose_printf("Reserve count after touch: %lu\n", read_reserved());
 
 	err = ftruncate(fd, 0);
 	if (err)
 		FAIL("ftruncate(): %s", strerror(errno));
 
 	rsvd = read_reserved();
-	verbose_printf("Reserve count after truncate: %llu\n", rsvd);
+	verbose_printf("Reserve count after truncate: %lu\n", rsvd);
 	if (rsvd != initial_rsvd)
-		FAIL("Reserved count is not restored after truncate: %llu instead of %llu",
+		FAIL("Reserved count is not restored after truncate: %lu instead of %lu",
 		     rsvd, initial_rsvd);
 
 	err = sigaction(SIGBUS, &sa, NULL);
@@ -127,19 +114,19 @@ int main(int argc, char *argv[])
 		FAIL("Didn't SIGBUS after truncate");
 
 	rsvd = read_reserved();
-	verbose_printf("Reserve count after SIGBUS fault: %llu\n", rsvd);
+	verbose_printf("Reserve count after SIGBUS fault: %lu\n", rsvd);
 	if (rsvd != initial_rsvd)
-		FAIL("Reserved count is altered by SIGBUS fault: %llu instead of %llu",
+		FAIL("Reserved count is altered by SIGBUS fault: %lu instead of %lu",
 		     rsvd, initial_rsvd);
 
 	munmap(p, hpage_size);
 
-	verbose_printf("Reserve count after munmap(): %llu\n",
+	verbose_printf("Reserve count after munmap(): %lu\n",
 		       read_reserved());
 
 	close(fd);
 
-	verbose_printf("Reserve count after close(): %llu\n",
+	verbose_printf("Reserve count after close(): %lu\n",
 		       read_reserved());
 
 	PASS();
