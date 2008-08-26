@@ -46,6 +46,7 @@ extern int errno;
 /* Global test configuration */
 #define DYNAMIC_SYSCTL "/proc/sys/vm/nr_overcommit_hugepages"
 static long saved_nr_hugepages;
+static long saved_oc_hugepages;
 static long hpage_size;
 static int private_resv;
 
@@ -70,17 +71,16 @@ static long prev_surp;
 /* Restore original nr_hugepages */
 void cleanup(void) {
 	set_pool_counter(HUGEPAGES_TOTAL, saved_nr_hugepages, 0);
+	if (saved_oc_hugepages >= 0)
+		set_pool_counter(HUGEPAGES_OC, saved_oc_hugepages, 0);
 }
 
 void verify_dynamic_pool_support(void)
 {
-	unsigned long val;
-
-	val = get_pool_counter(HUGEPAGES_OC, 0);
-	if (val < 0)
-		FAIL("Unable to test for dynamic hugetlb pool support");
-	if (val == 0)
-		CONFIG("Dynamic hugetlb pool support present, but disabled");
+	saved_oc_hugepages = get_pool_counter(HUGEPAGES_OC, 0);
+	if (saved_oc_hugepages < 0)
+		FAIL("Kernel appears to lack dynamic hugetlb pool support");
+	set_pool_counter(HUGEPAGES_OC, 10, 0);
 }
 
 void bad_value(int line, const char *name, long expect, long actual)

@@ -211,19 +211,6 @@ restore_shm_sysctl() {
     fi
 }
 
-setup_dynamic_pool_sysctl() {
-    if [ -f /proc/sys/vm/nr_overcommit_hugepages ]; then
-    	DYNAMIC_POOL=`cat /proc/sys/vm/nr_overcommit_hugepages`
-    	echo 10 > /proc/sys/vm/nr_overcommit_hugepages
-    fi
-}
-
-restore_dynamic_pool_sysctl() {
-    if [ -f /proc/sys/vm/nr_overcommit_hugepages ]; then
-        echo "$DYNAMIC_POOL" > /proc/sys/vm/nr_overcommit_hugepages
-    fi
-}
-
 functional_tests () {
 # Kernel background tests not requiring hugepage support
     run_test zero_filesize_segment
@@ -308,9 +295,7 @@ check_linkhuge_tests
 
 # Test accounting of HugePages_{Total|Free|Resv|Surp}
 #  Alters the size of the hugepage pool so should probably be run last
-    setup_dynamic_pool_sysctl
     run_test counters
-    restore_dynamic_pool_sysctl
 }
 
 stress_tests () {
