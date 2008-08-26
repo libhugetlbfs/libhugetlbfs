@@ -467,3 +467,27 @@ int kernel_has_private_reservations(int fd)
 	}
 	return -1;
 }
+
+int using_system_hpage_size(const char *mount)
+{
+	struct statfs64 sb;
+	int err;
+	long meminfo_size, mount_size;
+
+	if (!mount)
+		FAIL("using_system_hpage_size: hugetlbfs is not mounted\n");
+
+	err = statfs64(mount, &sb);
+	if (err)
+		FAIL("statfs64: %s\n", strerror(errno));
+
+	meminfo_size = file_read_ulong("/proc/meminfo", "Hugepagesize:");
+	if (meminfo_size < 0)
+		FAIL("using_system_hpage_size: Failed to read /proc/meminfo\n");
+
+	mount_size = sb.f_bsize / 1024; /* Compare to meminfo in kB */
+	if (mount_size == meminfo_size)
+		return 1;
+	else
+		return 0;
+}

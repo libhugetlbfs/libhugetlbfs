@@ -145,6 +145,8 @@ long get_pool_counter(unsigned int counter, unsigned long pagesize_kb);
 int set_pool_counter(unsigned int counter, unsigned long val,
 				unsigned long pagesize_kb);
 
+int using_system_hpage_size(const char *mount);
+
 /* WARNING: Racy -- use for test cases only! */
 int kernel_has_private_reservations(int fd);
 
