@@ -781,7 +781,7 @@ static void check_range_empty(void *addr, unsigned long len)
 		WARNING("Unable to verify address range %p - %p.  Not empty?\n",
 				addr, addr + len);
 		if (__hugetlbfs_debug)
-			dump_proc_pid_maps();
+			__lh_dump_proc_pid_maps();
 	}
 	if (p != MAP_FAILED)
 		munmap(p, len);
