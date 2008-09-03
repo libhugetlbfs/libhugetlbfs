@@ -16,6 +16,8 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
+#define _GNU_SOURCE 		/* For strchrnul */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -155,6 +157,48 @@ int hugetlbfs_test_feature(int feature_code)
 	return feature_mask & (1 << feature_code);
 }
 
+void print_valid_features(void)
+{
+	int i;
+
+	ERROR("HUGETLB_FEATURES=\"<feature>[,<feature>] ...\"\n");
+	ERROR_CONT("Valid features:\n");
+	for (i = 0; i < HUGETLB_FEATURE_NR; i++)
+		ERROR_CONT("\t%s, no_%s\n", kernel_features[i].name,
+						kernel_features[i].name);
+}
+
+int check_features_env_valid(const char *env)
+{
+	const char *pos = env;
+	int i;
+
+	while (pos && *pos != '\0') {
+		int match = 0;
+		char *next;
+
+		if (*pos == ',')
+			pos++;
+		next = strchrnul(pos, ',');
+		if (strncmp(pos, "no_", 3) == 0)
+			pos += 3;
+
+		for (i = 0; i < HUGETLB_FEATURE_NR; i++) {
+			char *name = kernel_features[i].name;
+			if (strncmp(pos, name, next - pos) == 0) {
+				match = 1;
+				break;
+			}
+		}
+		if (!match) {
+			print_valid_features();
+			return -1;
+		}
+		pos = next;
+	}
+	return 0;
+}
+
 void __lh_setup_features()
 {
 	struct utsname u;
@@ -171,6 +215,10 @@ void __lh_setup_features()
 
 	/* Check if the user has overrided any features */
 	env = getenv("HUGETLB_FEATURES");
+	if (env && check_features_env_valid(env) == -1) {
+		ERROR("HUGETLB_FEATURES was invalid -- ignoring.\n");
+		env = NULL;
+	}
 
 	for (i = 0; i < HUGETLB_FEATURE_NR; i++) {
 		struct kernel_version ver;
