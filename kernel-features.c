@@ -21,6 +21,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
 #include <sys/utsname.h>
 #include "kernel-features.h"
 #include "hugetlbfs.h"
@@ -157,6 +158,7 @@ int hugetlbfs_test_feature(int feature_code)
 void __lh_setup_features()
 {
 	struct utsname u;
+	char *env;
 	int i;
 
 	if (uname(&u)) {
@@ -167,9 +169,28 @@ void __lh_setup_features()
 	str_to_ver(u.release, &running_kernel_version);
 	debug_kernel_version();
 
+	/* Check if the user has overrided any features */
+	env = getenv("HUGETLB_FEATURES");
+
 	for (i = 0; i < HUGETLB_FEATURE_NR; i++) {
 		struct kernel_version ver;
+		char *name = kernel_features[i].name;
+		char *pos;
+		
 		str_to_ver(kernel_features[i].required_version, &ver);
+
+		/* Has the user overridden feature detection? */
+		if (env && (pos = strstr(env, name))) {
+			DEBUG("Overriding feature %s: ", name);
+			/* If feature is preceeded by 'no_' then turn it off */
+			if (((pos - 3) >= env) && !strncmp(pos - 3, "no_", 3))
+				DEBUG_CONT("no\n");
+			else {
+				DEBUG_CONT("yes\n");
+				feature_mask |= (1UL << i);
+			}
+			continue;
+		}
 
 		/* Is the running kernel version newer? */
 		if (ver_cmp(&running_kernel_version, &ver) >= 0) {
