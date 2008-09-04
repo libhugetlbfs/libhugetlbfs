@@ -204,6 +204,17 @@ void __lh_hugetlbfs_setup_morecore(void)
 	}
 
 	/*
+	 * If the kernel supports MAP_PRIVATE reservations, we can skip
+	 * prefaulting the huge pages we allocate for the heap since the
+	 * kernel guarantees them.  This can help NUMA performance quite a bit.
+	 */
+	if (hugetlbfs_test_feature(HUGETLB_FEATURE_PRIVATE_RESV)) {
+		DEBUG("Kernel has MAP_PRIVATE reservations.  Disabling "
+			"heap prefaulting.\n");
+		__hugetlbfs_prefault = 0;
+	}
+
+	/*
 	 * We have been seeing some unexpected behavior from malloc when
 	 * heap shrinking is enabled, so heap shrinking is disabled by
 	 * default.

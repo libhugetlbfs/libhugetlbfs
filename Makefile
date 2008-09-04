@@ -1,7 +1,7 @@
 PREFIX = /usr/local
 EXEDIR = /bin
 
-LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o alloc.o shm.o
+LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o alloc.o shm.o kernel-features.o
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
 BIN_OBJ_DIR=obj
 INSTALL_BIN = hugectl hugeedit
