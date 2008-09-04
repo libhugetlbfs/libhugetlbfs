@@ -39,13 +39,20 @@
 #include <sys/mman.h>
 #include <sys/file.h>
 #include <sys/uio.h>
+#include <sys/syscall.h>
+#include <linux/types.h>
+#include <linux/dirent.h>
+#include <linux/unistd.h>
 
 #include "libhugetlbfs_internal.h"
 #include "hugetlbfs.h"
 
-static long hpage_size; /* = 0 */
-static char htlb_mount[PATH_MAX+1]; /* = 0 */
 static int hugepagesize_errno; /* = 0 */
+
+#define MAX_HPAGE_SIZES 10
+struct hpage_size hpage_sizes[MAX_HPAGE_SIZES];
+static int nr_hpage_sizes;
+static int hpage_sizes_default_idx = -1;
 
 /********************************************************************/
 /* Internal functions                                               */
@@ -103,63 +110,113 @@ static long read_meminfo(const char *tag)
 	return val;
 }
 
-/********************************************************************/
-/* Library user visible functions                                   */
-/********************************************************************/
-
-/*
- * returns:
- *   on success, size of a huge page in number of bytes
- *   on failure, -1
- *	errno set to ENOSYS if huge pages are not supported
- *	errno set to EOVERFLOW if huge page size would overflow return type
- */
-long gethugepagesize(void)
-{
-	long hpage_kb;
-	long max_hpage_kb = LONG_MAX / 1024;
-
-	if (hpage_size) {
-		errno = hugepagesize_errno;
-		return hpage_size;
-	}
-	errno = 0;
-
-	hpage_kb = read_meminfo("Hugepagesize:");
-	if (hpage_kb < 0) {
-		hpage_size = -1;
-		errno = hugepagesize_errno = ENOSYS;
-	} else {
-		if (hpage_kb > max_hpage_kb) {
-			/* would overflow if converted to bytes */
-			hpage_size = -1;
-			errno = hugepagesize_errno = EOVERFLOW;
-		}
-		else
-			/* convert from kb to bytes */
-			hpage_size = 1024 * hpage_kb;
-	}
-
-	return hpage_size;
-}
-
-int hugetlbfs_test_path(const char *mount)
+static long hugetlbfs_test_pagesize(const char *mount)
 {
 	struct statfs64 sb;
 	int err;
 
-	/* Bugs in the 32<->64 translation code in pre-2.6.15 kernels
-	 * mean that plain statfs() returns bogus errors on hugetlbfs
-	 * filesystems.  Use statfs64() to work around. */
 	err = statfs64(mount, &sb);
 	if (err)
 		return -1;
 
-	return (sb.f_type == HUGETLBFS_MAGIC);
+	if ((sb.f_bsize <= 0) || (sb.f_bsize > LONG_MAX))
+		return -1;
+
+	return sb.f_bsize / 1024; /* Return in kB */
+}
+
+static int hpage_size_to_index(unsigned long size)
+{
+	int i;
+
+	for (i = 0; i < nr_hpage_sizes; i++)
+		if (hpage_sizes[i].pagesize_kb == size)
+			return i;
+	return -1;
+}
+
+static void probe_default_hpage_size(void)
+{
+	long size;
+	int index;
+
+	if (nr_hpage_sizes == 0) {
+		DEBUG("No configured huge page sizes\n");
+		hpage_sizes_default_idx = -1;
+		return;
+	}
+
+	size = read_meminfo("Hugepagesize:");
+	if (size >= 0) {
+		index = hpage_size_to_index(size);
+		if (index >= 0)
+			hpage_sizes_default_idx = index;
+		else {
+			DEBUG("No mount point found for default huge page "
+				"size. Using first available mount point.\n");
+			hpage_sizes_default_idx = 0;
+		}
+	} else {
+		DEBUG("Unable to determine default huge page size\n");
+		hpage_sizes_default_idx = -1;
+	}
+}
+
+static void add_hugetlbfs_mount(char *path, int user_mount)
+{
+	int idx;
+	long size;
+
+	if (strlen(path) > PATH_MAX)
+		return;
+
+	if (!hugetlbfs_test_path(path)) {
+		WARNING("%s is not a hugetlbfs mount point, ignoring\n", path);
+		return;
+	}
+
+	size = hugetlbfs_test_pagesize(path);
+	if (size < 0) {
+		DEBUG("Unable to detect page size for path %s\n", path);
+		return;
+	}
+
+	idx = hpage_size_to_index(size);
+	if (idx < 0) {
+		if (nr_hpage_sizes >= MAX_HPAGE_SIZES) {
+			WARNING("Maximum number of huge page sizes exceeded, "
+				"ignoring %lukB page size\n", size);
+			return;
+		}
+
+		idx = nr_hpage_sizes;
+		hpage_sizes[nr_hpage_sizes++].pagesize_kb = size;
+	}
+
+	if (strlen(hpage_sizes[idx].mount)) {
+		if (user_mount)
+			WARNING("Mount point already defined for size %li, "
+				"ignoring %s\n", size, path);
+		return;
+	}
+
+	strcpy(hpage_sizes[idx].mount, path);
+}
+
+static void debug_show_page_sizes(void)
+{
+	int i;
+
+	DEBUG("Detected page sizes:\n");
+	for (i = 0; i < nr_hpage_sizes; i++)
+		DEBUG("   Size: %li kB %s  Mount: %s\n",
+			hpage_sizes[i].pagesize_kb,
+			i == hpage_sizes_default_idx ? "(default)" : "",
+			hpage_sizes[i].mount); 
 }
 
 #define LINE_MAXLEN	2048
-void find_mounts(void)
+static void find_mounts(void)
 {
 	int fd;
 	char path[PATH_MAX+1];
@@ -196,48 +253,107 @@ void find_mounts(void)
 
 		err = sscanf(line, "%*s %" stringify(PATH_MAX) "s hugetlbfs ",
 			path);
-		if ((err == 1) && (hugetlbfs_test_path(path) == 1)) {
-			strncpy(htlb_mount, path, sizeof(htlb_mount)-1);
-			break;
-		}
+		if ((err == 1) && (hugetlbfs_test_path(path) == 1))
+			add_hugetlbfs_mount(path, 0);
 	}
 	close(fd);
 }
 
-const char *hugetlbfs_find_path(void)
+void __lh_setup_mounts(void)
 {
-	int err;
-	char *tmp;
+	char *env;
+	int do_scan = 1;
 
-	/* Have we already located a mount? */
-	if (*htlb_mount)
-		return htlb_mount;
+	/* If HUGETLB_PATH is set, only add mounts specified there */
+	env = getenv("HUGETLB_PATH");
+	while (env) {
+		char path[PATH_MAX + 1];
+		char *next = strchrnul(env, ':');
 
-	/* No?  Let's see if we've been told where to look */
-	tmp = getenv("HUGETLB_PATH");
-	if (tmp) {
-		err = hugetlbfs_test_path(tmp);
-		if (err < 0) {
-			ERROR("Can't statfs() \"%s\" (%s)\n",
-			      tmp, strerror(errno));
-			return NULL;
-		} else if (err == 0) {
-			ERROR("\"%s\" is not a hugetlbfs mount\n", tmp);
-			return NULL;
+		do_scan = 0;
+		if (next - env > PATH_MAX) {
+			ERROR("Path too long in HUGETLB_PATH -- "
+				"ignoring environment\n");
+			break;
 		}
-		strncpy(htlb_mount, tmp, sizeof(htlb_mount)-1);
-		return htlb_mount;
+
+		strncpy(path, env, next - env);
+		path[next - env] = '\0';
+		add_hugetlbfs_mount(path, 1);
+
+		/* skip the ':' token */
+		env = *next == '\0' ? NULL : next + 1;
 	}
 
-	/* Oh well, let's go searching for a mountpoint */
-	find_mounts();
-	if (*htlb_mount)
-		return htlb_mount;
+	/* Then probe all mounted filesystems */
+	if (do_scan)
+		find_mounts();
 
-	WARNING("Could not find hugetlbfs mount point in /proc/mounts. "
-			"Is it mounted?\n");
+	probe_default_hpage_size();
+	if (__hugetlbfs_debug)
+		debug_show_page_sizes();
+}
 
-	return NULL;
+/********************************************************************/
+/* Library user visible functions                                   */
+/********************************************************************/
+
+/*
+ * NOTE: This function uses data that is initialized by
+ * __lh_setup_mounts() which is called during libhugetlbfs initialization.
+ *
+ * returns:
+ *   on success, size of a huge page in number of bytes
+ *   on failure, -1
+ *	errno set to ENOSYS if huge pages are not supported
+ *	errno set to EOVERFLOW if huge page size would overflow return type
+ */
+long gethugepagesize(void)
+{
+	long hpage_kb;
+	long max_hpage_kb = LONG_MAX / 1024;
+
+	/* Are huge pages available and have they been initialized? */
+	if (hpage_sizes_default_idx == -1) {
+		errno = hugepagesize_errno = ENOSYS;
+		return -1;
+	}
+
+	hpage_kb = hpage_sizes[hpage_sizes_default_idx].pagesize_kb;
+	if (hpage_kb > max_hpage_kb) {
+		/* would overflow if converted to bytes */
+		errno = hugepagesize_errno = EOVERFLOW;
+		return -1;
+	} else {
+		errno = 0;
+		/* convert from kb to bytes */
+		return (1024 * hpage_kb);
+	}
+}
+
+int hugetlbfs_test_path(const char *mount)
+{
+	struct statfs64 sb;
+	int err;
+
+	/* Bugs in the 32<->64 translation code in pre-2.6.15 kernels
+	 * mean that plain statfs() returns bogus errors on hugetlbfs
+	 * filesystems.  Use statfs64() to work around. */
+	err = statfs64(mount, &sb);
+	if (err)
+		return -1;
+
+	return (sb.f_type == HUGETLBFS_MAGIC);
+}
+
+const char *hugetlbfs_find_path(void)
+{
+	char *path = hpage_sizes[hpage_sizes_default_idx].mount;
+
+	if (strlen(path))
+		return path;
+	else
+		return NULL;
 }
 
 int hugetlbfs_unlinked_fd(void)

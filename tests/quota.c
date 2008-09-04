@@ -52,7 +52,7 @@ extern int errno;
 
 /* Global test configuration */
 static long hpage_size;
-static char mountpoint[17];
+char *mountpoint = NULL;
 
 /* map action flags */
 #define ACTION_COW		0x0001
@@ -67,7 +67,7 @@ char result_str[3][10] = { "pass", "killed", "fail" };
 
 void cleanup(void)
 {
-	if (umount(mountpoint) == 0)
+	if (mountpoint && (umount(mountpoint) == 0))
 		rmdir(mountpoint);
 }
 
@@ -86,31 +86,47 @@ void _verify_stat(int line, long tot, long free, long avail)
 }
 #define verify_stat(t, f, a) _verify_stat(__LINE__, t, f, a)
 
-void get_quota_fs(unsigned long size)
+void get_quota_fs(unsigned long size, char *prog)
 {
-	char size_str[20];
+	char mount_str[17];
+	char mount_opts[50];
+	int nr_written;
 
-	snprintf(size_str, 20, "size=%luK", size/1024);
+	nr_written = snprintf(mount_opts, 20, "size=%luK", size/1024);
 
-	sprintf(mountpoint, "/tmp/huge-XXXXXX");
-	if (!mkdtemp(mountpoint))
+	/*
+	 * If the mount point now in use does not use the system default
+	 * huge page size, specify the desired size when mounting.  When
+	 * the sizes do match, we avoid specifying the pagesize= option to
+	 * preserve backwards compatibility with kernels that do not
+	 * recognize that option.
+	 */
+	if (!using_system_hpage_size(hugetlbfs_find_path()))
+		snprintf(mount_opts + nr_written, 29, ",pagesize=%lu",
+			hpage_size);
+
+	sprintf(mount_str, "/tmp/huge-XXXXXX");
+	if (!mkdtemp(mount_str))
 		FAIL("Cannot create directory for mountpoint: %s",
 							strerror(errno));
 
-	if (mount("none", mountpoint, "hugetlbfs", 0, size_str)) {
+	if (mount("none", mount_str, "hugetlbfs", 0, mount_opts)) {
 		perror("mount");
 		FAIL();
 	}
+	mountpoint = mount_str;
 
 	/*
-	 * Set HUGETLB_PATH so future calls to hugetlbfs_unlinked_fd()
-	 * will use this mountpoint.
+	 * Set HUGETLB_PATH and then exec the test again.  This will cause
+	 * libhugetlbfs to use this newly created mountpoint.
 	 */
-	if (setenv("HUGETLB_PATH", mountpoint, 1))
+	if (setenv("HUGETLB_PATH", mount_str, 1))
 		FAIL("Cannot set HUGETLB_PATH environment variable: %s",
 							strerror(errno));
+	verbose_printf("Using %s as temporary mount point.\n", mount_str);
 
-	verbose_printf("Using %s as temporary mount point.\n", mountpoint);
+	execlp(prog, prog, "-p", mount_str, NULL);
+	FAIL("execle failed: %s", strerror(errno));
 }
 
 void map(unsigned long size, int mmap_flags, int action_flags)
@@ -192,20 +208,24 @@ void _spawn(int l, int expected_result, unsigned long size, int mmap_flags,
 int main(int argc, char ** argv)
 {
 	int fd, private_resv;
-
-	test_init(argc, argv);
-	check_must_be_root();
-	mountpoint[0] = '\0';
-	hpage_size = check_hugepagesize();
 	int bad_priv_resv;
 
+	test_init(argc, argv);
+	hpage_size = check_hugepagesize();
+
+	if ((argc == 3) && !strcmp(argv[1], "-p"))
+		mountpoint = argv[2];
+	else
+		get_quota_fs(hpage_size, argv[0]);
+
+	check_must_be_root();
 	check_free_huge_pages(1);
-	get_quota_fs(hpage_size);
 
 	fd = hugetlbfs_unlinked_fd();
-	if ((private_resv = kernel_has_private_reservations(fd)) == -1)
-		FAIL("kernel_has_private_reservations() failed\n");
+	private_resv = kernel_has_private_reservations(fd);
 	close(fd);
+	if (private_resv == -1)
+		FAIL("kernel_has_private_reservations() failed\n");
 	bad_priv_resv = private_resv ? BAD_EXIT : BAD_SIG;
 
 	/*

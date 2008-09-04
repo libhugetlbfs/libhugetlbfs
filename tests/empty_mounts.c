@@ -60,7 +60,6 @@ int main(int argc, char *argv[])
 	int fd;
 
 	test_init(argc, argv);
-	check_hugepagesize();
 
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)

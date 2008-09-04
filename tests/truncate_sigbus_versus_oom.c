@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 
 	test_init(argc, argv);
 
-	totpages = read_meminfo("HugePages_Free:");
+	totpages = get_pool_counter(HUGEPAGES_FREE, 0);
 
 	hpage_size = check_hugepagesize();
 
