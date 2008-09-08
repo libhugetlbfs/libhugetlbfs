@@ -1027,6 +1027,9 @@ static int obtain_prepared_file(struct seg_info *htlb_seg_info)
 		return -1;
 	}
 
+	if (WEXITSTATUS(status) != 0)
+		return -1;
+
 	DEBUG("Prepare succeeded\n");
 	return 0;
 }
@@ -1216,7 +1219,12 @@ void __lh_hugetlbfs_setup_elflink(void)
 	for (i = 0; i < htlb_num_segs; i++) {
 		ret = obtain_prepared_file(&htlb_seg_table[i]);
 		if (ret < 0) {
-			DEBUG("Failed to setup hugetlbfs file\n");
+			DEBUG("Failed to setup hugetlbfs file for segment %d\n", i);
+
+			/* Close files we have already prepared */
+			for (; i >= 0; i--)
+				close(htlb_seg_table[i].fd);
+
 			return;
 		}
 	}
