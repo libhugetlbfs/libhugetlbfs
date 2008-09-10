@@ -110,6 +110,7 @@ static long read_meminfo(const char *tag)
 	return val;
 }
 
+/* Return the page size for the given mount point in bytes */
 static long hugetlbfs_test_pagesize(const char *mount)
 {
 	struct statfs64 sb;
@@ -122,7 +123,7 @@ static long hugetlbfs_test_pagesize(const char *mount)
 	if ((sb.f_bsize <= 0) || (sb.f_bsize > LONG_MAX))
 		return -1;
 
-	return sb.f_bsize / 1024; /* Return in kB */
+	return sb.f_bsize;
 }
 
 static int hpage_size_to_index(unsigned long size)
@@ -130,7 +131,7 @@ static int hpage_size_to_index(unsigned long size)
 	int i;
 
 	for (i = 0; i < nr_hpage_sizes; i++)
-		if (hpage_sizes[i].pagesize_kb == size)
+		if (hpage_sizes[i].pagesize == size)
 			return i;
 	return -1;
 }
@@ -147,6 +148,7 @@ static void probe_default_hpage_size(void)
 	}
 
 	size = read_meminfo("Hugepagesize:");
+	size *= 1024; /* convert from kB to B */
 	if (size >= 0) {
 		index = hpage_size_to_index(size);
 		if (index >= 0)
@@ -190,7 +192,7 @@ static void add_hugetlbfs_mount(char *path, int user_mount)
 		}
 
 		idx = nr_hpage_sizes;
-		hpage_sizes[nr_hpage_sizes++].pagesize_kb = size;
+		hpage_sizes[nr_hpage_sizes++].pagesize = size;
 	}
 
 	if (strlen(hpage_sizes[idx].mount)) {
@@ -210,7 +212,7 @@ static void debug_show_page_sizes(void)
 	DEBUG("Detected page sizes:\n");
 	for (i = 0; i < nr_hpage_sizes; i++)
 		DEBUG("   Size: %li kB %s  Mount: %s\n",
-			hpage_sizes[i].pagesize_kb,
+			hpage_sizes[i].pagesize / 1024,
 			i == hpage_sizes_default_idx ? "(default)" : "",
 			hpage_sizes[i].mount); 
 }
@@ -310,8 +312,7 @@ void __lh_setup_mounts(void)
  */
 long gethugepagesize(void)
 {
-	long hpage_kb;
-	long max_hpage_kb = LONG_MAX / 1024;
+	long hpage_size;
 
 	/* Are huge pages available and have they been initialized? */
 	if (hpage_sizes_default_idx == -1) {
@@ -319,16 +320,9 @@ long gethugepagesize(void)
 		return -1;
 	}
 
-	hpage_kb = hpage_sizes[hpage_sizes_default_idx].pagesize_kb;
-	if (hpage_kb > max_hpage_kb) {
-		/* would overflow if converted to bytes */
-		errno = hugepagesize_errno = EOVERFLOW;
-		return -1;
-	} else {
-		errno = 0;
-		/* convert from kb to bytes */
-		return (1024 * hpage_kb);
-	}
+	errno = 0;
+	hpage_size = hpage_sizes[hpage_sizes_default_idx].pagesize;
+	return hpage_size;
 }
 
 int hugetlbfs_test_path(const char *mount)

@@ -141,9 +141,9 @@ struct hugetlb_pool_counter_info_t {
 	char *sysfs_file;
 };
 extern struct hugetlb_pool_counter_info_t hugetlb_counter_info[];
-long get_pool_counter(unsigned int counter, unsigned long pagesize_kb);
+long get_pool_counter(unsigned int counter, unsigned long pagesize);
 int set_pool_counter(unsigned int counter, unsigned long val,
-				unsigned long pagesize_kb);
+				unsigned long pagesize);
 
 int using_system_hpage_size(const char *mount);
 

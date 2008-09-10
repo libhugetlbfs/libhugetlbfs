@@ -81,7 +81,7 @@ extern int __lh_hugetlbfs_prefault(int fd, void *addr, size_t length);
 
 /* Multiple huge page size support */
 struct hpage_size {
-	unsigned long pagesize_kb;
+	unsigned long pagesize;
 	char mount[PATH_MAX+1];
 };
 

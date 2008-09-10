@@ -289,7 +289,7 @@ int file_write_ulong(char *file, unsigned long val)
 	return ret > 0 ? 0 : -1;
 }
 
-int select_pool_counter(unsigned int counter, unsigned long pagesize_kb,
+int select_pool_counter(unsigned int counter, unsigned long pagesize,
 				char *filename, char **key)
 {
 	long default_size;
@@ -318,12 +318,12 @@ int select_pool_counter(unsigned int counter, unsigned long pagesize_kb,
 		return -1;
 	}
 
-	/* Convert a pagesize_kb of 0 to the libhugetlbfs default size */
-	if (pagesize_kb == 0)
-		pagesize_kb = gethugepagesize() / 1024;
+	/* Convert a pagesize of 0 to the libhugetlbfs default size */
+	if (pagesize == 0)
+		pagesize = gethugepagesize();
 
 	/* If the user is dealing in the default page size, we can use /proc */
-	if (pagesize_kb == default_size) {
+	if (pagesize == default_size) {
 		if (meminfo_key && key) {
 			strcpy(filename, "/proc/meminfo");
 			*key = meminfo_key;
@@ -331,27 +331,27 @@ int select_pool_counter(unsigned int counter, unsigned long pagesize_kb,
 			sprintf(filename, "/proc/sys/vm/%s", sysfs_file);
 	} else /* Use the sysfs interface */
 		sprintf(filename, "/sys/kernel/mm/hugepages/hugepages-%lukB/%s",
-			pagesize_kb, sysfs_file);
+			pagesize / 1024, sysfs_file);
 	return 0;
 }
 
-long get_pool_counter(unsigned int counter, unsigned long pagesize_kb)
+long get_pool_counter(unsigned int counter, unsigned long pagesize)
 {
 	char file[PATH_MAX+1];
 	char *key;
 
-	if (select_pool_counter(counter, pagesize_kb, file, &key))
+	if (select_pool_counter(counter, pagesize, file, &key))
 		return -1;
 
 	return file_read_ulong(file, key);
 }
 
 int set_pool_counter(unsigned int counter, unsigned long val,
-			unsigned long pagesize_kb)
+			unsigned long pagesize)
 {
 	char file[PATH_MAX+1];
 
-	if (select_pool_counter(counter, pagesize_kb, file, NULL))
+	if (select_pool_counter(counter, pagesize, file, NULL))
 		return -1;
 
 	return file_write_ulong(file, val);
