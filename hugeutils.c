@@ -61,6 +61,33 @@ static int hpage_sizes_default_idx = -1;
 #define BUF_SZ 256
 #define MEMINFO_SIZE	2048
 
+static long parse_page_size(const char *str)
+{
+	char *pos;
+	unsigned long size;
+
+	size = strtoul(str, &pos, 0);
+	if (str == pos)
+		return -1;
+	/* Catch strtoul errors and sizes that overflow the native word size */
+	if (size > LONG_MAX)
+		return -1;
+
+	switch (*pos) {
+	case 'G':
+	case 'g':
+		size *= 1024;
+	case 'M':
+	case 'm':
+		size *= 1024;
+	case 'K':
+	case 'k':
+		size *= 1024;
+	}
+
+	return size;
+}
+
 static long read_meminfo(const char *tag)
 {
 	int fd;
@@ -138,6 +165,7 @@ static int hpage_size_to_index(unsigned long size)
 
 static void probe_default_hpage_size(void)
 {
+	char *env;
 	long size;
 	int index;
 
@@ -147,8 +175,18 @@ static void probe_default_hpage_size(void)
 		return;
 	}
 
-	size = read_meminfo("Hugepagesize:");
-	size *= 1024; /* convert from kB to B */
+	/*
+	 * Check if the user specified a default size, otherwise use the
+	 * system default size as reported by /proc/meminfo.
+	 */
+	env = getenv("HUGETLB_DEFAULT_PAGE_SIZE");
+	if (env && strlen(env) > 0)
+		size = parse_page_size(env);
+	else {
+		size = read_meminfo("Hugepagesize:");
+		size *= 1024; /* convert from kB to B */
+	}
+
 	if (size >= 0) {
 		index = hpage_size_to_index(size);
 		if (index >= 0)
