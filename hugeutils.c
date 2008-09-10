@@ -378,23 +378,36 @@ int hugetlbfs_test_path(const char *mount)
 	return (sb.f_type == HUGETLBFS_MAGIC);
 }
 
-const char *hugetlbfs_find_path(void)
+const char *hugetlbfs_find_path_for_size(long page_size)
 {
-	char *path = hpage_sizes[hpage_sizes_default_idx].mount;
+	char *path;
+	int idx;
 
-	if (strlen(path))
-		return path;
+	if (page_size == 0)
+		idx = hpage_sizes_default_idx;
 	else
-		return NULL;
+		idx = hpage_size_to_index(page_size);
+
+	if (idx >= 0) {
+		path = hpage_sizes[idx].mount;
+		if (strlen(path))
+			return path;
+	}
+	return NULL;
 }
 
-int hugetlbfs_unlinked_fd(void)
+const char *hugetlbfs_find_path(void)
+{
+	return hugetlbfs_find_path_for_size(0);
+}
+
+int hugetlbfs_unlinked_fd_for_size(long page_size)
 {
 	const char *path;
 	char name[PATH_MAX+1];
 	int fd;
 
-	path = hugetlbfs_find_path();
+	path = hugetlbfs_find_path_for_size(page_size);
 	if (!path)
 		return -1;
 
@@ -414,6 +427,11 @@ int hugetlbfs_unlinked_fd(void)
 	unlink(name);
 
 	return fd;
+}
+
+int hugetlbfs_unlinked_fd(void)
+{
+	return hugetlbfs_unlinked_fd_for_size(0);
 }
 
 #define IOV_LEN 64

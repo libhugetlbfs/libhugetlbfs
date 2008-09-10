@@ -24,7 +24,9 @@
 long gethugepagesize(void);
 int hugetlbfs_test_path(const char *mount);
 const char *hugetlbfs_find_path(void);
+const char *hugetlbfs_find_path_for_size(long page_size);
 int hugetlbfs_unlinked_fd(void);
+int hugetlbfs_unlinked_fd_for_size(long page_size);
 
 /* Diagnoses/debugging only functions */
 long __lh_dump_proc_pid_maps(void);
