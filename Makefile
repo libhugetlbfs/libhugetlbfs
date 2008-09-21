@@ -249,8 +249,18 @@ obj64/%.s:	%.c
 	@$(VECHO) CC64 -S $@
 	$(CC64) $(CPPFLAGS) $(CFLAGS) -o $@ -S $<
 
-$(INSTALL_BIN:%=$(BIN_OBJ_DIR)/%): $(BIN_OBJ_DIR)/%: %.c
-	@$(VECHO) CC $@
+$(BIN_OBJ_DIR)/%.o: %.c
+	@$(VECHO) CCHOST $@
+	@mkdir -p $(BIN_OBJ_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+
+$(BIN_OBJ_DIR)/hugectl: $(BIN_OBJ_DIR)/hugectl.o
+	@$(VECHO) LDHOST $@
+	mkdir -p $(BIN_OBJ_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
+
+$(BIN_OBJ_DIR)/hugeedit: $(BIN_OBJ_DIR)/hugeedit.o
+	@$(VECHO) LDHOST $@
 	mkdir -p $(BIN_OBJ_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
 
