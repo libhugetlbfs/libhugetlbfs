@@ -53,11 +53,14 @@ extern char __hugetlbfs_hostname[];
 extern int __lh_hugetlbfs_prefault(int fd, void *addr, size_t length);
 extern long __lh_parse_page_size(const char *str);
 
+#ifndef REPORT_UTIL
+#define REPORT_UTIL "libhugetlbfs"
+#endif
 #ifndef REPORT
 #define REPORT(level, prefix, format, ...) \
 	do { \
 		if (__hugetlbfs_debug || __hugetlbfs_verbose >= level) { \
-			fprintf(stderr, "libhugetlbfs [%s:%d]: " prefix ": " \
+			fprintf(stderr, REPORT_UTIL " [%s:%d]: " prefix ": " \
 				format, __hugetlbfs_hostname, getpid(), \
 				##__VA_ARGS__); \
 			fflush(stderr); \
