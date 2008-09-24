@@ -248,10 +248,6 @@ int select_pool_counter(unsigned int counter, unsigned long pagesize,
 		return -1;
 	}
 
-	/* Convert a pagesize of 0 to the libhugetlbfs default size */
-	if (pagesize == 0)
-		pagesize = default_size;
-
 	/* If the user is dealing in the default page size, we can use /proc */
 	if (pagesize == default_size) {
 		if (meminfo_key && key) {
@@ -522,11 +518,7 @@ const char *hugetlbfs_find_path_for_size(long page_size)
 	char *path;
 	int idx;
 
-	if (page_size == 0)
-		idx = hpage_sizes_default_idx;
-	else
-		idx = hpage_size_to_index(page_size);
-
+	idx = hpage_size_to_index(page_size);
 	if (idx >= 0) {
 		path = hpage_sizes[idx].mount;
 		if (strlen(path))
@@ -537,7 +529,11 @@ const char *hugetlbfs_find_path_for_size(long page_size)
 
 const char *hugetlbfs_find_path(void)
 {
-	return hugetlbfs_find_path_for_size(0);
+	long hpage_size = gethugepagesize();
+	if (hpage_size > 0)
+		return hugetlbfs_find_path_for_size(hpage_size);
+	else
+		return NULL;
 }
 
 int hugetlbfs_unlinked_fd_for_size(long page_size)
@@ -570,7 +566,11 @@ int hugetlbfs_unlinked_fd_for_size(long page_size)
 
 int hugetlbfs_unlinked_fd(void)
 {
-	return hugetlbfs_unlinked_fd_for_size(0);
+	long hpage_size = gethugepagesize();
+	if (hpage_size > 0)
+		return hugetlbfs_unlinked_fd_for_size(hpage_size);
+	else
+		return -1;
 }
 
 #define IOV_LEN 64
