@@ -561,6 +561,71 @@ long gethugepagesize(void)
 	return hpage_size;
 }
 
+int gethugepagesizes(long pagesizes[], int n_elem)
+{
+	long default_size;
+	DIR *sysfs;
+	struct dirent *ent;
+	int nr_sizes = 0;
+
+	if (n_elem < 0) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	if (n_elem > 0 && pagesizes == NULL) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	errno = 0;
+
+	/* Get the system default size from /proc/meminfo */
+	default_size = read_meminfo("Hugepagesize:") * 1024;
+	if (default_size < 0)
+		return 0;
+
+	if (n_elem && pagesizes)
+		pagesizes[nr_sizes] = default_size;
+	nr_sizes++;
+	if (n_elem && (nr_sizes == n_elem))
+		return nr_sizes;
+
+	/*
+	 * Scan sysfs to look for other sizes.
+	 * Non-existing dir is not an error, we got one size from /proc/meminfo.
+	 */
+	sysfs = opendir(SYSFS_HUGEPAGES_DIR);
+	if (!sysfs) {
+		if (errno == ENOENT) {
+			errno = 0;
+			return nr_sizes;
+		} else
+			return -1;
+	}
+	while ((ent = readdir(sysfs)) &&
+				((n_elem == 0) || (nr_sizes < n_elem))) {
+		long size;
+
+		if (strncmp(ent->d_name, "hugepages-", 10))
+			continue;
+
+		size = strtol(ent->d_name + 10, NULL, 10);
+		if (size == LONG_MIN || size == LONG_MAX)
+			continue;
+		size *= 1024; /* Convert from KB to Bytes */
+
+		if (size == default_size)
+			continue;
+		if (n_elem && pagesizes)
+			pagesizes[nr_sizes] = size;
+		nr_sizes++;
+	}
+	closedir(sysfs);
+
+	return nr_sizes;
+}
+
 int hugetlbfs_test_path(const char *mount)
 {
 	struct statfs64 sb;

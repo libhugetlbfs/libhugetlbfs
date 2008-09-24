@@ -22,6 +22,7 @@
 #define HUGETLBFS_MAGIC	0x958458f6
 
 long gethugepagesize(void);
+int gethugepagesizes(long pagesizes[], int n_elem);
 int hugetlbfs_test_path(const char *mount);
 long hugetlbfs_test_pagesize(const char *mount);
 const char *hugetlbfs_find_path(void);
