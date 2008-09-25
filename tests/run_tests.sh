@@ -12,6 +12,16 @@ export HUGETLB_VERBOSE
 
 ENV=/usr/bin/env
 
+for BITS in 32 64; do
+    tot_tests[$BITS]=0
+    tot_pass[$BITS]=0
+    tot_fail[$BITS]=0
+    tot_config[$BITS]=0
+    tot_signal[$BITS]=0
+    tot_strange[$BITS]=0
+    tot_skip[$BITS]=0
+done
+
 function free_hpages() {
 	H=$(grep 'HugePages_Free:' /proc/meminfo | cut -f2 -d:)
 	[ -z "$H" ] && H=0
@@ -82,8 +92,22 @@ run_test_bits () {
     shift
 
     if [ -d obj$BITS ]; then
+	tot_tests[$BITS]=$[tot_tests[$BITS] + 1]
 	echo -n "$@ ($BITS):	"
-	PATH="obj$BITS:$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH:../obj$BITS:obj$BITS" $ENV "$@"
+	if PATH="obj$BITS:$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH:../obj$BITS:obj$BITS" $ENV "$@"; then
+	    tot_pass[$BITS]=$[tot_pass[$BITS] + 1]
+	else
+	    rc="$?"
+	    if [ "$rc" == "1" ]; then
+		tot_config[$BITS]=$[tot_config[$BITS] + 1]
+            elif [ "$rc" == "2" ]; then
+		tot_fail[$BITS]=$[tot_fail[$BITS] + 1]
+	    elif [ "$rc" -gt 127 ]; then
+		tot_signal[$BITS]=$[tot_signal[$BITS] + 1]
+            else
+		tot_strange[$BITS]=$[tot_strange[$BITS] + 1]
+            fi
+	fi
     fi
 }
 
@@ -97,6 +121,10 @@ run_test () {
 # replace "run_test <options>" with "skip_test <options>".
 skip_test () {
     echo "$@:	SKIPPED"
+    for bits in $WORDSIZES; do
+	tot_tests[$bits]=$[tot_tests[$bits] + 1]
+	tot_skip[$bits]=$[tot_skip[$bits] + 1]
+    done
 }
 
 maybe_run_linkhuge_test () {
@@ -367,3 +395,14 @@ for set in $TESTSETS; do
 	    ;;
     esac
 done
+
+echo -e "********** TEST SUMMARY"
+echo -e "*                      32-bit\t64-bit"
+echo -e "*     Total testcases:	${tot_tests[32]}\t${tot_tests[64]}"
+echo -e "*             Skipped:	${tot_skip[32]}\t${tot_skip[64]}"
+echo -e "*                PASS:	${tot_pass[32]}\t${tot_pass[64]}"
+echo -e "*                FAIL:	${tot_fail[32]}\t${tot_fail[64]}"
+echo -e "*    Killed by signal:	${tot_signal[32]}\t${tot_signal[64]}"
+echo -e "*   Bad configuration:	${tot_config[32]}\t${tot_config[64]}"
+echo -e "* Strange test result:	${tot_strange[32]}\t${tot_strange[64]}"
+echo -e "**********"
