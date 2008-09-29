@@ -167,22 +167,6 @@ static long read_meminfo(const char *tag)
 	return val;
 }
 
-/* Return the page size for the given mount point in bytes */
-static long hugetlbfs_test_pagesize(const char *mount)
-{
-	struct statfs64 sb;
-	int err;
-
-	err = statfs64(mount, &sb);
-	if (err)
-		return -1;
-
-	if ((sb.f_bsize <= 0) || (sb.f_bsize > LONG_MAX))
-		return -1;
-
-	return sb.f_bsize;
-}
-
 static int hpage_size_to_index(unsigned long size)
 {
 	int i;
@@ -406,6 +390,22 @@ int hugetlbfs_test_path(const char *mount)
 		return -1;
 
 	return (sb.f_type == HUGETLBFS_MAGIC);
+}
+
+/* Return the page size for the given mount point in bytes */
+long hugetlbfs_test_pagesize(const char *mount)
+{
+	struct statfs64 sb;
+	int err;
+
+	err = statfs64(mount, &sb);
+	if (err)
+		return -1;
+
+	if ((sb.f_bsize <= 0) || (sb.f_bsize > LONG_MAX))
+		return -1;
+
+	return sb.f_bsize;
 }
 
 const char *hugetlbfs_find_path_for_size(long page_size)

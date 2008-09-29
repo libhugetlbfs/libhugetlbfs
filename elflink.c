@@ -161,7 +161,7 @@ struct seg_info {
 
 struct seg_layout {
 	unsigned long start, end;
-	int huge;
+	long page_size;
 };
 
 static struct seg_info htlb_seg_table[MAX_HTLB_SEGS];
@@ -169,8 +169,15 @@ static int htlb_num_segs;
 static int minimal_copy = 1;
 static int sharing; /* =0 */
 static unsigned long force_remap; /* =0 */
-static long hpage_size;
-static int remap_readonly, remap_writable;
+static long hpage_default_size, hpage_readonly_size, hpage_writable_size;
+
+static long get_segment_hpage_size(struct seg_info *seg)
+{
+	if (seg->prot & PROT_WRITE)
+		return hpage_writable_size;
+	else
+		return hpage_readonly_size;
+}
 
 /**
  * assemble_path - handy wrapper around snprintf() for building paths
@@ -236,11 +243,16 @@ static void check_memsz()
  *  -1, on error
  *  0, on success
  */
-static int find_or_create_share_path(void)
+static int find_or_create_share_path(long page_size)
 {
 	char *env;
+	const char *base_path;
 	struct stat sb;
 	int ret;
+
+	/* If no remaping is planned for the read-only segments we are done */
+	if (!page_size)
+		return 0;
 
 	env = getenv("HUGETLB_SHARE_PATH");
 	if (env) {
@@ -250,12 +262,22 @@ static int find_or_create_share_path(void)
 			      " filesystem\n", share_path);
 			return -1;
 		}
+
+		/* Make sure the page size matches */
+		if (page_size != hugetlbfs_test_pagesize(env)) {
+			ERROR("HUGETLB_SHARE_PATH %s is not valid for a %li "
+			      "kB page size\n", env, page_size / 1024);
+			return -1;
+		}
 		assemble_path(share_path, "%s", env);
 		return 0;
 	}
 
-	assemble_path(share_path, "%s/elflink-uid-%d",
-		      hugetlbfs_find_path(), getuid());
+	base_path = hugetlbfs_find_path_for_size(page_size);
+	if (!base_path)
+		return -1;
+
+	assemble_path(share_path, "%s/elflink-uid-%d", base_path, getuid());
 
 	ret = mkdir(share_path, 0700);
 	if ((ret != 0) && (errno != EEXIST)) {
@@ -630,7 +652,7 @@ static int verify_segment_layout(struct seg_layout *segs, int num_segs)
 		}
 
 		/* Make sure page size transitions occur on slice boundaries */
-		if ((segs[i - 1].huge != segs[i].huge) &&
+		if ((segs[i - 1].page_size != segs[i].page_size) &&
 				hugetlb_slice_end(prev_end) >
 				hugetlb_slice_start(start)) {
 			WARNING("Layout problem with segments %i and %i:\n\t"
@@ -641,15 +663,33 @@ static int verify_segment_layout(struct seg_layout *segs, int num_segs)
 	return 0;
 }
 
+static long segment_requested_page_size(const ElfW(Phdr) *phdr)
+{
+	int writable = phdr->p_flags & PF_W;
+
+	/* Check if a page size was requested by the user */
+	if (writable && hpage_writable_size)
+		return hpage_writable_size;
+	if (!writable && hpage_readonly_size)
+		return hpage_readonly_size;
+
+	/* Check if this segment requests remapping by default */
+	if (!hpage_readonly_size && !hpage_writable_size &&
+			(phdr->p_flags & PF_LINUX_HUGETLB))
+		return hpage_default_size;
+
+	/* No remapping selected, return the base page size */
+	return getpagesize();
+}
+
 static
 int parse_elf_normal(struct dl_phdr_info *info, size_t size, void *data)
 {
 	int i, num_segs;
-	unsigned long page_size, hpage_size, seg_psize, start, end;
+	unsigned long page_size, seg_psize, start, end;
 	struct seg_layout segments[MAX_SEGS];
 
 	page_size = getpagesize();
-	hpage_size = gethugepagesize();
 	num_segs = 0;
 
 	for (i = 0; i < info->dlpi_phnum; i++) {
@@ -661,18 +701,8 @@ int parse_elf_normal(struct dl_phdr_info *info, size_t size, void *data)
 			return 1;
 		}
 
-		/* Determine if this segment will be remapped into huge pages */
-		if (remap_readonly && !(info->dlpi_phdr[i].p_flags & PF_W))
-			seg_psize = hpage_size;
-		else if (remap_writable && info->dlpi_phdr[i].p_flags & PF_W)
-			seg_psize = hpage_size;
-		else if (!remap_readonly && !remap_writable &&
-				(info->dlpi_phdr[i].p_flags & PF_LINUX_HUGETLB))
-			seg_psize = hpage_size;
-		else
-			seg_psize = page_size;
-
-		if (seg_psize == hpage_size) {
+		seg_psize = segment_requested_page_size(&info->dlpi_phdr[i]);
+		if (seg_psize != page_size) {
 			if (save_phdr(htlb_num_segs, i, &info->dlpi_phdr[i]))
 				return 1;
 			get_extracopy(&htlb_seg_table[htlb_num_segs],
@@ -683,7 +713,7 @@ int parse_elf_normal(struct dl_phdr_info *info, size_t size, void *data)
 		end = ALIGN(info->dlpi_phdr[i].p_vaddr +
 				info->dlpi_phdr[i].p_memsz, seg_psize);
 
-		segments[num_segs].huge = (seg_psize == hpage_size);
+		segments[num_segs].page_size = seg_psize;
 		segments[num_segs].start = start;
 		segments[num_segs].end = end;
 		num_segs++;
@@ -797,7 +827,9 @@ static int prepare_segment(struct seg_info *seg)
 	void *start, *p, *end, *new_end;
 	unsigned long size, offset;
 	long page_size = getpagesize();
-	long hpage_size = gethugepagesize();
+	long hpage_size;
+
+	hpage_size = get_segment_hpage_size(seg);
 
 	/*
 	 * mmaps must begin at an address aligned to the page size.  If the
@@ -985,6 +1017,7 @@ static int obtain_prepared_file(struct seg_info *htlb_seg_info)
 {
 	int fd = -1;
 	int ret, pid, status;
+	long hpage_size = get_segment_hpage_size(htlb_seg_info);
 
 	/* Share only read-only segments */
 	if (sharing && !(htlb_seg_info->prot & PROT_WRITE)) {
@@ -995,7 +1028,7 @@ static int obtain_prepared_file(struct seg_info *htlb_seg_info)
 		/* but, fall through to unlinked files, if sharing fails */
 		DEBUG("Falling back to unlinked files\n");
 	}
-	fd = hugetlbfs_unlinked_fd();
+	fd = hugetlbfs_unlinked_fd_for_size(hpage_size);
 	if (fd < 0)
 		return -1;
 	htlb_seg_info->fd = fd;
@@ -1040,7 +1073,7 @@ static void remap_segments(struct seg_info *seg, int num)
 	void *p;
 	unsigned long start, offset, mapsize;
 	long page_size = getpagesize();
-	long hpage_size = gethugepagesize();
+	long hpage_size;
 	int mmap_flags;
 
 	/*
@@ -1068,6 +1101,7 @@ static void remap_segments(struct seg_info *seg, int num)
 	 * because of PowerPC: we may need to unmap all the normal
 	 * segments before the MMU segment is ok for hugepages */
 	for (i = 0; i < num; i++) {
+		hpage_size = get_segment_hpage_size(&seg[i]);
 		start = ALIGN_DOWN((unsigned long)seg[i].vaddr, hpage_size);
 		offset = (unsigned long)(seg[i].vaddr - start);
 		mapsize = ALIGN(offset + seg[i].memsz, hpage_size);
@@ -1101,6 +1135,47 @@ static void remap_segments(struct seg_info *seg, int num)
 	 */
 }
 
+static int set_hpage_sizes(const char *env)
+{
+	char *pos;
+	long size;
+	char *key;
+	char keys[5] = { "R\0" "W\0" "\0" };
+
+	/* For each key in R,W */
+	for (key = keys; *key != '\0'; key += 2) {
+		pos = strcasestr(env, key);
+		if (!pos)
+			continue;
+
+		if (*(++pos) == '=') {
+			size = __lh_parse_page_size(pos + 1);
+			if (size == -1)
+				return size;
+		} else
+			size = gethugepagesize();
+
+		if (size <= 0) {
+			if (errno == ENOSYS)
+				ERROR("Hugepages unavailable\n");
+			else if (errno == EOVERFLOW)
+				ERROR("Hugepage size too large\n");
+			else
+				ERROR("Hugepage size (%s)\n", strerror(errno));
+			size = 0;
+		} else if (!hugetlbfs_find_path_for_size(size)) {
+			ERROR("Hugepage size %li unavailable", size);
+			size = 0;
+		}
+
+		if (*key == 'R')
+			hpage_readonly_size = size;
+		else
+			hpage_writable_size = size;
+	}
+	return 0;
+}
+
 static int check_env(void)
 {
 	char *env, *env2;
@@ -1112,10 +1187,10 @@ static int check_env(void)
 		      "segments\n", env);
 		return -1;
 	}
-	if (env && strcasestr(env, "R"))
-		remap_readonly = 1;
-	if (env && strcasestr(env, "W"))
-		remap_writable = 1;
+	if (env && set_hpage_sizes(env)) {
+		ERROR("Cannot set elfmap page sizes: %s", strerror(errno));
+		return -1;
+	}
 
 	env = getenv("LD_PRELOAD");
 	if (env && strstr(env, "libhugetlbfs")) {
@@ -1195,22 +1270,11 @@ void __lh_hugetlbfs_setup_elflink(void)
 	if (parse_elf())
 		return;
 
-	hpage_size = gethugepagesize();
-	if (hpage_size <= 0) {
-		if (errno == ENOSYS)
-			ERROR("Hugepages unavailable\n");
-		else if (errno == EOVERFLOW)
-			ERROR("Hugepage size too large\n");
-		else
-			ERROR("Hugepage size (%s)\n", strerror(errno));
-		return;
-	}
-
 	DEBUG("libhugetlbfs version: %s\n", VERSION);
 
 	/* Do we need to find a share directory */
 	if (sharing) {
-		ret = find_or_create_share_path();
+		ret = find_or_create_share_path(hpage_readonly_size);
 		if (ret != 0)
 			return;
 	}
