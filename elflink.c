@@ -146,7 +146,8 @@ static void unmapped_abort(const char *fmt, ...)
 	sys_abort();
 }
 
-static char share_path[PATH_MAX+1];
+/* The directory to use for sharing readonly segments */
+static char share_readonly_path[PATH_MAX+1];
 
 #define MAX_HTLB_SEGS	3
 #define MAX_SEGS	10
@@ -237,7 +238,7 @@ static void check_memsz()
  *
  * Checks environment and filesystem to locate a suitable directory
  * for shared hugetlbfs files, creating a new directory if necessary.
- * The determined path is stored in global variable share_path.
+ * The determined path is stored in global variable share_readonly_path.
  *
  * returns:
  *  -1, on error
@@ -259,7 +260,7 @@ static int find_or_create_share_path(long page_size)
 		/* Given an explicit path */
 		if (hugetlbfs_test_path(env) != 0) {
 			ERROR("HUGETLB_SHARE_PATH %s is not on a hugetlbfs"
-			      " filesystem\n", share_path);
+			      " filesystem\n", share_readonly_path);
 			return -1;
 		}
 
@@ -269,7 +270,7 @@ static int find_or_create_share_path(long page_size)
 			      "kB page size\n", env, page_size / 1024);
 			return -1;
 		}
-		assemble_path(share_path, "%s", env);
+		assemble_path(share_readonly_path, "%s", env);
 		return 0;
 	}
 
@@ -277,35 +278,38 @@ static int find_or_create_share_path(long page_size)
 	if (!base_path)
 		return -1;
 
-	assemble_path(share_path, "%s/elflink-uid-%d", base_path, getuid());
+	assemble_path(share_readonly_path, "%s/elflink-uid-%d",
+			base_path, getuid());
 
-	ret = mkdir(share_path, 0700);
+	ret = mkdir(share_readonly_path, 0700);
 	if ((ret != 0) && (errno != EEXIST)) {
-		ERROR("Error creating share directory %s\n", share_path);
+		ERROR("Error creating share directory %s\n",
+			share_readonly_path);
 		return -1;
 	}
 
 	/* Check the share directory is sane */
-	ret = lstat(share_path, &sb);
+	ret = lstat(share_readonly_path, &sb);
 	if (ret != 0) {
-		ERROR("Couldn't stat() %s: %s\n", share_path, strerror(errno));
+		ERROR("Couldn't stat() %s: %s\n", share_readonly_path,
+			strerror(errno));
 		return -1;
 	}
 
 	if (! S_ISDIR(sb.st_mode)) {
-		ERROR("%s is not a directory\n", share_path);
+		ERROR("%s is not a directory\n", share_readonly_path);
 		return -1;
 	}
 
 	if (sb.st_uid != getuid()) {
 		ERROR("%s has wrong owner (uid=%d instead of %d)\n",
-		      share_path, sb.st_uid, getuid());
+		      share_readonly_path, sb.st_uid, getuid());
 		return -1;
 	}
 
 	if (sb.st_mode & (S_IWGRP | S_IWOTH)) {
 		ERROR("%s has bad permissions 0%03o\n",
-		      share_path, sb.st_mode);
+		      share_readonly_path, sb.st_mode);
 		return -1;
 	}
 
@@ -362,7 +366,7 @@ static int get_shared_file_name(struct seg_info *htlb_seg_info, char *file_path)
 		return -1;
 	}
 
-	assemble_path(file_path, "%s/%s_%zd_%d", share_path, binary2,
+	assemble_path(file_path, "%s/%s_%zd_%d", share_readonly_path, binary2,
 		      sizeof(unsigned long) * 8, htlb_seg_info->index);
 
 	return 0;
