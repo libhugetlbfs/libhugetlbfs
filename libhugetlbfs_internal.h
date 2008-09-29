@@ -51,6 +51,7 @@ extern void __lh_setup_mounts();
 extern void __lh_setup_features();
 extern char __hugetlbfs_hostname[];
 extern int __lh_hugetlbfs_prefault(int fd, void *addr, size_t length);
+extern long __lh_parse_page_size(const char *str);
 
 #ifndef REPORT
 #define REPORT(level, prefix, format, ...) \

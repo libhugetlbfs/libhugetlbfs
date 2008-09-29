@@ -61,31 +61,61 @@ static int hpage_sizes_default_idx = -1;
 #define BUF_SZ 256
 #define MEMINFO_SIZE	2048
 
-static long parse_page_size(const char *str)
+/*
+ * Convert a quantity in a given unit to the next smallest unit by
+ * multiplying the quantity by 1024 (eg. convert 1MB to 1024kB).
+ * If the conversion would overflow the variable, return LONG_MAX to signify
+ * the error.
+ */
+static inline long size_to_smaller_unit(long size)
+{
+	if (size == LONG_MAX || size * 1024 < size)
+		return LONG_MAX;
+	else
+		return size * 1024;
+}
+
+/*
+ * Convert a page size string with an optional unit suffix into a page size
+ * in bytes.
+ *
+ * On error, -1 is returned and errno is set appropriately:
+ * 	EINVAL		- str could not be parsed or was not greater than zero
+ *	EOVERFLOW	- Overflow when converting from the specified units
+ */
+long __lh_parse_page_size(const char *str)
 {
 	char *pos;
-	unsigned long size;
+	long size;
 
-	size = strtoul(str, &pos, 0);
-	if (str == pos)
-		return -1;
+	errno = 0;
+	size = strtol(str, &pos, 0);
 	/* Catch strtoul errors and sizes that overflow the native word size */
-	if (size > LONG_MAX)
+	if (errno || str == pos || size <= 0) {
+		if (errno == ERANGE)
+			errno = EOVERFLOW;
+		else
+			errno = EINVAL;
 		return -1;
+	}
 
 	switch (*pos) {
 	case 'G':
 	case 'g':
-		size *= 1024;
+		size = size_to_smaller_unit(size);
 	case 'M':
 	case 'm':
-		size *= 1024;
+		size = size_to_smaller_unit(size);
 	case 'K':
 	case 'k':
-		size *= 1024;
+		size = size_to_smaller_unit(size);
 	}
 
-	return size;
+	if (size == LONG_MAX) {
+		errno = EOVERFLOW;
+		return -1;
+	} else
+		return size;
 }
 
 static long read_meminfo(const char *tag)
@@ -181,7 +211,7 @@ static void probe_default_hpage_size(void)
 	 */
 	env = getenv("HUGETLB_DEFAULT_PAGE_SIZE");
 	if (env && strlen(env) > 0)
-		size = parse_page_size(env);
+		size = __lh_parse_page_size(env);
 	else {
 		size = read_meminfo("Hugepagesize:");
 		size *= 1024; /* convert from kB to B */
