@@ -258,9 +258,9 @@ static int find_or_create_share_path(long page_size)
 	env = getenv("HUGETLB_SHARE_PATH");
 	if (env) {
 		/* Given an explicit path */
-		if (hugetlbfs_test_path(env) != 0) {
+		if (hugetlbfs_test_path(env) != 1) {
 			ERROR("HUGETLB_SHARE_PATH %s is not on a hugetlbfs"
-			      " filesystem\n", share_readonly_path);
+			      " filesystem\n", env);
 			return -1;
 		}
 
