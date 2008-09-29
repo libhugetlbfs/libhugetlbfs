@@ -40,6 +40,7 @@ static int zero_fd;
 static void *heapbase;
 static void *heaptop;
 static long mapsize;
+static long hpage_size;
 
 static long hugetlbfs_next_addr(long addr)
 {
@@ -51,9 +52,9 @@ static long hugetlbfs_next_addr(long addr)
 	if (addr < (1UL << SLICE_HIGH_SHIFT))
 		return ALIGN(addr, 1UL << SLICE_HIGH_SHIFT);
 	else
-		return ALIGN(addr, gethugepagesize());
+		return ALIGN(addr, hpage_size);
 #else
-	return ALIGN(addr, gethugepagesize());
+	return ALIGN(addr, hpage_size);
 #endif
 }
 
@@ -85,7 +86,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	      heapbase, heaptop, mapsize, delta);
 
 	/* align to multiple of hugepagesize. */
-	delta = ALIGN(delta, gethugepagesize());
+	delta = ALIGN(delta, hpage_size);
 
 	if (delta > 0) {
 		/* growing the heap */
@@ -204,6 +205,31 @@ void __lh_hugetlbfs_setup_morecore(void)
 	}
 
 	/*
+	 * Determine the page size that will be used for the heap.
+	 * This can be set explicitly by setting HUGETLB_MORECORE to a valid
+	 * page size string or by setting HUGETLB_DEFAULT_PAGE_SIZE.
+	 */
+	if (strncasecmp(env, "y", 1) == 0)
+		hpage_size = gethugepagesize();
+	else
+		hpage_size = __lh_parse_page_size(env);
+
+	if (hpage_size <= 0) {
+		if (errno == ENOSYS)
+			ERROR("Hugepages unavailable\n");
+		else if (errno == EOVERFLOW)
+			ERROR("Hugepage size too large\n");
+		else if (errno == EINVAL)
+			ERROR("Invalid huge page size\n");
+		else
+			ERROR("Hugepage size (%s)\n", strerror(errno));
+		return;
+	} else if (!hugetlbfs_find_path_for_size(hpage_size)) {
+		ERROR("Hugepage size %li unavailable", hpage_size);
+		return;
+	}
+
+	/*
 	 * If the kernel supports MAP_PRIVATE reservations, we can skip
 	 * prefaulting the huge pages we allocate for the heap since the
 	 * kernel guarantees them.  This can help NUMA performance quite a bit.
@@ -233,7 +259,7 @@ void __lh_hugetlbfs_setup_morecore(void)
 	if (env && strcasecmp(env, "yes") == 0)
 		shrink_ok = 1;
 
-	if (gethugepagesize() <= 0) {
+	if (hpage_size <= 0) {
 		if (errno == ENOSYS)
 			ERROR("Hugepages unavailable\n");
 		else if (errno == EOVERFLOW || errno == ERANGE)
@@ -243,7 +269,7 @@ void __lh_hugetlbfs_setup_morecore(void)
 		return;
 	}
 
-	heap_fd = hugetlbfs_unlinked_fd();
+	heap_fd = hugetlbfs_unlinked_fd_for_size(hpage_size);
 	if (heap_fd < 0) {
 		ERROR("Couldn't open hugetlbfs file for morecore\n");
 		return;
@@ -271,10 +297,10 @@ void __lh_hugetlbfs_setup_morecore(void)
 	/* Set some allocator options more appropriate for hugepages */
 	
 	if (shrink_ok)
-		mallopt(M_TRIM_THRESHOLD, gethugepagesize() / 2);
+		mallopt(M_TRIM_THRESHOLD, hpage_size / 2);
 	else
 		mallopt(M_TRIM_THRESHOLD, -1);
-	mallopt(M_TOP_PAD, gethugepagesize() / 2);
+	mallopt(M_TOP_PAD, hpage_size / 2);
 	/* we always want to use our morecore, not ordinary mmap().
 	 * This doesn't appear to prohibit malloc() from falling back
 	 * to mmap() if we run out of hugepages. */
