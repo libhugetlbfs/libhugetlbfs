@@ -42,7 +42,7 @@ extern int errno;
 
 /* Global test configuration */
 #define DYNAMIC_SYSCTL "/proc/sys/vm/nr_overcommit_hugepages"
-static long saved_nr_hugepages;
+static long saved_nr_hugepages = -1;
 static long hpage_size, bpage_size;
 
 /* Required pool size for test */
@@ -134,7 +134,8 @@ void run_test(char *desc, int hpages, int bpages, int pool_nr, int expect_diff)
 
 void cleanup(void)
 {
-	set_nr_hugepages(saved_nr_hugepages);
+	if (saved_nr_hugepages >= 0)
+		set_nr_hugepages(saved_nr_hugepages);
 }
 
 int main(int argc, char **argv)
