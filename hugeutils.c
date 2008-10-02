@@ -61,6 +61,10 @@ static int hpage_sizes_default_idx = -1;
 #define BUF_SZ 256
 #define MEMINFO_SIZE	2048
 
+#define MEMINFO "/proc/meminfo"
+#define PROC_HUGEPAGES_DIR "/proc/sys/vm/"
+#define SYSFS_HUGEPAGES_DIR "/sys/kernel/mm/hugepages/"
+
 /*
  * Convert a quantity in a given unit to the next smallest unit by
  * multiplying the quantity by 1024 (eg. convert 1MB to 1024kB).
@@ -239,7 +243,7 @@ int select_pool_counter(unsigned int counter, unsigned long pagesize,
 	 * between libhugetlbfs and the test suite.  For now we will just
 	 * read /proc/meminfo.
 	 */
-	default_size = file_read_ulong("/proc/meminfo", "Hugepagesize:");
+	default_size = file_read_ulong(MEMINFO, "Hugepagesize:");
 	default_size *= 1024; /* Convert from kB to B */
 	if (default_size < 0) {
 		ERROR("Cannot determine the default page size\n");
@@ -249,12 +253,12 @@ int select_pool_counter(unsigned int counter, unsigned long pagesize,
 	/* If the user is dealing in the default page size, we can use /proc */
 	if (pagesize == default_size) {
 		if (meminfo_key && key) {
-			strcpy(filename, "/proc/meminfo");
+			strcpy(filename, MEMINFO);
 			*key = meminfo_key;
 		} else
-			sprintf(filename, "/proc/sys/vm/%s", sysfs_file);
+			sprintf(filename, PROC_HUGEPAGES_DIR "%s", sysfs_file);
 	} else /* Use the sysfs interface */
-		sprintf(filename, "/sys/kernel/mm/hugepages/hugepages-%lukB/%s",
+		sprintf(filename, SYSFS_HUGEPAGES_DIR "hugepages-%lukB/%s",
 			pagesize / 1024, sysfs_file);
 	return 0;
 }
@@ -300,7 +304,7 @@ static void probe_default_hpage_size(void)
 	if (env && strlen(env) > 0)
 		size = __lh_parse_page_size(env);
 	else {
-		size = file_read_ulong("/proc/meminfo", "Hugepagesize:");
+		size = file_read_ulong(MEMINFO, "Hugepagesize:");
 		size *= 1024; /* convert from kB to B */
 	}
 
@@ -676,5 +680,5 @@ long __lh_dump_proc_pid_maps()
 
 long read_meminfo(const char *tag)
 {
-	return file_read_ulong("/proc/meminfo", tag);
+	return file_read_ulong(MEMINFO, tag);
 }
