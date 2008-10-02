@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include <hugetlbfs.h>
 #include "hugetests.h"
 
@@ -94,11 +95,55 @@ void _shmunmap(int s, int line)
 }
 #define shmunmap(s) _shmunmap(s, __LINE__)
 
+/*
+ * This test wants to manipulate the hugetlb pool without necessarily linking
+ * to libhugetlbfs so the helpers for doing this may not be available -- hence
+ * the duplicated versions below.
+ *
+ * NOTE: We use /proc/sys/vm/nr_hugepages and /proc/meminfo for writing and
+ * reading pool counters because shared memory will always use the system
+ * default huge page size regardless of any libhugetlbfs settings.
+ */
+#define MEMINFO_SIZE 2048
+long local_read_meminfo(const char *tag)
+{
+	int fd;
+	char buf[MEMINFO_SIZE];
+	int len, readerr;
+	char *p, *q;
+	long val;
+
+	fd = open("/proc/meminfo", O_RDONLY);
+	if (fd < 0)
+		FAIL("Couldn't open /proc/meminfo: %s\n", strerror(errno));
+
+	len = read(fd, buf, sizeof(buf));
+	readerr = errno;
+	close(fd);
+	if (len < 0)
+		FAIL("Error reading /proc/meminfo: %s\n", strerror(errno));
+
+	if (len == sizeof(buf))
+		FAIL("/proc/meminfo is too large\n");
+	buf[len] = '\0';
+
+	p = strstr(buf, tag);
+	if (!p)
+		FAIL("Tag %s not found in /proc/meminfo\n", tag);
+	p += strlen(tag);
+
+	val = strtol(p, &q, 0);
+	if (!isspace(*q))
+		FAIL("Couldn't parse /proc/meminfo\n");
+
+	return val;
+}
+
 void setup_hugetlb_pool(unsigned long count)
 {
 	FILE *fd;
 	unsigned long poolsize;
-	count += read_meminfo("HugePages_Rsvd:");
+	count += local_read_meminfo("HugePages_Rsvd:");
 	fd = fopen("/proc/sys/vm/nr_hugepages", "w");
 	if (!fd)
 		CONFIG("Cannot open nr_hugepages for writing\n");
@@ -106,10 +151,17 @@ void setup_hugetlb_pool(unsigned long count)
 	fclose(fd);
 
 	/* Confirm the resize worked */
-	poolsize = read_meminfo("HugePages_Total:");
+	poolsize = local_read_meminfo("HugePages_Total:");
 	if (poolsize != count)
 		FAIL("Failed to resize pool to %lu pages. Got %lu instead\n",
 			count, poolsize);
+}
+
+void local_check_free_huge_pages(int needed_pages)
+{
+	int free = local_read_meminfo("HugePages_Free:");
+	if (free < needed_pages)
+		CONFIG("Must have at least %i free hugepages", needed_pages);
 }
 
 void run_test(char *desc, int hpages, int bpages, int pool_nr, int expect_diff)
@@ -119,9 +171,9 @@ void run_test(char *desc, int hpages, int bpages, int pool_nr, int expect_diff)
 	setup_hugetlb_pool(pool_nr);
 
 	/* untouched, shared mmap */
-	resv_before = read_meminfo("HugePages_Rsvd:");
+	resv_before = local_read_meminfo("HugePages_Rsvd:");
 	shmmap(SL_TEST, hpages, bpages);
-	resv_after = read_meminfo("HugePages_Rsvd:");
+	resv_after = local_read_meminfo("HugePages_Rsvd:");
 	memset(map_addr[SL_TEST], 0, map_size[SL_TEST]);
 	shmunmap(SL_TEST);
 
@@ -134,6 +186,14 @@ void run_test(char *desc, int hpages, int bpages, int pool_nr, int expect_diff)
 
 void cleanup(void)
 {
+	int i;
+
+	/* Clean up any allocated shmids */
+	for (i = 0; i < NR_SLOTS; i++)
+		if (map_id[i] > 0)
+			shmctl(map_id[i], IPC_RMID, NULL);
+
+	/* Restore the pool size. */
 	if (saved_nr_hugepages >= 0)
 		setup_hugetlb_pool(saved_nr_hugepages);
 }
@@ -142,15 +202,15 @@ int main(int argc, char **argv)
 {
 	test_init(argc, argv);
 	check_must_be_root();
-	check_free_huge_pages(POOL_SIZE);
-	saved_nr_hugepages = read_meminfo("HugePages_Total:");
+	local_check_free_huge_pages(POOL_SIZE);
+	saved_nr_hugepages = local_read_meminfo("HugePages_Total:");
 
 	/*
 	 * We cannot call check_hugepagesize because we are not linked to
 	 * libhugetlbfs. This is a bit hacky but we are depending on earlier
 	 * tests failing to catch when this wouldn't work
 	 */
-	hpage_size = read_meminfo("Hugepagesize:") * 1024;
+	hpage_size = local_read_meminfo("Hugepagesize:") * 1024;
 	bpage_size = getpagesize();
 
 	/* Run the test with small pages */

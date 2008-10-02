@@ -56,7 +56,12 @@ int shmget(key_t key, size_t size, int shmflg)
 
 	/* Align the size and set SHM_HUGETLB on request */
 	if (hugetlbshm_enabled) {
-		aligned_size = ALIGN(size, gethugepagesize());
+		/*
+		 * Use /proc/meminfo because shm always uses the system
+		 * default huge page size.
+		 */
+		long hpage_size = read_meminfo("Hugepagesize:") * 1024;
+		aligned_size = ALIGN(size, hpage_size);
 		if (size != aligned_size) {
 			DEBUG("hugetlb_shmem: size growth align %zd -> %zd\n",
 				size, aligned_size);
