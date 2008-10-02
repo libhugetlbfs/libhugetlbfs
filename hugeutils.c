@@ -69,8 +69,8 @@ static int hpage_sizes_default_idx = -1;
  */
 static inline long size_to_smaller_unit(long size)
 {
-	if (size == LONG_MAX || size * 1024 < size)
-		return LONG_MAX;
+	if (size < 0 || size * 1024 < size)
+		return -1;
 	else
 		return size * 1024;
 }
@@ -111,11 +111,9 @@ long __lh_parse_page_size(const char *str)
 		size = size_to_smaller_unit(size);
 	}
 
-	if (size == LONG_MAX) {
+	if (size < 0)
 		errno = EOVERFLOW;
-		return -1;
-	} else
-		return size;
+	return size;
 }
 
 struct hugetlb_pool_counter_info_t {
