@@ -158,6 +158,7 @@ struct seg_info {
 	int prot;
 	int fd;
 	int index;
+	long page_size;
 };
 
 struct seg_layout {
@@ -170,15 +171,7 @@ static int htlb_num_segs;
 static int minimal_copy = 1;
 static int sharing; /* =0 */
 static unsigned long force_remap; /* =0 */
-static long hpage_default_size, hpage_readonly_size, hpage_writable_size;
-
-static long get_segment_hpage_size(struct seg_info *seg)
-{
-	if (seg->prot & PROT_WRITE)
-		return hpage_writable_size;
-	else
-		return hpage_readonly_size;
-}
+static long hpage_readonly_size, hpage_writable_size;
 
 /**
  * assemble_path - handy wrapper around snprintf() for building paths
@@ -680,7 +673,7 @@ static long segment_requested_page_size(const ElfW(Phdr) *phdr)
 	/* Check if this segment requests remapping by default */
 	if (!hpage_readonly_size && !hpage_writable_size &&
 			(phdr->p_flags & PF_LINUX_HUGETLB))
-		return hpage_default_size;
+		return gethugepagesize();
 
 	/* No remapping selected, return the base page size */
 	return getpagesize();
@@ -711,6 +704,7 @@ int parse_elf_normal(struct dl_phdr_info *info, size_t size, void *data)
 				return 1;
 			get_extracopy(&htlb_seg_table[htlb_num_segs],
 					&info->dlpi_phdr[0], info->dlpi_phnum);
+			htlb_seg_table[htlb_num_segs].page_size = seg_psize;
 			htlb_num_segs++;
 		}
 		start = ALIGN_DOWN(info->dlpi_phdr[i].p_vaddr, seg_psize);
@@ -833,7 +827,7 @@ static int prepare_segment(struct seg_info *seg)
 	long page_size = getpagesize();
 	long hpage_size;
 
-	hpage_size = get_segment_hpage_size(seg);
+	hpage_size = seg->page_size;
 
 	/*
 	 * mmaps must begin at an address aligned to the page size.  If the
@@ -1021,7 +1015,7 @@ static int obtain_prepared_file(struct seg_info *htlb_seg_info)
 {
 	int fd = -1;
 	int ret, pid, status;
-	long hpage_size = get_segment_hpage_size(htlb_seg_info);
+	long hpage_size = htlb_seg_info->page_size;
 
 	/* Share only read-only segments */
 	if (sharing && !(htlb_seg_info->prot & PROT_WRITE)) {
@@ -1105,7 +1099,7 @@ static void remap_segments(struct seg_info *seg, int num)
 	 * because of PowerPC: we may need to unmap all the normal
 	 * segments before the MMU segment is ok for hugepages */
 	for (i = 0; i < num; i++) {
-		hpage_size = get_segment_hpage_size(&seg[i]);
+		hpage_size = seg[i].page_size;
 		start = ALIGN_DOWN((unsigned long)seg[i].vaddr, hpage_size);
 		offset = (unsigned long)(seg[i].vaddr - start);
 		mapsize = ALIGN(offset + seg[i].memsz, hpage_size);
@@ -1278,7 +1272,15 @@ void __lh_hugetlbfs_setup_elflink(void)
 
 	/* Do we need to find a share directory */
 	if (sharing) {
-		ret = find_or_create_share_path(hpage_readonly_size);
+		/*
+		 * If HUGETLB_ELFMAP is undefined but a shareable segment has
+		 * PF_LINUX_HUGETLB set, segment remapping will occur using the
+		 * default huge page size.
+		 */
+		long page_size = hpage_readonly_size ?
+			hpage_readonly_size : gethugepagesize();
+
+		ret = find_or_create_share_path(page_size);
 		if (ret != 0)
 			return;
 	}
