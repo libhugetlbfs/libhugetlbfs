@@ -321,7 +321,7 @@ int select_pool_counter(unsigned int counter, unsigned long pagesize,
 
 	/* Convert a pagesize of 0 to the libhugetlbfs default size */
 	if (pagesize == 0)
-		pagesize = gethugepagesize();
+		pagesize = default_size;
 
 	/* If the user is dealing in the default page size, we can use /proc */
 	if (pagesize == default_size) {
