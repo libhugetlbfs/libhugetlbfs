@@ -30,6 +30,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <signal.h>
+#include <dirent.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -41,7 +42,6 @@
 #include <sys/uio.h>
 #include <sys/syscall.h>
 #include <linux/types.h>
-#include <linux/dirent.h>
 #include <linux/unistd.h>
 
 #include "libhugetlbfs_internal.h"
