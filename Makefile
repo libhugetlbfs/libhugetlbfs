@@ -29,7 +29,7 @@ ELF64 = elf64ppc
 LIB64 = lib64
 LIB32 = lib
 ifneq ($(BUILDTYPE),NATIVEONLY)
-CC32 = gcc
+CC32 = gcc -m32
 ELF32 = elf32ppclinux
 endif
 else
