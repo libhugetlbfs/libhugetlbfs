@@ -72,6 +72,8 @@ DIR *opendir(const char *name)
 	}
 }
 
+#define HPAGE_SIZE (16 * 1024)
+
 /*
  * Override read_meminfo to simulate various conditions
  */
@@ -86,7 +88,7 @@ long read_meminfo(const char *tag)
 
 	switch (meminfo_state) {
 		case OVERRIDE_OFF:	return real_read_meminfo(tag);
-		case OVERRIDE_ON:	return 16 * 1024;
+		case OVERRIDE_ON:	return HPAGE_SIZE;
 		default:		return -1;
 	}
 }
@@ -141,10 +143,8 @@ void cleanup(void)
 		cleanup_fake_sysfs();
 }
 
-#define INIT_SIZES(a, v1, v2, v3) {a[0] = v1; a[1] = v2; a[2] = v3; a[3] = -1;}
-
-void expect_sizes(int line, int expected, int actual,
-			long expected_sizes[], long actual_sizes[])
+void validate_sizes(int line, long actual_sizes[], int actual, int max_actual,
+			long expected_sizes[], int expected)
 {
 	int i, j;
 	if (expected != actual)
@@ -159,12 +159,37 @@ void expect_sizes(int line, int expected, int actual,
 			FAIL("Line %i: Expected size %li not found in actual "
 				"results", line, expected_sizes[i]);
 	}
+
+	for (i = expected; i < max_actual; i++)
+		if (actual_sizes[i] != 42)
+			FAIL("Line %i: Wrote past official limit at %i",
+				line, i);
 }
+
+#define MAX 16
+#define EXPECT_SIZES(func, max, count, expected)			\
+({									\
+	long __a[MAX] = { [0 ... MAX-1] = 42 };				\
+	int __na;							\
+	int __l = (count < max) ? count : max;				\
+									\
+	__na = func(__a, max);						\
+									\
+	validate_sizes(__LINE__, __a, __na, MAX, expected, __l);	\
+									\
+	__na;								\
+})
+
+#define INIT_LIST(a, values...)						\
+({									\
+	long __e[] = { values };					\
+	memcpy(a, __e, sizeof(__e));					\
+})
 
 int main(int argc, char *argv[])
 {
-	long expected_sizes[4], actual_sizes[4], meminfo_size;
-	int nr_sizes;
+	long expected_sizes[MAX], actual_sizes[MAX], meminfo_size;
+	long base_size = sysconf(_SC_PAGESIZE);
 
 	test_init(argc, argv);
 
@@ -175,9 +200,15 @@ int main(int argc, char *argv[])
 	 */
 	meminfo_state = OVERRIDE_OFF;
 	sysfs_state = OVERRIDE_OFF;
+
 	if (gethugepagesizes(actual_sizes, -1) != -1 || errno != EINVAL)
 		FAIL("Mishandled params (n_elem < 0)");
 	if (gethugepagesizes(NULL, 1) != -1 || errno != EINVAL)
+		FAIL("Mishandled params (pagesizes == NULL, n_elem > 0)");
+
+	if (getpagesizes(actual_sizes, -1) != -1 || errno != EINVAL)
+		FAIL("Mishandled params (n_elem < 0)");
+	if (getpagesizes(NULL, 1) != -1 || errno != EINVAL)
 		FAIL("Mishandled params (pagesizes == NULL, n_elem > 0)");
 
 	/*
@@ -190,8 +221,11 @@ int main(int argc, char *argv[])
 	 * Check handling when /proc/meminfo indicates no huge page support
 	 */
 	meminfo_state = OVERRIDE_MISSING;
-	if (gethugepagesizes(actual_sizes, 1) != 0 || errno != 0)
-		FAIL("Incorrect handling when huge page support is missing");
+
+	EXPECT_SIZES(gethugepagesizes, MAX, 0, expected_sizes);
+
+	INIT_LIST(expected_sizes, base_size);
+	EXPECT_SIZES(getpagesizes, MAX, 1, expected_sizes);
 
 	/*
 	 * When the sysfs heirarchy is not present ...
@@ -201,25 +235,43 @@ int main(int argc, char *argv[])
 	/* ... only the meminfo size is returned. */
 	meminfo_state = OVERRIDE_ON;
 	meminfo_size = read_meminfo("Hugepagesize:") * 1024;
-	INIT_SIZES(expected_sizes, meminfo_size, -1, -1);
 
-	/* Use 2 to give the function the chance to return too many sizes */
-	nr_sizes = gethugepagesizes(actual_sizes, 2);
-	expect_sizes(__LINE__, 1, nr_sizes, expected_sizes, actual_sizes);
+	INIT_LIST(expected_sizes, meminfo_size);
+	EXPECT_SIZES(gethugepagesizes, MAX, 1, expected_sizes);
+
+	INIT_LIST(expected_sizes, base_size, meminfo_size);
+	EXPECT_SIZES(getpagesizes, MAX, 2, expected_sizes);
 
 	/*
 	 * When sysfs defines additional sizes ...
 	 */
-	INIT_SIZES(expected_sizes, meminfo_size, 1024, 2048);
+	INIT_LIST(expected_sizes, meminfo_size, 1024 * 1024, 2048 * 1024);
+
 	setup_fake_sysfs(expected_sizes, 3);
 	sysfs_state = OVERRIDE_ON;
 
 	/* ... make sure all sizes are returned without duplicates */
-	nr_sizes = gethugepagesizes(actual_sizes, 4);
-	expect_sizes(__LINE__, 3, nr_sizes, expected_sizes, actual_sizes);
+	/* ... while making sure we do not overstep our limit */
+	EXPECT_SIZES(gethugepagesizes, MAX, 3, expected_sizes);
+	EXPECT_SIZES(gethugepagesizes, 1, 3, expected_sizes);
+	EXPECT_SIZES(gethugepagesizes, 2, 3, expected_sizes);
+	EXPECT_SIZES(gethugepagesizes, 3, 3, expected_sizes);
+	EXPECT_SIZES(gethugepagesizes, 4, 3, expected_sizes);
+
+	INIT_LIST(expected_sizes,
+			base_size, meminfo_size, 1024 * 1024, 2048 * 1024);
+	EXPECT_SIZES(getpagesizes, MAX, 4, expected_sizes);
+	EXPECT_SIZES(getpagesizes, 1, 4, expected_sizes);
+	EXPECT_SIZES(getpagesizes, 2, 4, expected_sizes);
+	EXPECT_SIZES(getpagesizes, 3, 4, expected_sizes);
+	EXPECT_SIZES(getpagesizes, 4, 4, expected_sizes);
+	EXPECT_SIZES(getpagesizes, 5, 4, expected_sizes);
 
 	/* ... we can check how many sizes are supported. */
 	if (gethugepagesizes(NULL, 0) != 3)
+		FAIL("Unable to check the number of supported sizes");
+
+	if (getpagesizes(NULL, 0) != 4)
 		FAIL("Unable to check the number of supported sizes");
 
 	PASS();

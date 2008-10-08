@@ -626,6 +626,32 @@ int gethugepagesizes(long pagesizes[], int n_elem)
 	return nr_sizes;
 }
 
+int getpagesizes(long pagesizes[], int n_elem)
+{
+	int ret;
+
+	if (n_elem < 0 || (n_elem > 0 && pagesizes == NULL)) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	/* Requests for sizing, we need one more slot than gethugepagesizes. */
+	if (pagesizes == NULL && n_elem == 0) {
+		ret = gethugepagesizes(pagesizes, n_elem);
+	} else {
+		/* Install the base page size. */
+		if (n_elem && pagesizes)
+			pagesizes[0] = sysconf(_SC_PAGESIZE);
+                if (n_elem == 1)
+                        return 1;
+
+		ret = gethugepagesizes(pagesizes + 1, n_elem - 1);
+	}
+	if (ret < 0)
+		return ret;
+	return ret + 1;
+}
+
 int hugetlbfs_test_path(const char *mount)
 {
 	struct statfs64 sb;
