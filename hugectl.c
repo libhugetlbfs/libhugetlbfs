@@ -333,6 +333,9 @@ int main(int argc, char** argv)
 			opt_library = optarg;
 			break;
 
+		case -1:
+			break;
+
 		default:
 			WARNING("unparsed option %08x\n", ret);
 			ret = -1;
