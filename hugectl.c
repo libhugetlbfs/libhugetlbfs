@@ -66,6 +66,7 @@ void print_usage()
 	OPTION("--bss", "Requests remapping of the program bss");
 	OPTION("--heap", "Requests remapping of the program heap");
 	CONT("(malloc space)");
+	OPTION("--shm", "Requests remapping of shared memory segments");
 
 	OPTION("--no-preload", "Disable preloading the libhugetlbfs library");
 
@@ -162,6 +163,7 @@ void verbose_expose(void)
 #define MAP_DATA	0x0004
 #define MAP_BSS		0x0008
 #define MAP_HEAP	0x0010
+#define MAP_SHM		0x0020
 
 void setup_mappings(int which)
 {
@@ -193,6 +195,9 @@ void setup_mappings(int which)
 
 	if (which & MAP_HEAP)
 		setup_environment("HUGETLB_MORECORE", "yes");
+
+	if (which & MAP_SHM)
+		setup_environment("HUGETLB_SHM", "yes");
 }
 
 #define LIBRARY_DISABLE ((void *)-1)
@@ -253,9 +258,9 @@ void library_path(char *path)
 
 void ldpreload(int which)
 {
-	if (which == MAP_HEAP) {
+	if (which & (MAP_HEAP|MAP_SHM)) {
 		setup_environment("LD_PRELOAD", "libhugetlbfs.so");
-		WARNING("LD_PRELOAD in use for lone --heap\n");
+		WARNING("LD_PRELOAD in use for lone --heap/--shm\n");
 	} else {
 		DEBUG("LD_PRELOAD not appropriate for this map combination\n");
 	}
@@ -284,6 +289,7 @@ int main(int argc, char** argv)
 		{"data",       no_argument, NULL, MAP_BASE|MAP_DATA},
 		{"bss",        no_argument, NULL, MAP_BASE|MAP_BSS},
 		{"heap",       no_argument, NULL, MAP_BASE|MAP_HEAP},
+		{"shm",        no_argument, NULL, MAP_BASE|MAP_SHM},
 
 		{0},
 	};
