@@ -59,6 +59,7 @@ void print_usage()
 	fprintf(stderr, "options:\n");
 
 	OPTION("--help, -h", "Prints this message");
+	OPTION("--verbose <level>, -v", "Increases/sets tracing levels");
 
 	OPTION("--text", "Requests remapping of the program text");
 	OPTION("--data", "Requests remapping of the program data");
@@ -97,6 +98,27 @@ void verbose_init(void)
 		verbose_level = VERBOSITY_MAX;
 }
 
+void verbose(char *which)
+{
+	int new_level;
+
+	if (which) {
+		new_level = atoi(which);
+		if (new_level < 0 || new_level > 99) {
+			ERROR("%d: verbosity out of range 0-99\n",
+				new_level);
+			exit(EXIT_FAILURE);
+		}
+	} else {
+		new_level = verbose_level + 1;
+		if (new_level == 100) {
+			WARNING("verbosity limited to 99\n");
+			new_level--;
+		}
+	}
+	verbose_level = new_level;
+}
+
 void setup_environment(char *var, char *val)
 {
 	setenv(var, val, 1);
@@ -106,6 +128,16 @@ void setup_environment(char *var, char *val)
 		printf("%s='%s'\n", var, val);
 }
 
+void verbose_expose(void)
+{
+	char level[3];
+
+	if (verbose_level == 99) {
+		setup_environment("HUGETLB_DEBUG", "yes");
+	}
+	snprintf(level, sizeof(level), "%d", verbose_level);
+	setup_environment("HUGETLB_VERBOSE", level);
+}
 
 /*
  * getopts return values for options which are long only.
@@ -235,10 +267,11 @@ int main(int argc, char** argv)
 	int opt_preload = 1;
 	char *opt_library = NULL;
 
-	char opts[] = "+h";
+	char opts[] = "+hv";
 	int ret = 0, index = 0;
 	struct option long_opts[] = {
 		{"help",       no_argument, NULL, 'h'},
+		{"verbose",    required_argument, NULL, 'v' },
 		{"no-preload", no_argument, NULL, LONG_NO_PRELOAD},
 		{"dry-run",    no_argument, NULL, LONG_DRY_RUN},
 		{"library-path",
@@ -272,6 +305,10 @@ int main(int argc, char** argv)
 			print_usage();
 			exit(EXIT_SUCCESS);
 
+		case 'v':
+			verbose(optarg);
+			break;
+
 		case LONG_NO_PRELOAD:
 			opt_preload = 0;
 			DEBUG("LD_PRELOAD disabled\n");
@@ -303,6 +340,8 @@ int main(int argc, char** argv)
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
+
+	verbose_expose();
 
 	if (opt_library != LIBRARY_DISABLE)
 		library_path(opt_library);
