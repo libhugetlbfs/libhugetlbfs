@@ -613,9 +613,9 @@ int gethugepagesizes(long pagesizes[], int n_elem)
 		size = strtol(ent->d_name + 10, NULL, 10);
 		if (size == LONG_MIN || size == LONG_MAX)
 			continue;
-		size *= 1024; /* Convert from KB to Bytes */
+		size = size_to_smaller_unit(size);
 
-		if (size == default_size)
+		if (size < 0 || size == default_size)
 			continue;
 		if (n_elem && pagesizes)
 			pagesizes[nr_sizes] = size;
