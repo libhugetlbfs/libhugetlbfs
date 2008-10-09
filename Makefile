@@ -7,6 +7,7 @@ BIN_OBJ_DIR=obj
 INSTALL_BIN = hugectl hugeedit
 INSTALL_HEADERS = hugetlbfs.h
 INSTALL_MAN7 = libhugetlbfs.7
+INSTALL_MAN8 = hugectl.8
 LDSCRIPT_TYPES = B BDT
 LDSCRIPT_DIST_ELF = elf32ppclinux elf64ppc elf_i386 elf_x86_64
 INSTALL_OBJSCRIPT = ld.hugetlbfs
@@ -110,6 +111,7 @@ BINDIR = $(PREFIX)/share/libhugetlbfs
 EXEDIR = $(PREFIX)/bin
 DOCDIR = $(PREFIX)/share/doc/libhugetlbfs
 MANDIR7 = $(PREFIX)/man/man7
+MANDIR8 = $(PREFIX)/man/man8
 
 ifdef LIB32
 LIBPATHS += -DLIB32='"$(LIB32)"' -DLIBDIR32='"$(LIBDIR32)"'
@@ -286,6 +288,7 @@ install: libs tools $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	$(INSTALL) -d $(DESTDIR)$(LDSCRIPTDIR)
 	$(INSTALL) -d $(DESTDIR)$(HEADERDIR)
 	$(INSTALL) -d $(DESTDIR)$(MANDIR7)
+	$(INSTALL) -d $(DESTDIR)$(MANDIR8)
 	$(INSTALL) -m 644 -t $(DESTDIR)$(HEADERDIR) $(INSTALL_HEADERS)
 	$(INSTALL) -m 644 $(INSTALL_LDSCRIPTS:%=ldscripts/%) $(DESTDIR)$(LDSCRIPTDIR)
 	$(INSTALL) -d $(DESTDIR)$(BINDIR)
@@ -299,6 +302,10 @@ install: libs tools $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	for x in $(INSTALL_MAN7); do \
 		$(INSTALL) -m 444 man/$$x $(DESTDIR)$(MANDIR7); \
 		gzip -f $(DESTDIR)$(MANDIR7)/$$x; \
+	done
+	for x in $(INSTALL_MAN8); do \
+		$(INSTALL) -m 444 man/$$x $(DESTDIR)$(MANDIR8); \
+		gzip -f $(DESTDIR)$(MANDIR8)/$$x; \
 	done
 	cd $(DESTDIR)$(BINDIR) && ln -sf ld.hugetlbfs ld
 
