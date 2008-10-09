@@ -4,7 +4,7 @@ EXEDIR = /bin
 LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o alloc.o shm.o kernel-features.o
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
 BIN_OBJ_DIR=obj
-INSTALL_BIN = hugectl hugeedit hugeadm
+INSTALL_BIN = hugectl hugeedit hugeadm pagesize
 INSTALL_HEADERS = hugetlbfs.h
 INSTALL_MAN1 = pagesize.1
 INSTALL_MAN3 = get_huge_pages.3 gethugepagesizes.3 getpagesizes.3
@@ -266,6 +266,12 @@ $(BIN_OBJ_DIR)/hugeedit: $(BIN_OBJ_DIR)/hugeedit.o
 
 HUGEADM_OBJ=hugeadm.o hugeutils.o debug.o
 $(BIN_OBJ_DIR)/hugeadm: $(foreach file,$(HUGEADM_OBJ),$(BIN_OBJ_DIR)/$(file))
+	@$(VECHO) LDHOST $@
+	mkdir -p $(BIN_OBJ_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
+
+PAGESIZE_OBJ=pagesize.o hugeutils.o debug.o
+$(BIN_OBJ_DIR)/pagesize: $(foreach file,$(PAGESIZE_OBJ),$(BIN_OBJ_DIR)/$(file))
 	@$(VECHO) LDHOST $@
 	mkdir -p $(BIN_OBJ_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
