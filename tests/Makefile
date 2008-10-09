@@ -100,11 +100,11 @@ obj64/libheapshrink.so: obj64/heapshrink-helper-pic.o
 	@mkdir -p obj64
 	$(CC64) -Wl,-soname,$(notdir $@) -shared -o $@ $^
 
-$(LIB_TESTS:%=obj32/%): %: %.o obj32/testutils.o
+$(LIB_TESTS:%=obj32/%): %: %.o obj32/testutils.o obj32/libtestutils.o
 	@$(VECHO) LD32 "(lib test)" $@
 	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS) -lhugetlbfs 
 
-$(LIB_TESTS:%=obj64/%) $(LIB_TESTS_64:%=obj64/%): %: %.o obj64/testutils.o
+$(LIB_TESTS:%=obj64/%) $(LIB_TESTS_64:%=obj64/%): %: %.o obj64/testutils.o obj64/libtestutils.o
 	@$(VECHO) LD64 "(lib test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs 
 

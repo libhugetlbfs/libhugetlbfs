@@ -44,11 +44,6 @@
  * 856fc29505556cf263f3dcda2533cf3766c14ab6.
  */
 
-static unsigned long read_free(void)
-{
-	return get_pool_counter(HUGEPAGES_FREE, 0);
-}
-
 #define RANDOM_CONSTANT	0x1234ABCD
 
 int main(int argc, char *argv[])
@@ -80,7 +75,8 @@ int main(int argc, char *argv[])
 	 * backout path for the bogus mapping is buggy, which it was
 	 * in some kernels. */
 
-	verbose_printf("Free hugepages: %lu\n", read_free());
+	verbose_printf("Free hugepages: %lu\n",
+		get_huge_page_counter(hpage_size, HUGEPAGES_FREE));
 
 	verbose_printf("Mapping reference map...");
 	/* First get arena of three hpages size, at file offset 4GB */
@@ -89,7 +85,8 @@ int main(int argc, char *argv[])
 		FAIL("mmap() offset 4GB: %s", strerror(errno));
 	verbose_printf("%p-%p\n", p, p+2*hpage_size-1);
 
-	verbose_printf("Free hugepages: %lu\n", read_free());
+	verbose_printf("Free hugepages: %lu\n",
+		get_huge_page_counter(hpage_size, HUGEPAGES_FREE));
 
 	/* Instantiate the pages */
 	verbose_printf("Instantiating...");
@@ -98,7 +95,8 @@ int main(int argc, char *argv[])
 	*pi = RANDOM_CONSTANT;
 	verbose_printf("done.\n");
 
-	verbose_printf("Free hugepages: %lu\n", read_free());
+	verbose_printf("Free hugepages: %lu\n",
+		get_huge_page_counter(hpage_size, HUGEPAGES_FREE));
 
 	/* Toggle the permissions on the first page.  This forces TLB
 	 * entries (including hash page table on powerpc) to be
@@ -123,13 +121,15 @@ int main(int argc, char *argv[])
 		     strerror(errno), strerror(EINVAL));
 	verbose_printf("%s\n", strerror(errno));
 
-	verbose_printf("Free hugepages: %lu\n", read_free());
+	verbose_printf("Free hugepages: %lu\n",
+		get_huge_page_counter(hpage_size, HUGEPAGES_FREE));
 
 	if (*pi != RANDOM_CONSTANT)
 		FAIL("Pre-existing mapping clobbered: %x instead of %x",
 		     *pi, RANDOM_CONSTANT);
 
-	verbose_printf("Free hugepages: %lu\n", read_free());
+	verbose_printf("Free hugepages: %lu\n",
+		get_huge_page_counter(hpage_size, HUGEPAGES_FREE));
 
 	/* The real test is whether we got a bad_pud() or similar
 	 * during the run.  The check above, combined with the earlier

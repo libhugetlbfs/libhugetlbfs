@@ -58,9 +58,8 @@ int main(int argc, char *argv[])
 
 	test_init(argc, argv);
 
-	totpages = get_pool_counter(HUGEPAGES_FREE, 0);
-
 	hpage_size = check_hugepagesize();
+	totpages = get_huge_page_counter(hpage_size, HUGEPAGES_TOTAL);
 
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)

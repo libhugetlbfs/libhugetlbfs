@@ -127,27 +127,9 @@ static inline long check_hugepagesize()
 	return hpage_size;
 }
 
-/* Keys for reading hugetlb pool counters */
-enum {
-	HUGEPAGES_TOTAL,
-	HUGEPAGES_FREE,
-	HUGEPAGES_RSVD,
-	HUGEPAGES_SURP,
-	HUGEPAGES_OC,
-	HUGEPAGES_MAX_COUNTERS,
-};
-struct hugetlb_pool_counter_info_t {
-	char *meminfo_key;
-	char *sysfs_file;
-};
-extern struct hugetlb_pool_counter_info_t hugetlb_counter_info[];
-long get_pool_counter(unsigned int counter, unsigned long pagesize);
-int set_pool_counter(unsigned int counter, unsigned long val,
-				unsigned long pagesize);
-
 int using_system_hpage_size(const char *mount);
 
 /* WARNING: Racy -- use for test cases only! */
-int kernel_has_private_reservations(int fd);
+int kernel_has_private_reservations(void);
 
 #endif /* _HUGETESTS_H */

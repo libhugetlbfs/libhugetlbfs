@@ -50,11 +50,6 @@ static void sigbus_handler(int signum, siginfo_t *si, void *uc)
 	siglongjmp(sig_escape, 17);
 }
 
-static unsigned long read_reserved(void)
-{
-	return get_pool_counter(HUGEPAGES_RSVD, 0);
-}
-
 int main(int argc, char *argv[])
 {
 	long hpage_size;
@@ -77,7 +72,7 @@ int main(int argc, char *argv[])
 	if (fd < 0)
 		FAIL("hugetlbfs_unlinked_fd()");
 
-	initial_rsvd = read_reserved();
+	initial_rsvd = get_huge_page_counter(hpage_size, HUGEPAGES_RSVD);
 	verbose_printf("Reserve count before map: %lu\n", initial_rsvd);
 
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED,
@@ -86,16 +81,18 @@ int main(int argc, char *argv[])
 		FAIL("mmap(): %s", strerror(errno));
 	q = p;
 
-	verbose_printf("Reserve count after map: %lu\n", read_reserved());
+	verbose_printf("Reserve count after map: %lu\n",
+		get_huge_page_counter(hpage_size, HUGEPAGES_RSVD));
 
 	*q = 0;
-	verbose_printf("Reserve count after touch: %lu\n", read_reserved());
+	verbose_printf("Reserve count after touch: %lu\n",
+		get_huge_page_counter(hpage_size, HUGEPAGES_RSVD));
 
 	err = ftruncate(fd, 0);
 	if (err)
 		FAIL("ftruncate(): %s", strerror(errno));
 
-	rsvd = read_reserved();
+	rsvd = get_huge_page_counter(hpage_size, HUGEPAGES_RSVD);
 	verbose_printf("Reserve count after truncate: %lu\n", rsvd);
 	if (rsvd != initial_rsvd)
 		FAIL("Reserved count is not restored after truncate: %lu instead of %lu",
@@ -113,7 +110,7 @@ int main(int argc, char *argv[])
 	if (sigbus_count != 1)
 		FAIL("Didn't SIGBUS after truncate");
 
-	rsvd = read_reserved();
+	rsvd = get_huge_page_counter(hpage_size, HUGEPAGES_RSVD);
 	verbose_printf("Reserve count after SIGBUS fault: %lu\n", rsvd);
 	if (rsvd != initial_rsvd)
 		FAIL("Reserved count is altered by SIGBUS fault: %lu instead of %lu",
@@ -122,12 +119,12 @@ int main(int argc, char *argv[])
 	munmap(p, hpage_size);
 
 	verbose_printf("Reserve count after munmap(): %lu\n",
-		       read_reserved());
+		get_huge_page_counter(hpage_size, HUGEPAGES_RSVD));
 
 	close(fd);
 
 	verbose_printf("Reserve count after close(): %lu\n",
-		       read_reserved());
+		get_huge_page_counter(hpage_size, HUGEPAGES_RSVD));
 
 	PASS();
 }

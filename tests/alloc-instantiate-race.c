@@ -233,7 +233,8 @@ int main(int argc, char *argv[])
 	if (argc != 2)
 		CONFIG("Usage: alloc-instantiate-race <private|shared>");
 
-	totpages = get_pool_counter(HUGEPAGES_FREE, 0);
+	hpage_size = check_hugepagesize();
+	totpages = get_huge_page_counter(hpage_size, HUGEPAGES_FREE);
 
 	if (strcmp(argv[1], "shared") == 0) {
 		race_type = MAP_SHARED;
@@ -242,8 +243,6 @@ int main(int argc, char *argv[])
 	} else {
 		CONFIG("Usage: alloc-instantiate-race <private|shared>");
 	}
-
-	hpage_size = check_hugepagesize();
 
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)

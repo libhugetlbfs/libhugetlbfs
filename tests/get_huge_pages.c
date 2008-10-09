@@ -25,13 +25,14 @@
 
 #include "hugetests.h"
 
+long hpage_size;
 long oc_hugepages = -1;
 
 /* Restore nr_overcommit_hugepages */
 void cleanup(void)
 {
 	if (oc_hugepages != -1)
-		set_pool_counter(HUGEPAGES_OC, oc_hugepages, 0);
+		set_nr_overcommit_hugepages(hpage_size, oc_hugepages);
 }
 
 /* Confirm a region really frees, only really important for GHP_FALLBACK */
@@ -45,7 +46,6 @@ void free_and_confirm_region_free(void *p, int line) {
 void test_get_huge_pages(int num_hugepages)
 {
 	int err;
-	long hpage_size = check_hugepagesize();
 	void *p = get_huge_pages(num_hugepages * hpage_size, GHP_DEFAULT);
 	if (p == NULL)
 		FAIL("get_huge_pages() for %d hugepages", num_hugepages);
@@ -65,14 +65,13 @@ void test_get_huge_pages(int num_hugepages)
 void test_GHP_FALLBACK(void)
 {
 	int err;
-	long hpage_size = check_hugepagesize();
-	long rsvd_hugepages = get_pool_counter(HUGEPAGES_RSVD, 0);
-	long num_hugepages = get_pool_counter(HUGEPAGES_TOTAL, 0)
+	long rsvd_hugepages = get_huge_page_counter(hpage_size, HUGEPAGES_RSVD);
+	long num_hugepages = get_huge_page_counter(hpage_size, HUGEPAGES_TOTAL)
 		- rsvd_hugepages;
 
 	/* We must disable overcommitted huge pages to test this */
-	oc_hugepages = get_pool_counter(HUGEPAGES_OC, 0);
-	set_pool_counter(HUGEPAGES_OC, 0, 0);
+	oc_hugepages = get_huge_page_counter(hpage_size, HUGEPAGES_OC);
+	set_nr_overcommit_hugepages(hpage_size, 0);
 
 	/* We should be able to allocate the whole pool */
 	void *p = get_huge_pages(num_hugepages * hpage_size, GHP_DEFAULT);
@@ -118,6 +117,7 @@ void test_GHP_FALLBACK(void)
 int main(int argc, char *argv[])
 {
 	test_init(argc, argv);
+	hpage_size = gethugepagesize();
 	check_free_huge_pages(4);
 	test_get_huge_pages(1);
 	test_get_huge_pages(4);

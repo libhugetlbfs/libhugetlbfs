@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 
 	hpagesize = check_hugepagesize();
 
-	freepages = get_pool_counter(HUGEPAGES_FREE, 0);
+	freepages = get_huge_page_counter(hpagesize, HUGEPAGES_FREE);
 	if (freepages < 3)
 		CONFIG("Must have at least 3 free hugepages");
 

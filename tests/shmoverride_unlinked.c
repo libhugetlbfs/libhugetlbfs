@@ -94,7 +94,7 @@ void _shmunmap(int s, int line)
 }
 #define shmunmap(s) _shmunmap(s, __LINE__)
 
-void set_nr_hugepages(unsigned long count)
+void setup_hugetlb_pool(unsigned long count)
 {
 	FILE *fd;
 	unsigned long poolsize;
@@ -116,7 +116,7 @@ void run_test(char *desc, int hpages, int bpages, int pool_nr, int expect_diff)
 {
 	long resv_before, resv_after;
 	verbose_printf("%s...\n", desc);
-	set_nr_hugepages(pool_nr);
+	setup_hugetlb_pool(pool_nr);
 
 	/* untouched, shared mmap */
 	resv_before = read_meminfo("HugePages_Rsvd:");
@@ -135,7 +135,7 @@ void run_test(char *desc, int hpages, int bpages, int pool_nr, int expect_diff)
 void cleanup(void)
 {
 	if (saved_nr_hugepages >= 0)
-		set_nr_hugepages(saved_nr_hugepages);
+		setup_hugetlb_pool(saved_nr_hugepages);
 }
 
 int main(int argc, char **argv)
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
 	run_test("override-requested-unaligned", 1, 1, POOL_SIZE, 2);
 
 	/* Run the test with no pool but requested large pages */
-	set_nr_hugepages(0);
+	setup_hugetlb_pool(0);
 	run_test("override-requested-aligned-nopool", 1, 0, 0, 0);
 
 	PASS();

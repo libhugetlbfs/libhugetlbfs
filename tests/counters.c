@@ -45,8 +45,8 @@ extern int errno;
 
 /* Global test configuration */
 #define DYNAMIC_SYSCTL "/proc/sys/vm/nr_overcommit_hugepages"
-static long saved_nr_hugepages;
-static long saved_oc_hugepages;
+static long saved_nr_hugepages = -1;
+static long saved_oc_hugepages = -1;
 static long hpage_size;
 static int private_resv;
 
@@ -70,17 +70,20 @@ static long prev_surp;
 
 /* Restore original nr_hugepages */
 void cleanup(void) {
-	set_pool_counter(HUGEPAGES_TOTAL, saved_nr_hugepages, 0);
+	if (hpage_size <= 0)
+		return;
+	if (saved_nr_hugepages >= 0)
+		set_nr_hugepages(hpage_size, saved_nr_hugepages);
 	if (saved_oc_hugepages >= 0)
-		set_pool_counter(HUGEPAGES_OC, saved_oc_hugepages, 0);
+		set_nr_overcommit_hugepages(hpage_size, saved_oc_hugepages);
 }
 
 void verify_dynamic_pool_support(void)
 {
-	saved_oc_hugepages = get_pool_counter(HUGEPAGES_OC, 0);
+	saved_oc_hugepages = get_huge_page_counter(hpage_size, HUGEPAGES_OC);
 	if (saved_oc_hugepages < 0)
 		FAIL("Kernel appears to lack dynamic hugetlb pool support");
-	set_pool_counter(HUGEPAGES_OC, 10, 0);
+	set_nr_overcommit_hugepages(hpage_size, 10);
 }
 
 void bad_value(int line, const char *name, long expect, long actual)
@@ -96,10 +99,10 @@ void verify_counters(int line, long et, long ef, long er, long es)
 {
 	long t, f, r, s;
 
-	t = get_pool_counter(HUGEPAGES_TOTAL, 0);
-	f = get_pool_counter(HUGEPAGES_FREE, 0);
-	r = get_pool_counter(HUGEPAGES_RSVD, 0);
-	s = get_pool_counter(HUGEPAGES_SURP, 0);
+	t = get_huge_page_counter(hpage_size, HUGEPAGES_TOTAL);
+	f = get_huge_page_counter(hpage_size, HUGEPAGES_FREE);
+	r = get_huge_page_counter(hpage_size, HUGEPAGES_RSVD);
+	s = get_huge_page_counter(hpage_size, HUGEPAGES_SURP);
 
 	/* Invariant checks */
 	if (t < 0 || f < 0 || r < 0 || s < 0)
@@ -136,7 +139,7 @@ void _set_nr_hugepages(unsigned long count, int line)
 	long min_size;
 	long et, ef, er, es;
 
-	if (set_pool_counter(HUGEPAGES_TOTAL, count, 0))
+	if (set_nr_hugepages(hpage_size, count))
 		FAIL("Cannot set nr_hugepages");
 
 	/* The code below is based on set_max_huge_pages in mm/hugetlb.c */
@@ -361,19 +364,16 @@ void run_test(char *desc, int base_nr)
 
 int main(int argc, char ** argv)
 {
-	int fd, base_nr;
+	int base_nr;
 
 	test_init(argc, argv);
-	check_must_be_root();
-	saved_nr_hugepages = get_pool_counter(HUGEPAGES_TOTAL, 0);
-	verify_dynamic_pool_support();
-
-	fd = hugetlbfs_unlinked_fd();
-	if ((private_resv = kernel_has_private_reservations(fd)) == -1)
-		FAIL("kernel_has_private_reservations() failed\n");
-	close(fd);
-
 	hpage_size = check_hugepagesize();
+	saved_nr_hugepages = get_huge_page_counter(hpage_size, HUGEPAGES_TOTAL);
+	verify_dynamic_pool_support();
+	check_must_be_root();
+
+	if ((private_resv = kernel_has_private_reservations()) == -1)
+		FAIL("kernel_has_private_reservations() failed\n");
 
 	/*
 	 * This test case should require a maximum of 3 huge pages.

@@ -207,7 +207,7 @@ void _spawn(int l, int expected_result, unsigned long size, int mmap_flags,
 
 int main(int argc, char ** argv)
 {
-	int fd, private_resv;
+	int private_resv;
 	int bad_priv_resv;
 
 	test_init(argc, argv);
@@ -221,9 +221,7 @@ int main(int argc, char ** argv)
 	check_must_be_root();
 	check_free_huge_pages(1);
 
-	fd = hugetlbfs_unlinked_fd();
-	private_resv = kernel_has_private_reservations(fd);
-	close(fd);
+	private_resv = kernel_has_private_reservations();
 	if (private_resv == -1)
 		FAIL("kernel_has_private_reservations() failed\n");
 	bad_priv_resv = private_resv ? BAD_EXIT : BAD_SIG;

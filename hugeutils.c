@@ -118,7 +118,39 @@ long __lh_parse_page_size(const char *str)
 		return size;
 }
 
-static long read_meminfo(const char *tag)
+struct hugetlb_pool_counter_info_t {
+	char *meminfo_key;
+	char *sysfs_file;
+};
+
+struct hugetlb_pool_counter_info_t hugetlb_counter_info[] = {
+	[HUGEPAGES_TOTAL] = {
+		.meminfo_key	= "HugePages_Total:",
+		.sysfs_file	= "nr_hugepages",
+	},
+	[HUGEPAGES_FREE] = {
+		.meminfo_key	= "HugePages_Free:",
+		.sysfs_file	= "free_hugepages",
+	},
+	[HUGEPAGES_RSVD] = {
+		.meminfo_key	= "HugePages_Rsvd:",
+		.sysfs_file	= "resv_hugepages",
+	},
+	[HUGEPAGES_SURP] = {
+		.meminfo_key	= "HugePages_Surp:",
+		.sysfs_file	= "surplus_hugepages",
+	},
+	[HUGEPAGES_OC] = {
+		.meminfo_key	= NULL,
+		.sysfs_file	= "nr_overcommit_hugepages"
+	},
+};
+
+/*
+ * Read numeric data from raw and tagged kernel status files.  Used to read
+ * /proc and /sys data (without a tag) and from /proc/meminfo (with a tag).
+ */
+long file_read_ulong(char *file, const char *tag)
 {
 	int fd;
 	char buf[MEMINFO_SIZE];
@@ -126,9 +158,9 @@ static long read_meminfo(const char *tag)
 	char *p, *q;
 	long val;
 
-	fd = open("/proc/meminfo", O_RDONLY);
+	fd = open(file, O_RDONLY);
 	if (fd < 0) {
-		ERROR("Couldn't open /proc/meminfo (%s)\n", strerror(errno));
+		ERROR("Couldn't open %s: %s\n", file, strerror(errno));
 		return -1;
 	}
 
@@ -136,35 +168,112 @@ static long read_meminfo(const char *tag)
 	readerr = errno;
 	close(fd);
 	if (len < 0) {
-		ERROR("Error reading /proc/meminfo (%s)\n", strerror(readerr));
+		ERROR("Error reading %s: %s\n", file, strerror(errno));
 		return -1;
 	}
 	if (len == sizeof(buf)) {
-		ERROR("/proc/meminfo is too large\n");
+		ERROR("%s is too large\n", file);
 		return -1;
 	}
 	buf[len] = '\0';
 
-	p = strstr(buf, tag);
-	if (!p)
-		return -1; /* looks like the line we want isn't there */
+	/* Search for a tag if provided */
+	if (tag) {
+		p = strstr(buf, tag);
+		if (!p)
+			return -1; /* looks like the line we want isn't there */
+		p += strlen(tag);
+	} else
+		p = buf;
 
-	p += strlen(tag);
-	errno = 0;
 	val = strtol(p, &q, 0);
-	if (errno != 0) {
-		if (errno == ERANGE && val == LONG_MAX)
-			ERROR("Value of %s in /proc/meminfo overflows long\n", tag);
-		else
-			ERROR("strtol() failed (%s)\n", strerror(errno));
-		return -1;
-	}
 	if (! isspace(*q)) {
-		ERROR("Couldn't parse /proc/meminfo value\n");
+		ERROR("Couldn't parse %s value\n", file);
 		return -1;
 	}
 
 	return val;
+}
+
+int file_write_ulong(char *file, unsigned long val)
+{
+	FILE *f;
+	int ret;
+
+	f = fopen(file, "w");
+	if (!f) {
+		ERROR("Couldn't open %s: %s\n", file, strerror(errno));
+		return -1;
+	}
+
+	ret = fprintf(f, "%lu", val);
+	fclose(f);
+	return ret > 0 ? 0 : -1;
+}
+
+/*
+ * Pool counters are typically exposed in sysfs in modern kernels, the
+ * counters for the default page size are exposed in procfs in all kernels
+ * supporting hugepages.  Given a specific counter (e.g. HUGEPAGES_RSVD)
+ * and a page size return both a filename and an optional tag to locate
+ * and extract this counter.
+ */
+int select_pool_counter(unsigned int counter, unsigned long pagesize,
+				char *filename, char **key)
+{
+	long default_size;
+	char *meminfo_key;
+	char *sysfs_file;
+
+	if (counter >= HUGEPAGES_MAX_COUNTERS) {
+		ERROR("Invalid counter specified\n");
+		return -1;
+	}
+
+	meminfo_key = hugetlb_counter_info[counter].meminfo_key;
+	sysfs_file = hugetlb_counter_info[counter].sysfs_file;
+	if (key)
+		*key = NULL;
+
+	/*
+	 * Get the meminfo page size.
+	 * This could be made more efficient if utility functions were shared
+	 * between libhugetlbfs and the test suite.  For now we will just
+	 * read /proc/meminfo.
+	 */
+	default_size = file_read_ulong("/proc/meminfo", "Hugepagesize:");
+	default_size *= 1024; /* Convert from kB to B */
+	if (default_size < 0) {
+		ERROR("Cannot determine the default page size\n");
+		return -1;
+	}
+
+	/* Convert a pagesize of 0 to the libhugetlbfs default size */
+	if (pagesize == 0)
+		pagesize = default_size;
+
+	/* If the user is dealing in the default page size, we can use /proc */
+	if (pagesize == default_size) {
+		if (meminfo_key && key) {
+			strcpy(filename, "/proc/meminfo");
+			*key = meminfo_key;
+		} else
+			sprintf(filename, "/proc/sys/vm/%s", sysfs_file);
+	} else /* Use the sysfs interface */
+		sprintf(filename, "/sys/kernel/mm/hugepages/hugepages-%lukB/%s",
+			pagesize / 1024, sysfs_file);
+	return 0;
+}
+
+int set_pool_counter(unsigned long pagesize, unsigned int counter,
+			unsigned long val)
+{
+	char file[PATH_MAX+1];
+
+	if (select_pool_counter(counter, pagesize, file, NULL))
+		return -1;
+
+	return file_write_ulong(file, val);
 }
 
 static int hpage_size_to_index(unsigned long size)
@@ -197,7 +306,7 @@ static void probe_default_hpage_size(void)
 	if (env && strlen(env) > 0)
 		size = __lh_parse_page_size(env);
 	else {
-		size = read_meminfo("Hugepagesize:");
+		size = file_read_ulong("/proc/meminfo", "Hugepagesize:");
 		size *= 1024; /* convert from kB to B */
 	}
 
@@ -510,6 +619,27 @@ int __lh_hugetlbfs_prefault(int fd, void *addr, size_t length)
 	return 0;
 }
 
+long get_huge_page_counter(long pagesize, unsigned int counter)
+{
+	char file[PATH_MAX+1];
+	char *key;
+
+	if (select_pool_counter(counter, pagesize, file, &key))
+		return -1;
+
+	return file_read_ulong(file, key);
+}
+
+int set_nr_hugepages(long pagesize, unsigned long val)
+{
+	return set_pool_counter(pagesize, HUGEPAGES_TOTAL, val);
+}
+
+int set_nr_overcommit_hugepages(long pagesize, unsigned long val)
+{
+	return set_pool_counter(pagesize, HUGEPAGES_OC, val);
+}
+
 /********************************************************************/
 /* Library user visible DIAGNOSES/DEBUGGING ONLY functions          */
 /********************************************************************/
@@ -544,4 +674,9 @@ long __lh_dump_proc_pid_maps()
 
 	fclose(f);
 	return 0;
+}
+
+long read_meminfo(const char *tag)
+{
+	return file_read_ulong("/proc/meminfo", tag);
 }
