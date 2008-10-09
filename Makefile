@@ -6,6 +6,7 @@ INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
 BIN_OBJ_DIR=obj
 INSTALL_BIN = hugectl hugeedit
 INSTALL_HEADERS = hugetlbfs.h
+INSTALL_MAN3 = get_huge_pages.3
 INSTALL_MAN7 = libhugetlbfs.7
 INSTALL_MAN8 = hugectl.8 hugeedit.8
 LDSCRIPT_TYPES = B BDT
@@ -110,6 +111,7 @@ LDSCRIPTDIR = $(PREFIX)/share/libhugetlbfs/ldscripts
 BINDIR = $(PREFIX)/share/libhugetlbfs
 EXEDIR = $(PREFIX)/bin
 DOCDIR = $(PREFIX)/share/doc/libhugetlbfs
+MANDIR3 = $(PREFIX)/man/man3
 MANDIR7 = $(PREFIX)/man/man7
 MANDIR8 = $(PREFIX)/man/man8
 
@@ -299,6 +301,12 @@ install: libs tools $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	for x in $(INSTALL_OBJSCRIPT); do \
 		$(INSTALL) -m 755 objscript.$$x $(DESTDIR)$(BINDIR)/$$x; done
 	@$(VECHO) INSTALLMAN $(DESTDIR)manX
+	for x in $(INSTALL_MAN3); do \
+		$(INSTALL) -m 444 man/$$x $(DESTDIR)$(MANDIR3); \
+		gzip -f $(DESTDIR)$(MANDIR3)/$$x; \
+	done
+	rm -f $(DESTDIR)$(MANDIR3)/free_huge_pages.3.gz
+	ln -s $(DESTDIR)$(MANDIR3)/get_huge_pages.3.gz $(DESTDIR)$(MANDIR3)/free_huge_pages.3.gz
 	for x in $(INSTALL_MAN7); do \
 		$(INSTALL) -m 444 man/$$x $(DESTDIR)$(MANDIR7); \
 		gzip -f $(DESTDIR)$(MANDIR7)/$$x; \
