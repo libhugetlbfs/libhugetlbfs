@@ -1,0 +1,90 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH HUGEADM 8 "October 10, 2008"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+hugeadm \- Configure the system huge page pools
+.SH SYNOPSIS
+.B hugeadm [options]
+.SH DESCRIPTION
+
+\fBhugeadm\fP displays and configures the systems huge page pools. The size
+of the pools is set as a minimum and maximum threshold.  The minimum value
+is allocated up front by the kernel and guaranteed to remain as hugepages
+until the pool is shrunk. If a maximum is set, the system will dynamically
+allocate pages if applications request more hugepages than the minimum size
+of the pool. There is no guarantee that more pages than this minimum pool
+size can be allocated.
+
+The following options display information about the pools.
+
+.TP
+.B --pool-list
+
+This displays the Minimum, Current and Maximum number of huge pages in the pool
+for each pagesize supported by the system. The "Minimum" value is the size of
+the static pool and there will always be at least this number of hugepages in
+use by the system, either by applications or kept by the kernel in a reserved
+pool. The "Current" value is the number of hugepages currently in use, either
+by applications or stored on the kernels free list. The "Maximum" value is the
+largest number of hugepages that can be in use at any given time.
+
+.TP
+.B --page-sizes
+
+This displays every page size supported by the system and has a pool
+configured.
+
+.TP
+.B --page-sizes-all
+
+This displays all page sizes supported by the system, even if no pool is
+available.
+
+.PP
+The following options configure the pool.
+
+.TP
+.B --pool-pages-min=<size>:[+|-]<count>
+
+This option sets or adjusts the Minimum number of hugepages in the pool for
+pagesize \fBsize\fP. \fBsize\fP may be specified in bytes or in kilobytes,
+megabytes, or gigabytes by appending K, M, or G respectively. The pool is set
+to \fBcount\fP pages if + or - are not specified. If + or - are specified,
+then the size of the pool will adjust by that amount. Note that there is
+no guarantee that the system can allocate the hugepages requested for the
+Minimum pool. The size of the pools should be checked after executing this
+command to ensure they were successful.
+
+.TP
+.B --pool-pages-max=<size>:[+|-]<count>
+
+This option sets or adjusts the Maximum number of hugepages. Note that while
+the Minimum number of pages are guaranteed to be available to applications,
+there is not guarantee that the system can allocate the pages on demand when
+the number of huge pages requested by applications is between the Minimum and
+Maximum pool sizes.
+
+.SH SEE ALSO
+.I oprofile(1),
+.I pagesize(1),
+.I libhugetlbfs(7),
+.I hugectl(8),
+.br
+.SH AUTHORS
+libhugetlbfs was written by various people on the libhugetlbfs-devel
+mailing list.
+
