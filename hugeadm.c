@@ -61,6 +61,13 @@ int opt_dry_run = 0;
 #define LONG_POOL_LIST	(LONG_POOL|'l')
 
 #define MAX_POOLS	32
+
+static int cmpsizes(const void *p1, const void *p2)
+{
+	return ((struct hpage_pool *)p1)->pagesize >
+			((struct hpage_pool *)p2)->pagesize;
+}
+
 void pool_list(void)
 {
 	struct hpage_pool pools[MAX_POOLS];
@@ -72,12 +79,14 @@ void pool_list(void)
 		ERROR("unable to obtain pools list");
 		exit(EXIT_FAILURE);
 	}
+	qsort(pools, cnt, sizeof(pools[0]), cmpsizes);
 
-	printf("%10s %8s %8s %8s\n", "Size", "Minimum", "Current", "Maximum");
+	printf("%10s %8s %8s %8s %8s\n",
+		"Size", "Minimum", "Current", "Maximum", "Default");
 	for (pos = 0; cnt--; pos++) {
-		printf("%10ld %8ld %8ld %8ld\n", pools[pos].pagesize,
+		printf("%10ld %8ld %8ld %8ld %8s\n", pools[pos].pagesize,
 			pools[pos].minimum, pools[pos].size,
-			pools[pos].maximum);
+			pools[pos].maximum, (pools[pos].is_default) ? "*" : "");
 	}
 }
 

@@ -496,6 +496,7 @@ static int get_pool_size(long size, struct hpage_pool *pool)
 		pool->minimum = nr_static;
 		pool->maximum = nr_static + nr_over;
 		pool->size = nr_used + nr_resv;
+		pool->is_default = 0;
 
 		return 1;
 	}
@@ -513,8 +514,10 @@ int __lh_hpool_sizes(struct hpage_pool *pools, int pcnt)
 	default_size = size_to_smaller_unit(file_read_ulong(MEMINFO,
 							"Hugepagesize:"));
 	if (default_size >= 0 && which < pcnt)
-		if (get_pool_size(default_size, &pools[which]))
+		if (get_pool_size(default_size, &pools[which])) {
+			pools[which].is_default = 1;
 			which++;
+		}
 
 	dir = opendir(SYSFS_HUGEPAGES_DIR);
 	if (dir) {

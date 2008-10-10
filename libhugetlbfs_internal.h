@@ -94,6 +94,7 @@ struct hpage_pool {
 	unsigned long minimum;
 	unsigned long maximum;
 	unsigned long size;
+	int is_default;
 };
 
 extern int __lh_hpool_sizes(struct hpage_pool *, int);
