@@ -54,6 +54,10 @@ void print_usage()
 	OPTION("--pool-pages-max <size>:[+|-]<count>", "");
 	CONT("Adjust pool 'size' upper bound");
 
+	OPTION("--page-sizes", "Display page sizes that a configured pool");
+	OPTION("--page-sizes-all",
+			"Display page sizes support by the hardware");
+
 	OPTION("--help, -h", "Prints this message");
 }
 
@@ -66,6 +70,10 @@ int opt_dry_run = 0;
 #define LONG_POOL_LIST		(LONG_POOL|'l')
 #define LONG_POOL_MIN_ADJ	(LONG_POOL|'m')
 #define LONG_POOL_MAX_ADJ	(LONG_POOL|'M')
+
+#define LONG_PAGE	('P' << 8)
+#define LONG_PAGE_SIZES	(LONG_PAGE|'s')
+#define LONG_PAGE_AVAIL	(LONG_PAGE|'a')
 
 #define MAX_POOLS	32
 
@@ -214,6 +222,26 @@ void pool_adjust(char *cmd, unsigned int counter)
 	}
 }
 
+void page_sizes(int all)
+{
+	struct hpage_pool pools[MAX_POOLS];
+	int pos;
+	int cnt;
+
+	cnt = __lh_hpool_sizes(pools, MAX_POOLS);
+	if (cnt < 0) {
+		ERROR("unable to obtain pools list");
+		exit(EXIT_FAILURE);
+	}
+	qsort(pools, cnt, sizeof(pools[0]), cmpsizes);
+
+	for (pos = 0; cnt--; pos++) {
+		if (all || (pools[pos].maximum &&
+		    hugetlbfs_find_path_for_size(pools[pos].pagesize)))
+			printf("%ld\n", pools[pos].pagesize);
+	}
+}
+
 int main(int argc, char** argv)
 {
 	char opts[] = "+h";
@@ -225,10 +253,14 @@ int main(int argc, char** argv)
 		{"pool-pages-min", required_argument, NULL, LONG_POOL_MIN_ADJ},
 		{"pool-pages-max", required_argument, NULL, LONG_POOL_MAX_ADJ},
 
+		{"page-sizes", no_argument, NULL, LONG_PAGE_SIZES},
+		{"page-sizes-all", no_argument, NULL, LONG_PAGE_AVAIL},
+
 		{0},
 	};
 
 	__lh_hugetlbfs_setup_debug();
+        __lh_setup_mounts();
 
 	while (ret != -1) {
 		ret = getopt_long(argc, argv, opts, long_opts, &index);
@@ -254,6 +286,14 @@ int main(int argc, char** argv)
 
 		case LONG_POOL_MAX_ADJ:
 			pool_adjust(optarg, POOL_MAX);
+			break;
+
+		case LONG_PAGE_SIZES:
+			page_sizes(0);
+			break;
+
+		case LONG_PAGE_AVAIL:
+			page_sizes(1);
 			break;
 
 		default:
