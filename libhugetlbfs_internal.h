@@ -89,6 +89,15 @@ struct hpage_size {
 	char mount[PATH_MAX+1];
 };
 
+struct hpage_pool {
+	unsigned long pagesize;
+	unsigned long minimum;
+	unsigned long maximum;
+	unsigned long size;
+};
+
+extern int __lh_hpool_sizes(struct hpage_pool *, int);
+
 /* Arch-specific callbacks */
 extern int direct_syscall(int sysnum, ...);
 extern ElfW(Word) plt_extrasz(ElfW(Dyn) *dyntab);

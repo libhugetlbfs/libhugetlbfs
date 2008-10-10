@@ -47,10 +47,39 @@ void print_usage()
 	fprintf(stderr, "hugectl [options] target\n");
 	fprintf(stderr, "options:\n");
 
+	OPTION("--pool-list", "List all pools");
+
 	OPTION("--help, -h", "Prints this message");
 }
 
 int opt_dry_run = 0;
+
+/*
+ * getopts return values for options which are long only.
+ */
+#define LONG_POOL	('p' << 8)
+#define LONG_POOL_LIST	(LONG_POOL|'l')
+
+#define MAX_POOLS	32
+void pool_list(void)
+{
+	struct hpage_pool pools[MAX_POOLS];
+	int pos;
+	int cnt;
+
+	cnt = __lh_hpool_sizes(pools, MAX_POOLS);
+	if (cnt < 0) {
+		ERROR("unable to obtain pools list");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("%10s %8s %8s %8s\n", "Size", "Minimum", "Current", "Maximum");
+	for (pos = 0; cnt--; pos++) {
+		printf("%10ld %8ld %8ld %8ld\n", pools[pos].pagesize,
+			pools[pos].minimum, pools[pos].size,
+			pools[pos].maximum);
+	}
+}
 
 int main(int argc, char** argv)
 {
@@ -58,6 +87,8 @@ int main(int argc, char** argv)
 	int ret = 0, index = 0;
 	struct option long_opts[] = {
 		{"help",       no_argument, NULL, 'h'},
+
+		{"pool-list", no_argument, NULL, LONG_POOL_LIST},
 
 		{0},
 	};
@@ -77,6 +108,10 @@ int main(int argc, char** argv)
 		case 'h':
 			print_usage();
 			exit(EXIT_SUCCESS);
+
+		case LONG_POOL_LIST:
+			pool_list();
+			break;
 
 		default:
 			WARNING("unparsed option %08x\n", ret);

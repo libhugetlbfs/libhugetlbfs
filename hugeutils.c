@@ -43,6 +43,7 @@
 #include <sys/syscall.h>
 #include <linux/types.h>
 #include <linux/unistd.h>
+#include <dirent.h>
 
 #include "libhugetlbfs_internal.h"
 #include "hugetlbfs.h"
@@ -453,6 +454,90 @@ void __lh_setup_mounts(void)
 	probe_default_hpage_size();
 	if (__hugetlbfs_debug)
 		debug_show_page_sizes();
+}
+
+static int get_pool_size(long size, struct hpage_pool *pool)
+{
+	long nr_over = 0;
+	long nr_used = 0;
+	long nr_surp = 0;
+	long nr_resv = 0;
+	long nr_static = 0;
+
+	long it_used = -1;
+	long it_surp = -1;
+	long it_resv = -1;
+
+	/*
+	 * Pick up those values which are basically stable with respect to
+	 * the admin; ie. only changed by them.
+	 */
+	nr_over = get_huge_page_counter(size, HUGEPAGES_OC);
+
+	/* Sample the volatile values until they are stable. */
+	while (nr_used != it_used || nr_surp != it_surp || nr_resv != it_resv) {
+		nr_used = it_used;
+		nr_surp = it_surp;
+		nr_resv = it_resv;
+
+		it_used = get_huge_page_counter(size, HUGEPAGES_TOTAL);
+		it_surp = get_huge_page_counter(size, HUGEPAGES_SURP);
+		it_resv = get_huge_page_counter(size, HUGEPAGES_RSVD);
+	}
+
+	nr_static = nr_used - nr_surp;
+
+	if (nr_static >= 0) {
+		DEBUG("size<%ld> min<%ld> max<%ld> "
+			"size<%ld>\n",
+			size, nr_static, nr_static + nr_over,
+			nr_used + nr_resv);
+		pool->pagesize = size;
+		pool->minimum = nr_static;
+		pool->maximum = nr_static + nr_over;
+		pool->size = nr_used + nr_resv;
+
+		return 1;
+	}
+
+	return 0;
+}
+
+int __lh_hpool_sizes(struct hpage_pool *pools, int pcnt)
+{
+	long default_size;
+	int which = 0;
+	DIR *dir;
+	struct dirent *entry;
+
+	default_size = size_to_smaller_unit(file_read_ulong(MEMINFO,
+							"Hugepagesize:"));
+	if (default_size >= 0 && which < pcnt)
+		if (get_pool_size(default_size, &pools[which]))
+			which++;
+
+	dir = opendir(SYSFS_HUGEPAGES_DIR);
+	if (dir) {
+		while ((entry = readdir(dir))) {
+			char *name = entry->d_name;
+			long size;
+
+			DEBUG("parsing<%s>\n", name);
+			if (strncmp(name, "hugepages-", 10) != 0)
+				continue;
+			name += 10;
+
+			size = size_to_smaller_unit(atol(name));
+			if (size < 0 || size == default_size)
+				continue;
+
+			if (get_pool_size(size, &pools[which]))
+				which++;
+		}
+		closedir(dir);
+	}
+
+	return (which < pcnt) ? which : -1;
 }
 
 /********************************************************************/
