@@ -445,7 +445,7 @@ void __lh_setup_mounts(void)
 		debug_show_page_sizes();
 }
 
-static int get_pool_size(long size, struct hpage_pool *pool)
+int __lh_get_pool_size(long size, struct hpage_pool *pool)
 {
 	long nr_over = 0;
 	long nr_used = 0;
@@ -503,7 +503,7 @@ int __lh_hpool_sizes(struct hpage_pool *pools, int pcnt)
 	default_size = size_to_smaller_unit(file_read_ulong(MEMINFO,
 							"Hugepagesize:"));
 	if (default_size >= 0 && which < pcnt)
-		if (get_pool_size(default_size, &pools[which])) {
+		if (__lh_get_pool_size(default_size, &pools[which])) {
 			pools[which].is_default = 1;
 			which++;
 		}
@@ -523,7 +523,7 @@ int __lh_hpool_sizes(struct hpage_pool *pools, int pcnt)
 			if (size < 0 || size == default_size)
 				continue;
 
-			if (get_pool_size(size, &pools[which]))
+			if (__lh_get_pool_size(size, &pools[which]))
 				which++;
 		}
 		closedir(dir);
@@ -727,6 +727,7 @@ int set_nr_hugepages(long pagesize, unsigned long val)
 
 int set_nr_overcommit_hugepages(long pagesize, unsigned long val)
 {
+	DEBUG("setting HUGEPAGES_OC to %ld\n", val);
 	return set_huge_page_counter(pagesize, HUGEPAGES_OC, val);
 }
 

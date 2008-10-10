@@ -98,6 +98,7 @@ struct hpage_pool {
 };
 
 extern int __lh_hpool_sizes(struct hpage_pool *, int);
+extern int __lh_get_pool_size(long, struct hpage_pool *);
 
 /* Arch-specific callbacks */
 extern int direct_syscall(int sysnum, ...);

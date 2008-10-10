@@ -35,6 +35,7 @@
 
 #define REPORT_UTIL "hugeadm"
 #include "libhugetlbfs_internal.h"
+#include "hugetlbfs.h"
 
 extern int optind;
 extern char *optarg;
@@ -48,6 +49,10 @@ void print_usage()
 	fprintf(stderr, "options:\n");
 
 	OPTION("--pool-list", "List all pools");
+	OPTION("--pool-pages-min <size>:[+|-]<count>", "");
+	CONT("Adjust pool 'size' lower bound");
+	OPTION("--pool-pages-max <size>:[+|-]<count>", "");
+	CONT("Adjust pool 'size' upper bound");
 
 	OPTION("--help, -h", "Prints this message");
 }
@@ -57,8 +62,10 @@ int opt_dry_run = 0;
 /*
  * getopts return values for options which are long only.
  */
-#define LONG_POOL	('p' << 8)
-#define LONG_POOL_LIST	(LONG_POOL|'l')
+#define LONG_POOL		('p' << 8)
+#define LONG_POOL_LIST		(LONG_POOL|'l')
+#define LONG_POOL_MIN_ADJ	(LONG_POOL|'m')
+#define LONG_POOL_MAX_ADJ	(LONG_POOL|'M')
 
 #define MAX_POOLS	32
 
@@ -90,6 +97,123 @@ void pool_list(void)
 	}
 }
 
+enum {
+	POOL_MIN,
+	POOL_MAX,
+};
+
+static long value_adjust(char *adjust_str, long base)
+{
+	long adjust;
+	char *iter;
+
+	/* Convert and validate the adjust. */
+	adjust = strtol(adjust_str, &iter, 0);
+	if (*iter) {
+		ERROR("%s: invalid adjustment\n", adjust_str);
+		exit(EXIT_FAILURE);
+	}
+
+	if (adjust_str[0] != '+' && adjust_str[0] != '-')
+		base = 0;
+
+	/* Ensure we neither go negative nor exceed LONG_MAX. */
+	if (adjust < 0 && -adjust > base) {
+		adjust = -base;
+	}
+	if (adjust > 0 && (base + adjust) < base) {
+		adjust = LONG_MAX - base;
+	}
+	base += adjust;
+
+	return base;
+}
+
+
+void pool_adjust(char *cmd, unsigned int counter)
+{
+	struct hpage_pool pools[MAX_POOLS];
+	int pos;
+	int cnt;
+
+	char *iter = NULL;
+	char *page_size_str = NULL;
+	char *adjust_str = NULL;
+	long page_size;
+
+	unsigned long min;
+	unsigned long max;
+
+	/* Extract the pagesize and adjustment. */
+	page_size_str = strtok_r(cmd, ":", &iter);
+	if (page_size_str)
+		adjust_str = strtok_r(NULL, ":", &iter);
+
+	if (!page_size_str || !adjust_str) {
+		ERROR("%s: invalid resize specificiation\n", cmd);
+		exit(EXIT_FAILURE);
+	}
+	DEBUG("page_size<%s> adjust<%s> counter<%d>\n",
+					page_size_str, adjust_str, counter);
+
+	/* Convert and validate the page_size. */
+	page_size = __lh_parse_page_size(page_size_str);
+
+	cnt = __lh_hpool_sizes(pools, MAX_POOLS);
+	if (cnt < 0) {
+		ERROR("unable to obtain pools list");
+		exit(EXIT_FAILURE);
+	}
+	for (pos = 0; cnt--; pos++) {
+		if (pools[pos].pagesize == page_size)
+			break;
+	}
+	if (cnt < 0) {
+		ERROR("%s: unknown page size\n", page_size_str);
+		exit(EXIT_FAILURE);
+	}
+
+	min = pools[pos].minimum;
+	max = pools[pos].maximum;
+
+	if (counter == POOL_MIN) {
+		min = value_adjust(adjust_str, min);
+		if (min > max)
+			max = min;
+	} else {
+		max = value_adjust(adjust_str, max);
+		if (max < min)
+			min = max;
+	}
+
+	DEBUG("%ld, %ld -> %ld, %ld\n", pools[pos].minimum, pools[pos].maximum,
+		min, max);
+
+	if ((pools[pos].maximum - pools[pos].minimum) < (max - min)) {
+		DEBUG("setting HUGEPAGES_OC to %ld\n", (max - min));
+		set_huge_page_counter(page_size, HUGEPAGES_OC, (max - min));
+	}
+	if (pools[pos].minimum != min) {
+		DEBUG("setting HUGEPAGES_TOTAL to %ld\n", min);
+		set_huge_page_counter(page_size, HUGEPAGES_TOTAL, min);
+	}
+	/*
+	 * HUGEPAGES_TOTAL is not guarenteed to check to exactly the figure
+	 * requested should there be insufficient pages.  Check the new
+	 * value and adjust HUGEPAGES_OC accordingly.
+	 */
+	__lh_get_pool_size(page_size, &pools[pos]);
+	if (pools[pos].minimum != min) {
+		ERROR("failed to set pool minimum to %ld became %ld\n",
+			min, pools[pos].minimum);
+		min = pools[pos].minimum;
+	}
+	if (pools[pos].maximum != max) {
+		DEBUG("setting HUGEPAGES_OC to %ld\n", (max - min));
+		set_huge_page_counter(page_size, HUGEPAGES_OC, (max - min));
+	}
+}
+
 int main(int argc, char** argv)
 {
 	char opts[] = "+h";
@@ -98,6 +222,8 @@ int main(int argc, char** argv)
 		{"help",       no_argument, NULL, 'h'},
 
 		{"pool-list", no_argument, NULL, LONG_POOL_LIST},
+		{"pool-pages-min", required_argument, NULL, LONG_POOL_MIN_ADJ},
+		{"pool-pages-max", required_argument, NULL, LONG_POOL_MAX_ADJ},
 
 		{0},
 	};
@@ -120,6 +246,14 @@ int main(int argc, char** argv)
 
 		case LONG_POOL_LIST:
 			pool_list();
+			break;
+
+		case LONG_POOL_MIN_ADJ:
+			pool_adjust(optarg, POOL_MIN);
+			break;
+
+		case LONG_POOL_MAX_ADJ:
+			pool_adjust(optarg, POOL_MAX);
 			break;
 
 		default:
