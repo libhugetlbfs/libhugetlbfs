@@ -70,6 +70,8 @@ enum {			 /* The number of pages of a given size that ... */
 	HUGEPAGES_MAX_COUNTERS,
 };
 long get_huge_page_counter(long pagesize, unsigned int counter);
+int set_huge_page_counter(long pagesize, unsigned int counter,
+							unsigned long val);
 int set_nr_hugepages(long pagesize, unsigned long val);
 int set_nr_overcommit_hugepages(long pagesize, unsigned long val);
 long read_meminfo(const char *tag);

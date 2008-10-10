@@ -264,17 +264,6 @@ int select_pool_counter(unsigned int counter, unsigned long pagesize,
 	return 0;
 }
 
-int set_pool_counter(unsigned long pagesize, unsigned int counter,
-			unsigned long val)
-{
-	char file[PATH_MAX+1];
-
-	if (select_pool_counter(counter, pagesize, file, NULL))
-		return -1;
-
-	return file_write_ulong(file, val);
-}
-
 static int hpage_size_to_index(unsigned long size)
 {
 	int i;
@@ -720,14 +709,25 @@ long get_huge_page_counter(long pagesize, unsigned int counter)
 	return file_read_ulong(file, key);
 }
 
+int set_huge_page_counter(long pagesize, unsigned int counter,
+			unsigned long val)
+{
+	char file[PATH_MAX+1];
+
+	if (select_pool_counter(counter, pagesize, file, NULL))
+		return -1;
+
+	return file_write_ulong(file, val);
+}
+
 int set_nr_hugepages(long pagesize, unsigned long val)
 {
-	return set_pool_counter(pagesize, HUGEPAGES_TOTAL, val);
+	return set_huge_page_counter(pagesize, HUGEPAGES_TOTAL, val);
 }
 
 int set_nr_overcommit_hugepages(long pagesize, unsigned long val)
 {
-	return set_pool_counter(pagesize, HUGEPAGES_OC, val);
+	return set_huge_page_counter(pagesize, HUGEPAGES_OC, val);
 }
 
 /********************************************************************/
