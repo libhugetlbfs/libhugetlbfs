@@ -38,7 +38,7 @@ ELF32 = elf32ppclinux
 endif
 else
 ifeq ($(ARCH),ppc)
-CC32 = gcc
+CC32 = gcc -m32
 ELF32 = elf32ppclinux
 LIB32 = lib
 else
