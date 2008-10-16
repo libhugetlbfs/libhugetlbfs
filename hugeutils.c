@@ -122,7 +122,7 @@ struct hugetlb_pool_counter_info_t {
 	char *sysfs_file;
 };
 
-struct hugetlb_pool_counter_info_t hugetlb_counter_info[] = {
+static struct hugetlb_pool_counter_info_t hugetlb_counter_info[] = {
 	[HUGEPAGES_TOTAL] = {
 		.meminfo_key	= "HugePages_Total:",
 		.sysfs_file	= "nr_hugepages",
@@ -217,7 +217,7 @@ int file_write_ulong(char *file, unsigned long val)
  * and a page size return both a filename and an optional tag to locate
  * and extract this counter.
  */
-int select_pool_counter(unsigned int counter, unsigned long pagesize,
+static int select_pool_counter(unsigned int counter, unsigned long pagesize,
 				char *filename, char **key)
 {
 	long default_size;
