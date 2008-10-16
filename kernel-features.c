@@ -158,7 +158,7 @@ int hugetlbfs_test_feature(int feature_code)
 	return feature_mask & (1 << feature_code);
 }
 
-void print_valid_features(void)
+static void print_valid_features(void)
 {
 	int i;
 
@@ -169,7 +169,7 @@ void print_valid_features(void)
 						kernel_features[i].name);
 }
 
-int check_features_env_valid(const char *env)
+static int check_features_env_valid(const char *env)
 {
 	const char *pos = env;
 	int i;
