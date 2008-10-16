@@ -42,4 +42,14 @@ int set_nr_overcommit_hugepages(long pagesize, unsigned long val);
 #define read_meminfo __pu_read_meminfo
 long read_meminfo(const char *tag);
 
+/* Kernel feature testing */
+/* This enum defines the bits in a feature bitmask */
+enum {
+	/* Reservations are created for private mappings */
+	HUGETLB_FEATURE_PRIVATE_RESV,
+	HUGETLB_FEATURE_NR,
+};
+#define hugetlbfs_test_feature __pu_hugetlbfs_test_feature
+int hugetlbfs_test_feature(int feature_code);
+
 #endif /* _LIBHUGETLBFS_PRIVUTILS_H */

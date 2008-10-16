@@ -27,6 +27,7 @@
 #include <sys/utsname.h>
 #include "kernel-features.h"
 #include "hugetlbfs.h"
+#include "libhugetlbfs_privutils.h"
 #include "libhugetlbfs_internal.h"
 #include "libhugetlbfs_debug.h"
 

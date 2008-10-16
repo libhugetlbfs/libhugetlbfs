@@ -2,7 +2,7 @@ PREFIX = /usr/local
 EXEDIR = /bin
 
 LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o alloc.o shm.o kernel-features.o
-LIBPUOBJS = init_privutils.o debug.o hugeutils.o
+LIBPUOBJS = init_privutils.o debug.o hugeutils.o kernel-features.o
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a libhugetlbfs_privutils.so
 BIN_OBJ_DIR=obj
 INSTALL_BIN = hugectl hugeedit hugeadm pagesize
