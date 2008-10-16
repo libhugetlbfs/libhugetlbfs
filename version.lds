@@ -15,3 +15,9 @@ HTLBFS_2.0 {
 		get_huge_pages;
 		free_huge_pages;
 };
+
+HTLBFS_2.1 {
+	global:
+		gethugepagesizes;
+		getpagesizes;
+};
