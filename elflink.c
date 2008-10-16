@@ -809,7 +809,7 @@ static void check_range_empty(void *addr, unsigned long len)
 		WARNING("Unable to verify address range %p - %p.  Not empty?\n",
 				addr, addr + len);
 		if (__hugetlbfs_debug)
-			__lh_dump_proc_pid_maps();
+			dump_proc_pid_maps();
 	}
 	if (p != MAP_FAILED)
 		munmap(p, len);
@@ -1155,7 +1155,7 @@ static int set_hpage_sizes(const char *env)
 			continue;
 
 		if (*(++pos) == '=') {
-			size = __lh_parse_page_size(pos + 1);
+			size = parse_page_size(pos + 1);
 			if (size == -1)
 				return size;
 		} else
@@ -1266,7 +1266,7 @@ static int parse_elf()
 	return 0;
 }
 
-void __lh_hugetlbfs_setup_elflink(void)
+void hugetlbfs_setup_elflink(void)
 {
 	int i, ret;
 

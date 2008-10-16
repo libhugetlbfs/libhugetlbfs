@@ -103,7 +103,7 @@ void *get_huge_pages(size_t len, ghp_t flags)
 	}
 
 	/* Fault the region to ensure accesses succeed */
-	if (__lh_hugetlbfs_prefault(heap_fd, buf, len) != 0) {
+	if (hugetlbfs_prefault(heap_fd, buf, len) != 0) {
 		munmap(buf, len);
 		close(heap_fd);
 

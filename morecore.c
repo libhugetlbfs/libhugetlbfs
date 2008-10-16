@@ -108,7 +108,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 				WARNING("Heap originates at %p instead of %p\n",
 					p, heapbase);
 				if (__hugetlbfs_debug)
-					__lh_dump_proc_pid_maps();
+					dump_proc_pid_maps();
 			}
 			/* then setup the heap variables */
 			heapbase = heaptop = p;
@@ -118,12 +118,12 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			WARNING("New heap segment mapped at %p instead of %p\n",
 			      p, heapbase + mapsize);
 			if (__hugetlbfs_debug)
-				__lh_dump_proc_pid_maps();
+				dump_proc_pid_maps();
 			return NULL;
 		}
 
 		/* Fault the region to ensure accesses succeed */
-		if (__lh_hugetlbfs_prefault(zero_fd, p, delta) != 0) {
+		if (hugetlbfs_prefault(zero_fd, p, delta) != 0) {
 			munmap(p, delta);
 			return NULL;
 		}
@@ -190,7 +190,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	return p;
 }
 
-void __lh_hugetlbfs_setup_morecore(void)
+void hugetlbfs_setup_morecore(void)
 {
 	char *env, *ep;
 	unsigned long heapaddr;
@@ -212,7 +212,7 @@ void __lh_hugetlbfs_setup_morecore(void)
 	if (strncasecmp(env, "y", 1) == 0)
 		hpage_size = gethugepagesize();
 	else
-		hpage_size = __lh_parse_page_size(env);
+		hpage_size = parse_page_size(env);
 
 	if (hpage_size <= 0) {
 		if (errno == ENOSYS)

@@ -89,7 +89,7 @@ void pool_list(void)
 	int pos;
 	int cnt;
 
-	cnt = __lh_hpool_sizes(pools, MAX_POOLS);
+	cnt = hpool_sizes(pools, MAX_POOLS);
 	if (cnt < 0) {
 		ERROR("unable to obtain pools list");
 		exit(EXIT_FAILURE);
@@ -165,9 +165,9 @@ void pool_adjust(char *cmd, unsigned int counter)
 					page_size_str, adjust_str, counter);
 
 	/* Convert and validate the page_size. */
-	page_size = __lh_parse_page_size(page_size_str);
+	page_size = parse_page_size(page_size_str);
 
-	cnt = __lh_hpool_sizes(pools, MAX_POOLS);
+	cnt = hpool_sizes(pools, MAX_POOLS);
 	if (cnt < 0) {
 		ERROR("unable to obtain pools list");
 		exit(EXIT_FAILURE);
@@ -210,7 +210,7 @@ void pool_adjust(char *cmd, unsigned int counter)
 	 * requested should there be insufficient pages.  Check the new
 	 * value and adjust HUGEPAGES_OC accordingly.
 	 */
-	__lh_get_pool_size(page_size, &pools[pos]);
+	get_pool_size(page_size, &pools[pos]);
 	if (pools[pos].minimum != min) {
 		ERROR("failed to set pool minimum to %ld became %ld\n",
 			min, pools[pos].minimum);
@@ -228,7 +228,7 @@ void page_sizes(int all)
 	int pos;
 	int cnt;
 
-	cnt = __lh_hpool_sizes(pools, MAX_POOLS);
+	cnt = hpool_sizes(pools, MAX_POOLS);
 	if (cnt < 0) {
 		ERROR("unable to obtain pools list");
 		exit(EXIT_FAILURE);
@@ -259,8 +259,8 @@ int main(int argc, char** argv)
 		{0},
 	};
 
-	__lh_hugetlbfs_setup_debug();
-        __lh_setup_mounts();
+	hugetlbfs_setup_debug();
+        setup_mounts();
 
 	while (ret != -1) {
 		ret = getopt_long(argc, argv, opts, long_opts, &index);

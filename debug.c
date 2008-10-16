@@ -58,7 +58,7 @@ static void __hugetlbfs_init_debug(void)
 	initialized = 1;
 }
 
-void __lh_hugetlbfs_setup_debug(void)
+void hugetlbfs_setup_debug(void)
 {
 	__hugetlbfs_init_debug();
 }

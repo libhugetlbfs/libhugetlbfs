@@ -80,7 +80,7 @@ int main(int argc, char** argv)
 	long pagesizes[MAX_PAGESIZES];
 	int i;
 
-        __lh_hugetlbfs_setup_debug();
+        hugetlbfs_setup_debug();
 
 	while (ret != -1) {
 		ret = getopt_long(argc, argv, opts, long_opts, &index);

@@ -199,7 +199,7 @@ int check_features_env_valid(const char *env)
 	return 0;
 }
 
-void __lh_setup_features()
+void setup_features()
 {
 	struct utsname u;
 	char *env;

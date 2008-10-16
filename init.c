@@ -21,11 +21,11 @@
 
 static void __attribute__ ((constructor)) setup_libhugetlbfs(void)
 {
-	__lh_hugetlbfs_setup_debug();
-	__lh_setup_mounts();
-	__lh_setup_features();
+	hugetlbfs_setup_debug();
+	setup_mounts();
+	setup_features();
 #ifndef NO_ELFLINK
-	__lh_hugetlbfs_setup_elflink();
+	hugetlbfs_setup_elflink();
 #endif
-	__lh_hugetlbfs_setup_morecore();
+	hugetlbfs_setup_morecore();
 }

@@ -88,7 +88,7 @@ static inline long size_to_smaller_unit(long size)
  * 	EINVAL		- str could not be parsed or was not greater than zero
  *	EOVERFLOW	- Overflow when converting from the specified units
  */
-long __lh_parse_page_size(const char *str)
+long parse_page_size(const char *str)
 {
 	char *pos;
 	long size;
@@ -292,7 +292,7 @@ static void probe_default_hpage_size(void)
 	 */
 	env = getenv("HUGETLB_DEFAULT_PAGE_SIZE");
 	if (env && strlen(env) > 0)
-		size = __lh_parse_page_size(env);
+		size = parse_page_size(env);
 	else {
 		size = file_read_ulong(MEMINFO, "Hugepagesize:");
 		size *= 1024; /* convert from kB to B */
@@ -410,7 +410,7 @@ static void find_mounts(void)
 	close(fd);
 }
 
-void __lh_setup_mounts(void)
+void setup_mounts(void)
 {
 	char *env;
 	int do_scan = 1;
@@ -445,7 +445,7 @@ void __lh_setup_mounts(void)
 		debug_show_page_sizes();
 }
 
-int __lh_get_pool_size(long size, struct hpage_pool *pool)
+int get_pool_size(long size, struct hpage_pool *pool)
 {
 	long nr_over = 0;
 	long nr_used = 0;
@@ -493,7 +493,7 @@ int __lh_get_pool_size(long size, struct hpage_pool *pool)
 	return 0;
 }
 
-int __lh_hpool_sizes(struct hpage_pool *pools, int pcnt)
+int hpool_sizes(struct hpage_pool *pools, int pcnt)
 {
 	long default_size;
 	int which = 0;
@@ -503,7 +503,7 @@ int __lh_hpool_sizes(struct hpage_pool *pools, int pcnt)
 	default_size = size_to_smaller_unit(file_read_ulong(MEMINFO,
 							"Hugepagesize:"));
 	if (default_size >= 0 && which < pcnt)
-		if (__lh_get_pool_size(default_size, &pools[which])) {
+		if (get_pool_size(default_size, &pools[which])) {
 			pools[which].is_default = 1;
 			which++;
 		}
@@ -523,7 +523,7 @@ int __lh_hpool_sizes(struct hpage_pool *pools, int pcnt)
 			if (size < 0 || size == default_size)
 				continue;
 
-			if (__lh_get_pool_size(size, &pools[which]))
+			if (get_pool_size(size, &pools[which]))
 				which++;
 		}
 		closedir(dir);
@@ -538,7 +538,7 @@ int __lh_hpool_sizes(struct hpage_pool *pools, int pcnt)
 
 /*
  * NOTE: This function uses data that is initialized by
- * __lh_setup_mounts() which is called during libhugetlbfs initialization.
+ * setup_mounts() which is called during libhugetlbfs initialization.
  *
  * returns:
  *   on success, size of a huge page in number of bytes
@@ -744,7 +744,7 @@ int hugetlbfs_unlinked_fd(void)
 }
 
 #define IOV_LEN 64
-int __lh_hugetlbfs_prefault(int fd, void *addr, size_t length)
+int hugetlbfs_prefault(int fd, void *addr, size_t length)
 {
 	/*
 	 * The NUMA users of libhugetlbfs' malloc feature are
@@ -827,7 +827,7 @@ int set_nr_overcommit_hugepages(long pagesize, unsigned long val)
 /********************************************************************/
 
 #define MAPS_BUF_SZ 4096
-long __lh_dump_proc_pid_maps()
+long dump_proc_pid_maps()
 {
 	FILE *f;
 	char line[MAPS_BUF_SZ];

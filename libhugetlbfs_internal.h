@@ -41,17 +41,30 @@
 #define SLICE_HIGH_SHIFT	63
 #endif
 
+/*
+ * When adding a library local variable externalise the symbol as
+ * normal, plus add a #define of the form below.  This define effectively
+ * renames the routine into the local namespace __lh_* which is forced
+ * local in the linker script version.lds.
+ */
 extern int __hugetlbfs_verbose;
 extern int __hugetlbfs_debug;
 extern int __hugetlbfs_prefault;
-extern void __lh_hugetlbfs_setup_elflink();
-extern void __lh_hugetlbfs_setup_morecore();
-extern void __lh_hugetlbfs_setup_debug();
-extern void __lh_setup_mounts();
-extern void __lh_setup_features();
+#define hugetlbfs_setup_elflink __lh_hugetlbfs_setup_elflink
+extern void hugetlbfs_setup_elflink();
+#define hugetlbfs_setup_morecore __lh_hugetlbfs_setup_morecore
+extern void hugetlbfs_setup_morecore();
+#define hugetlbfs_setup_debug __lh_hugetlbfs_setup_debug
+extern void hugetlbfs_setup_debug();
+#define setup_mounts __lh_setup_mounts
+extern void setup_mounts();
+#define setup_features __lh_setup_features
+extern void setup_features();
 extern char __hugetlbfs_hostname[];
-extern int __lh_hugetlbfs_prefault(int fd, void *addr, size_t length);
-extern long __lh_parse_page_size(const char *str);
+#define hugetlbfs_prefault __lh_hugetlbfs_prefault
+extern int hugetlbfs_prefault(int fd, void *addr, size_t length);
+#define parse_page_size __lh_parse_page_size
+extern long parse_page_size(const char *str);
 
 #ifndef REPORT_UTIL
 #define REPORT_UTIL "libhugetlbfs"
@@ -97,8 +110,10 @@ struct hpage_pool {
 	int is_default;
 };
 
-extern int __lh_hpool_sizes(struct hpage_pool *, int);
-extern int __lh_get_pool_size(long, struct hpage_pool *);
+#define hpool_sizes __lh_hpool_sizes
+extern int hpool_sizes(struct hpage_pool *, int);
+#define get_pool_size __lh_get_pool_size
+extern int get_pool_size(long, struct hpage_pool *);
 
 /* Arch-specific callbacks */
 extern int direct_syscall(int sysnum, ...);
