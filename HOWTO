@@ -172,10 +172,11 @@ all testcases included as of this writing.
 
 3. (Optional) Install to system paths with "make install"
 
-This will install the library images to the system lib/lib32/lib64
-as appropriate.  By default it will install under /usr/local.  To put
-it somewhere else use PREFIX=/path/to/install on the make command
-line.  For example:
+This will install the library images to the system lib/lib32/lib64 as
+appropriate, the helper utilities and the manual pages.  By default
+it will install under /usr/local.  To put it somewhere else use
+PREFIX=/path/to/install on the make command line.  For example:
+
 	make install PREFIX=/opt/hugetlbfs
 Will install under /opt/hugetlbfs.
 
@@ -184,6 +185,11 @@ used for hugepage test/data/BSS (see below for details).
 
 Alternatively, you can use the library from the directory in which it
 was built, using the LD_LIBRARY_PATH environment variable.
+
+To only install library with linker scripts, the manual pages or the helper
+utilities separetly, use the install-libs, install-man and install-bin targets
+respectively. This can be useful when you with to install the utilities but
+not override the distribution-supported version of libhugetlbfs for example.
 
 Usage
 =====

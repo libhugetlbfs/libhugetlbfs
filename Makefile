@@ -296,12 +296,12 @@ ifeq (,$(findstring <$(MAKECMDGOALS)>,$(NODEPTARGETS)))
 endif
 
 obj32/install:
-	@$(VECHO) INSTALL32 $(LIBDIR32)
+	@$(VECHO) INSTALL-LIB32 $(LIBDIR32)
 	$(INSTALL) -d $(DESTDIR)$(LIBDIR32)
 	$(INSTALL) $(INSTALL_OBJ_LIBS:%=obj32/%) $(DESTDIR)$(LIBDIR32)
 
 obj64/install:
-	@$(VECHO) INSTALL64 $(LIBDIR64)
+	@$(VECHO) INSTALL-LIB64 $(LIBDIR64)
 	$(INSTALL) -d $(DESTDIR)$(LIBDIR64)
 	$(INSTALL) $(INSTALL_OBJ_LIBS:%=obj64/%) $(DESTDIR)$(LIBDIR64)
 
@@ -309,24 +309,22 @@ objscript.%: %
 	@$(VECHO) OBJSCRIPT $*
 	sed "s!### SET DEFAULT LDSCRIPT PATH HERE ###!HUGETLB_LDSCRIPT_PATH=$(LDSCRIPTDIR)!" < $< > $@
 
-install: libs tools $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
-	@$(VECHO) INSTALL
-	$(INSTALL) -d $(DESTDIR)$(LDSCRIPTDIR)
+install-libs: libs $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	$(INSTALL) -d $(DESTDIR)$(HEADERDIR)
+	$(INSTALL) -d $(DESTDIR)$(LDSCRIPTDIR)
+	$(INSTALL) -d $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 644 -t $(DESTDIR)$(HEADERDIR) $(INSTALL_HEADERS)
+	$(INSTALL) -m 644 $(INSTALL_LDSCRIPTS:%=ldscripts/%) $(DESTDIR)$(LDSCRIPTDIR)
+	for x in $(INSTALL_OBJSCRIPT); do \
+		$(INSTALL) -m 755 objscript.$$x $(DESTDIR)$(BINDIR)/$$x; done
+	cd $(DESTDIR)$(BINDIR) && ln -sf ld.hugetlbfs ld
+
+install-man:
+	@$(VECHO) INSTALL_MAN $(DESTDIR)manX
 	$(INSTALL) -d $(DESTDIR)$(MANDIR1)
 	$(INSTALL) -d $(DESTDIR)$(MANDIR3)
 	$(INSTALL) -d $(DESTDIR)$(MANDIR7)
 	$(INSTALL) -d $(DESTDIR)$(MANDIR8)
-	$(INSTALL) -m 644 -t $(DESTDIR)$(HEADERDIR) $(INSTALL_HEADERS)
-	$(INSTALL) -m 644 $(INSTALL_LDSCRIPTS:%=ldscripts/%) $(DESTDIR)$(LDSCRIPTDIR)
-	$(INSTALL) -d $(DESTDIR)$(BINDIR)
-	$(INSTALL) -d $(DESTDIR)$(EXEDIR)
-	@$(VECHO) INSTALLBIN $(DESTDIR)$(EXEDIR)
-	for x in $(INSTALL_BIN); do \
-		$(INSTALL) -m 755 $(BIN_OBJ_DIR)/$$x $(DESTDIR)$(EXEDIR); done
-	for x in $(INSTALL_OBJSCRIPT); do \
-		$(INSTALL) -m 755 objscript.$$x $(DESTDIR)$(BINDIR)/$$x; done
-	@$(VECHO) INSTALLMAN $(DESTDIR)manX
 	for x in $(INSTALL_MAN1); do \
 		$(INSTALL) -m 444 man/$$x $(DESTDIR)$(MANDIR1); \
 		gzip -f $(DESTDIR)$(MANDIR1)/$$x; \
@@ -345,7 +343,14 @@ install: libs tools $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 		$(INSTALL) -m 444 man/$$x $(DESTDIR)$(MANDIR8); \
 		gzip -f $(DESTDIR)$(MANDIR8)/$$x; \
 	done
-	cd $(DESTDIR)$(BINDIR) && ln -sf ld.hugetlbfs ld
+
+install-bin:
+	@$(VECHO) INSTALL_BIN $(DESTDIR)$(EXEDIR)
+	$(INSTALL) -d $(DESTDIR)$(EXEDIR)
+	for x in $(INSTALL_BIN); do \
+		$(INSTALL) -m 755 $(BIN_OBJ_DIR)/$$x $(DESTDIR)$(EXEDIR); done
+
+install: install-libs install-bin install-man
 
 install-docs:
 	$(INSTALL) -d $(DESTDIR)$(DOCDIR)
