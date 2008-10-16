@@ -51,7 +51,7 @@
 static int hugepagesize_errno; /* = 0 */
 
 #define MAX_HPAGE_SIZES 10
-struct hpage_size hpage_sizes[MAX_HPAGE_SIZES];
+static struct hpage_size hpage_sizes[MAX_HPAGE_SIZES];
 static int nr_hpage_sizes;
 static int hpage_sizes_default_idx = -1;
 
