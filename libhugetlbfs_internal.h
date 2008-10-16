@@ -147,4 +147,7 @@ long hugetlbfs_test_pagesize(const char *mount);
 #define dump_proc_pid_maps __lh_dump_proc_pid_maps
 long dump_proc_pid_maps(void);
 
+#define plt_extrasz __lh_plt_extrasz
+ElfW(Word) plt_extrasz(ElfW(Dyn) *dyntab);
+
 #endif /* _LIBHUGETLBFS_INTERNAL_H */

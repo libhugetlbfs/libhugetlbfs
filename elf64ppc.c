@@ -20,6 +20,8 @@
 #include <elf.h>
 #include <link.h>
 
+#include "libhugetlbfs_internal.h"
+
 /*
  * The powerpc 64-bit ELF ABI defines the location and size of the plt as
  * follows (see the ELF ABI and powerpc64 supplement for details):
