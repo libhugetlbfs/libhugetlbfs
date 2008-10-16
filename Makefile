@@ -112,10 +112,10 @@ LDSCRIPTDIR = $(PREFIX)/share/libhugetlbfs/ldscripts
 BINDIR = $(PREFIX)/share/libhugetlbfs
 EXEDIR = $(PREFIX)/bin
 DOCDIR = $(PREFIX)/share/doc/libhugetlbfs
-MANDIR1 = $(PREFIX)/man/man1
-MANDIR3 = $(PREFIX)/man/man3
-MANDIR7 = $(PREFIX)/man/man7
-MANDIR8 = $(PREFIX)/man/man8
+MANDIR1 = $(PREFIX)/share/man/man1
+MANDIR3 = $(PREFIX)/share/man/man3
+MANDIR7 = $(PREFIX)/share/man/man7
+MANDIR8 = $(PREFIX)/share/man/man8
 
 ifdef LIB32
 LIBPATHS += -DLIB32='"$(LIB32)"' -DLIBDIR32='"$(LIBDIR32)"'
@@ -336,7 +336,7 @@ install: libs tools $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 		gzip -f $(DESTDIR)$(MANDIR3)/$$x; \
 	done
 	rm -f $(DESTDIR)$(MANDIR3)/free_huge_pages.3.gz
-	ln -s $(DESTDIR)$(MANDIR3)/get_huge_pages.3.gz $(DESTDIR)$(MANDIR3)/free_huge_pages.3.gz
+	ln -s get_huge_pages.3.gz $(DESTDIR)$(MANDIR3)/free_huge_pages.3.gz
 	for x in $(INSTALL_MAN7); do \
 		$(INSTALL) -m 444 man/$$x $(DESTDIR)$(MANDIR7); \
 		gzip -f $(DESTDIR)$(MANDIR7)/$$x; \
