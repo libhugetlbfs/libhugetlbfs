@@ -52,8 +52,11 @@
  * them for export in libhugetlbfs_privutils; their definitions should
  * appear in libhugetlbfs_privutils.h rather than here.
  */
+#define __hugetlbfs_verbose __lh___hugetlbfs_verbose
 extern int __hugetlbfs_verbose;
+#define __hugetlbfs_debug __lh___hugetlbfs_debug
 extern int __hugetlbfs_debug;
+#define __hugetlbfs_prefault __lh___hugetlbfs_prefault
 extern int __hugetlbfs_prefault;
 #define hugetlbfs_setup_elflink __lh_hugetlbfs_setup_elflink
 extern void hugetlbfs_setup_elflink();
@@ -65,6 +68,7 @@ extern void hugetlbfs_setup_debug();
 extern void setup_mounts();
 #define setup_features __lh_setup_features
 extern void setup_features();
+#define __hugetlbfs_hostname __lh___hugetlbfs_hostname
 extern char __hugetlbfs_hostname[];
 #define hugetlbfs_prefault __lh_hugetlbfs_prefault
 extern int hugetlbfs_prefault(int fd, void *addr, size_t length);
