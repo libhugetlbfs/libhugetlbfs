@@ -20,4 +20,6 @@ HTLBFS_2.1 {
 	global:
 		gethugepagesizes;
 		getpagesizes;
+		hugetlbfs_find_path_for_size;
+		hugetlbfs_unlinked_fd_for_size;
 };
