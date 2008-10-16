@@ -5,6 +5,7 @@ VERS_1.0 {
 		hugetlbfs_find_path;
 		hugetlbfs_unlinked_fd;
 	local:
+		direct_syscall;
 		__lh_*;
 		__pu_*;
 };
