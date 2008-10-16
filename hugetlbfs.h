@@ -30,10 +30,6 @@ const char *hugetlbfs_find_path_for_size(long page_size);
 int hugetlbfs_unlinked_fd(void);
 int hugetlbfs_unlinked_fd_for_size(long page_size);
 
-/* Diagnoses/debugging only functions */
-#define dump_proc_pid_maps __lh_dump_proc_pid_maps
-long dump_proc_pid_maps(void);
-
 #define PF_LINUX_HUGETLB	0x100000
 
 /*

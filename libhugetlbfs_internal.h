@@ -139,4 +139,8 @@ extern ElfW(Word) plt_extrasz(ElfW(Dyn) *dyntab);
 #define hugetlbfs_test_pagesize __lh_hugetlbfs_test_pagesize
 long hugetlbfs_test_pagesize(const char *mount);
 
+/* Diagnoses/debugging only functions */
+#define dump_proc_pid_maps __lh_dump_proc_pid_maps
+long dump_proc_pid_maps(void);
+
 #endif /* _LIBHUGETLBFS_INTERNAL_H */
