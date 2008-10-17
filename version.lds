@@ -6,6 +6,7 @@ VERS_1.0 {
 		hugetlbfs_unlinked_fd;
 	local:
 		__lh_*;
+		__pu_*;
 };
 
 HTLBFS_2.0 {

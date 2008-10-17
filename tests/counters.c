@@ -181,6 +181,7 @@ void _set_nr_hugepages(unsigned long count, int line)
 out:
 	verify_counters(line, et, ef, er, es);
 }
+#undef set_nr_hugepages
 #define set_nr_hugepages(c) _set_nr_hugepages(c, __LINE__)
 
 void _map(int s, int hpages, int flags, int line)

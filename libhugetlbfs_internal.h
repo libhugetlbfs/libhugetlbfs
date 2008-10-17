@@ -27,6 +27,8 @@
 #error This header should not be included by library users.
 #endif /* __LIBHUGETLBFS__ */
 
+#include "libhugetlbfs_privutils.h"
+
 #define stringify_1(x)	#x
 #define stringify(x)	stringify_1(x)
 
@@ -45,7 +47,10 @@
  * When adding a library local variable externalise the symbol as
  * normal, plus add a #define of the form below.  This define effectively
  * renames the routine into the local namespace __lh_* which is forced
- * local in the linker script version.lds.
+ * local in the linker script version.lds.  Some routines may need to be
+ * exported in the utilities library these are marked __pu_* which marks
+ * them for export in libhugetlbfs_privutils; their definitions should
+ * appear in libhugetlbfs_privutils.h rather than here.
  */
 extern int __hugetlbfs_verbose;
 extern int __hugetlbfs_debug;

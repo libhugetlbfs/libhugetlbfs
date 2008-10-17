@@ -37,6 +37,7 @@
 #include <fcntl.h>
 
 #include "hugetlbfs.h"
+#include "libhugetlbfs_privutils.h"
 #include "hugetests.h"
 
 void check_free_huge_pages(int nr_pages_needed)

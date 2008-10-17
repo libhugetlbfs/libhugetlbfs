@@ -2,7 +2,8 @@ PREFIX = /usr/local
 EXEDIR = /bin
 
 LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o alloc.o shm.o kernel-features.o
-INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a
+LIBPUOBJS = init_privutils.o debug.o
+INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a libhugetlbfs_privutils.so
 BIN_OBJ_DIR=obj
 INSTALL_BIN = hugectl hugeedit hugeadm pagesize
 INSTALL_HEADERS = hugetlbfs.h
@@ -20,7 +21,7 @@ NODEPTARGETS=<version.h> <clean>
 
 INSTALL = install
 
-LDFLAGS += --no-undefined-version -Wl,--version-script=version.lds -ldl
+LDFLAGS += --no-undefined-version -ldl
 CFLAGS ?= -O2 -g
 CFLAGS += -Wall -fPIC
 CPPFLAGS += -D__LIBHUGETLBFS__
@@ -154,7 +155,7 @@ all:	libs tests tools
 
 .PHONY:	tests libs
 
-libs:	$(foreach file,$(INSTALL_OBJ_LIBS),$(OBJDIRS:%=%/$(file)))
+libs:	$(foreach file,$(INSTALL_OBJ_LIBS),$(OBJDIRS:%=%/$(file))) $(BIN_OBJ_DIR)/libhugetlbfs_privutils.a
 
 tests:	libs # Force make to build the library first
 tests:	tests/all
@@ -227,11 +228,31 @@ obj64/libhugetlbfs.a: $(LIBOBJS64)
 
 obj32/libhugetlbfs.so: $(LIBOBJS32)
 	@$(VECHO) LD32 "(shared)" $@
-	$(CC32) $(LDFLAGS) -Wl,-soname,$(notdir $@) -shared -o $@ $^ $(LDLIBS)
+	$(CC32) $(LDFLAGS) -Wl,--version-script=version.lds -Wl,-soname,$(notdir $@) -shared -o $@ $^ $(LDLIBS)
 
 obj64/libhugetlbfs.so: $(LIBOBJS64)
 	@$(VECHO) LD64 "(shared)" $@
-	$(CC64) $(LDFLAGS) -Wl,-soname,$(notdir $@) -shared -o $@ $^ $(LDLIBS)
+	$(CC64) $(LDFLAGS) -Wl,--version-script=version.lds -Wl,-soname,$(notdir $@) -shared -o $@ $^ $(LDLIBS)
+
+#obj32/libhugetlbfs_privutils.a: $(LIBPUOBJS:%=obj32/%)
+#	@$(VECHO) AR32 $@
+#	$(AR) $(ARFLAGS) $@ $^
+#
+#obj64/libhugetlbfs_privutils.a: $(LIBPUOBJS:%=obj64/%)
+#	@$(VECHO) AR64 $@
+#	$(AR) $(ARFLAGS) $@ $^
+
+$(BIN_OBJ_DIR)/libhugetlbfs_privutils.a: $(LIBPUOBJS:%=$(BIN_OBJ_DIR)/%)
+	@$(VECHO) ARHOST $@
+	$(AR) $(ARFLAGS) $@ $^
+
+obj32/libhugetlbfs_privutils.so: $(LIBPUOBJS:%=obj32/%)
+	@$(VECHO) LD32 "(shared)" $@
+	$(CC32) $(LDFLAGS) -Wl,--version-script=privutils.lds -Wl,-soname,$(notdir $@) -shared -o $@ $^ $(LDLIBS)
+
+obj64/libhugetlbfs_privutils.so: $(LIBPUOBJS:%=obj64/%)
+	@$(VECHO) LD64 "(shared)" $@
+	$(CC64) $(LDFLAGS) -Wl,--version-script=privutils.lds -Wl,-soname,$(notdir $@) -shared -o $@ $^ $(LDLIBS)
 
 obj32/%.i:	%.c
 	@$(VECHO) CPP $@

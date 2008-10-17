@@ -22,6 +22,9 @@
 
 #include <errno.h>
 #include <string.h>
+
+#include "libhugetlbfs_privutils.h"
+
 #define DEBUG
 
 /* Test return codes */
