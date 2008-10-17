@@ -2,7 +2,7 @@ PREFIX = /usr/local
 EXEDIR = /bin
 
 LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o alloc.o shm.o kernel-features.o
-LIBPUOBJS = init_privutils.o debug.o
+LIBPUOBJS = init_privutils.o debug.o hugeutils.o
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a libhugetlbfs_privutils.so
 BIN_OBJ_DIR=obj
 INSTALL_BIN = hugectl hugeedit hugeadm pagesize
@@ -285,13 +285,13 @@ $(BIN_OBJ_DIR)/hugeedit: $(BIN_OBJ_DIR)/hugeedit.o
 	mkdir -p $(BIN_OBJ_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
 
-HUGEADM_OBJ=hugeadm.o hugeutils.o debug.o
+HUGEADM_OBJ=hugeadm.o libhugetlbfs_privutils.a
 $(BIN_OBJ_DIR)/hugeadm: $(foreach file,$(HUGEADM_OBJ),$(BIN_OBJ_DIR)/$(file))
 	@$(VECHO) LDHOST $@
 	mkdir -p $(BIN_OBJ_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
 
-PAGESIZE_OBJ=pagesize.o hugeutils.o debug.o
+PAGESIZE_OBJ=pagesize.o libhugetlbfs_privutils.a
 $(BIN_OBJ_DIR)/pagesize: $(foreach file,$(PAGESIZE_OBJ),$(BIN_OBJ_DIR)/$(file))
 	@$(VECHO) LDHOST $@
 	mkdir -p $(BIN_OBJ_DIR)

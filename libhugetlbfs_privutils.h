@@ -19,4 +19,27 @@
 #ifndef _LIBHUGETLBFS_PRIVUTILS_H
 #define _LIBHUGETLBFS_PRIVUTILS_H
 
+/* Hugetlb pool counter operations */
+/* Keys for reading hugetlb pool counters */
+enum {			 /* The number of pages of a given size that ... */
+	HUGEPAGES_TOTAL, /*  are allocated to the pool */
+	HUGEPAGES_FREE,  /*  are not in use */
+	HUGEPAGES_RSVD,  /*  are reserved for possible future use */
+	HUGEPAGES_SURP,  /*  are allocated to the pool on demand */
+	HUGEPAGES_OC,    /*  can be allocated on demand - maximum */
+	HUGEPAGES_MAX_COUNTERS,
+};
+#define get_huge_page_counter __pu_get_huge_page_counter
+long get_huge_page_counter(long pagesize, unsigned int counter);
+#define set_huge_page_counter __pu_set_huge_page_counter
+int set_huge_page_counter(long pagesize, unsigned int counter,
+							unsigned long val);
+#define set_nr_hugepages __pu_set_nr_hugepages
+int set_nr_hugepages(long pagesize, unsigned long val);
+#define set_nr_overcommit_hugepages __pu_set_nr_overcommit_hugepages
+int set_nr_overcommit_hugepages(long pagesize, unsigned long val);
+
+#define read_meminfo __pu_read_meminfo
+long read_meminfo(const char *tag);
+
 #endif /* _LIBHUGETLBFS_PRIVUTILS_H */

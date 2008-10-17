@@ -62,17 +62,13 @@ static int hpage_sizes_default_idx = -1;
 #define BUF_SZ 256
 #define MEMINFO_SIZE	2048
 
-#define MEMINFO "/proc/meminfo"
-#define PROC_HUGEPAGES_DIR "/proc/sys/vm/"
-#define SYSFS_HUGEPAGES_DIR "/sys/kernel/mm/hugepages/"
-
 /*
  * Convert a quantity in a given unit to the next smallest unit by
  * multiplying the quantity by 1024 (eg. convert 1MB to 1024kB).
  * If the conversion would overflow the variable, return LONG_MAX to signify
  * the error.
  */
-static inline long size_to_smaller_unit(long size)
+long size_to_smaller_unit(long size)
 {
 	if (size < 0 || size * 1024 < size)
 		return -1;

@@ -62,20 +62,4 @@ enum {
 };
 int hugetlbfs_test_feature(int feature_code);
 
-/* Hugetlb pool counter operations */
-/* Keys for reading hugetlb pool counters */
-enum {			 /* The number of pages of a given size that ... */
-	HUGEPAGES_TOTAL, /*  are allocated to the pool */
-	HUGEPAGES_FREE,  /*  are not in use */
-	HUGEPAGES_RSVD,  /*  are reserved for possible future use */
-	HUGEPAGES_SURP,  /*  are allocated to the pool on demand */
-	HUGEPAGES_OC,    /*  can be allocated on demand - maximum */
-	HUGEPAGES_MAX_COUNTERS,
-};
-long get_huge_page_counter(long pagesize, unsigned int counter);
-int set_huge_page_counter(long pagesize, unsigned int counter,
-							unsigned long val);
-int set_nr_hugepages(long pagesize, unsigned long val);
-int set_nr_overcommit_hugepages(long pagesize, unsigned long val);
-long read_meminfo(const char *tag);
 #endif /* _HUGETLBFS_H */

@@ -115,6 +115,14 @@ struct hpage_pool {
 	int is_default;
 };
 
+#define size_to_smaller_unit __lh_size_to_smaller_unit
+extern long size_to_smaller_unit(long size);
+
+#define file_read_ulong __lh_file_read_ulong
+extern long file_read_ulong(char *file, const char *tag);
+#define file_write_ulong __lh_file_write_ulong
+extern int file_write_ulong(char *file, unsigned long val);
+
 #define hpool_sizes __lh_hpool_sizes
 extern int hpool_sizes(struct hpage_pool *, int);
 #define get_pool_size __lh_get_pool_size
@@ -123,5 +131,9 @@ extern int get_pool_size(long, struct hpage_pool *);
 /* Arch-specific callbacks */
 extern int direct_syscall(int sysnum, ...);
 extern ElfW(Word) plt_extrasz(ElfW(Dyn) *dyntab);
+
+#define MEMINFO "/proc/meminfo"
+#define PROC_HUGEPAGES_DIR "/proc/sys/vm/"
+#define SYSFS_HUGEPAGES_DIR "/sys/kernel/mm/hugepages/"
 
 #endif /* _LIBHUGETLBFS_INTERNAL_H */
