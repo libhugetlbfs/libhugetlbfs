@@ -81,10 +81,15 @@ function check_linkhuge_tests() {
     # system linker scripts use the SPECIAL keyword (for placing the got and
     # plt).  Our linker scripts do not use SPECIAL and are thus broken when the
     # system scripts use it.
-    ld --verbose | grep -q SPECIAL
-    if [ $? -eq 0 ]; then
-        LINKHUGE_SKIP=1
-    fi
+    LINKHUGE_WORDSIZES=""
+    for bits in $WORDSIZES; do
+        gcc -m$bits -Wl,--verbose 2> /dev/null | grep -q SPECIAL
+        if [ $? -eq 0 ]; then
+            bits="no$bits"
+        fi
+        LINKHUGE_WORDSIZES="$LINKHUGE_WORDSIZES $bits"
+    done
+echo "LINKHUGE_WORDSIZES = $LINKHUGE_WORDSIZES"
 }
 
 run_test_bits () {
@@ -117,22 +122,31 @@ run_test () {
     done
 }
 
+skip_test_bits () {
+    bits=$1
+    shift
+
+    echo "$@ ($bits):	SKIPPED"
+    tot_tests[$bits]=$[tot_tests[$bits] + 1]
+    tot_skip[$bits]=$[tot_skip[$bits] + 1]
+}
+
 # To manually disable a test (e.g., one that panics an older kernel),
 # replace "run_test <options>" with "skip_test <options>".
 skip_test () {
-    echo "$@:	SKIPPED"
     for bits in $WORDSIZES; do
-	tot_tests[$bits]=$[tot_tests[$bits] + 1]
-	tot_skip[$bits]=$[tot_skip[$bits] + 1]
+        skip_test_bits $bits "$@"
     done
 }
 
 maybe_run_linkhuge_test () {
-    if [ "$LINKHUGE_SKIP" != "1" ]; then
-        run_test "$@"
-    else
-        skip_test "$@"
-    fi
+    for bits in $LINKHUGE_WORDSIZES; do
+        if [ "$bits" == "${bits#no}" ]; then
+            run_test_bits $bits "$@"
+        else
+            skip_test_bits ${bits#no} "$@"
+        fi
+    done
 }
 
 preload_test () {
