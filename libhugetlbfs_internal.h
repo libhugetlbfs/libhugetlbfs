@@ -16,6 +16,17 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
+
+/*
+ * This file should only contain definitions of functions, data types, and
+ * constants which are used internally within the libhugetlbfs library.
+ *
+ * All external functions declared here are library static and must be
+ * internalised using a define of the following form:
+ * 
+ * 	#define foo __lh_foo
+ */
+
 #ifndef _LIBHUGETLBFS_INTERNAL_H
 #define _LIBHUGETLBFS_INTERNAL_H
 

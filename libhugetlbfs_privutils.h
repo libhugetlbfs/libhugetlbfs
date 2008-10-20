@@ -16,6 +16,19 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
+
+/*
+ * This file should only contain definitions of functions, data types, and
+ * constants which are part of the internal private utilities interfaces.
+ * These are exposed only to utilities and tests within the source, this is
+ * not a public interface nor part of the libhugetlfs API.
+ *
+ * All functions declared external here must be externalised using a define
+ * of the following form:
+ *
+ * 	#define foo __pu_foo
+ */
+
 #ifndef _LIBHUGETLBFS_PRIVUTILS_H
 #define _LIBHUGETLBFS_PRIVUTILS_H
 

@@ -16,6 +16,13 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
+
+/*
+ * This file should only contain definitions of functions, data types, and
+ * constants which are part of the published libhugetlfs API.  Functions
+ * exported here must also be listed in version.lds.
+ */
+
 #ifndef _HUGETLBFS_H
 #define _HUGETLBFS_H
 
