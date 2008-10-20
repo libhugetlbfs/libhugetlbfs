@@ -359,7 +359,7 @@ static void debug_show_page_sizes(void)
 		DEBUG("   Size: %li kB %s  Mount: %s\n",
 			hpage_sizes[i].pagesize / 1024,
 			i == hpage_sizes_default_idx ? "(default)" : "",
-			hpage_sizes[i].mount); 
+			hpage_sizes[i].mount);
 }
 
 #define LINE_MAXLEN	2048
@@ -638,8 +638,8 @@ int getpagesizes(long pagesizes[], int n_elem)
 		/* Install the base page size. */
 		if (n_elem && pagesizes)
 			pagesizes[0] = sysconf(_SC_PAGESIZE);
-                if (n_elem == 1)
-                        return 1;
+		if (n_elem == 1)
+			return 1;
 
 		ret = gethugepagesizes(pagesizes + 1, n_elem - 1);
 	}
@@ -753,7 +753,7 @@ int hugetlbfs_prefault(int fd, void *addr, size_t length)
 	 * process tried to access the missing memory.
 	 *
 	 * The value of this environment variable is read during library
-	 * initialisation and sets __hugetlbfs_prefault accordingly. If 
+	 * initialisation and sets __hugetlbfs_prefault accordingly. If
 	 * prefaulting is enabled and we can't get all that were requested,
 	 * -ENOMEM is returned. The caller is expected to release the entire
 	 * mapping and optionally it may recover by mapping base pages instead.

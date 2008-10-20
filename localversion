@@ -58,7 +58,7 @@ else
 		exit 1
 	fi
 
-	# No version control, use the modification times 
+	# No version control, use the modification times
 	# of the source.
 	for s in "$@"
 	do

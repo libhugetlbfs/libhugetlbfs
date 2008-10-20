@@ -25,7 +25,7 @@
 /*
  * The powerpc 64-bit ELF ABI defines the location and size of the plt as
  * follows (see the ELF ABI and powerpc64 supplement for details):
- * 
+ *
  * Location:   (data segment p_vaddr) + (data segment p_filesz)
  * Size:       (dynamic symbol table DT_PTRELSZ entry) + 24
  *

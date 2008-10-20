@@ -140,7 +140,7 @@ static void test_prot(void *p, int prot)
 	}
 }
 
-static void test_mprotect(int fd, char *testname, 
+static void test_mprotect(int fd, char *testname,
 			  unsigned long len1, int prot1,
 			  unsigned long len2, int prot2)
 {

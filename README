@@ -10,7 +10,7 @@ After a series of preview releases, we have tested a huge array of the
 supported usage scenarios using benchmarks and real HPC applications.
 Usability and reliability have greatly improved.  But... due to the
 incredible diversity of applications that exist, there is bound to be a few
-that will not work correctly.  
+that will not work correctly.
 
 If using libhugetlbfs makes your application slower:
 

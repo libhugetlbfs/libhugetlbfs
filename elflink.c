@@ -309,7 +309,7 @@ static int find_or_create_share_path(long page_size)
 	return 0;
 }
 
-/* 
+/*
  * Look for non-zero BSS data inside a range and print out any matches
  */
 
@@ -497,9 +497,9 @@ static void get_extracopy(struct seg_info *seg, const Elf_Phdr *phdr, int phnum)
 	if (numsyms < 0)
 		goto bail;
 
-	/* 
-	 * We must ensure any returns done hereafter have sane start and end 
-	 * values, as the criss-cross apple sauce algorithm is beginning 
+	/*
+	 * We must ensure any returns done hereafter have sane start and end
+	 * values, as the criss-cross apple sauce algorithm is beginning
 	 */
 	end = start;
 
@@ -598,7 +598,7 @@ static unsigned long hugetlb_prev_slice_end(unsigned long addr)
 }
 
 /*
- * Store a copy of the given program header 
+ * Store a copy of the given program header
  */
 static int save_phdr(int table_idx, int phnum, const ElfW(Phdr) *phdr)
 {
@@ -617,7 +617,7 @@ static int save_phdr(int table_idx, int phnum, const ElfW(Phdr) *phdr)
 		prot |= PROT_WRITE;
 	if (phdr->p_flags & PF_X)
 		prot |= PROT_EXEC;
-	
+
 	htlb_seg_table[table_idx].vaddr = (void *) phdr->p_vaddr;
 	htlb_seg_table[table_idx].filesz = phdr->p_filesz;
 	htlb_seg_table[table_idx].memsz = phdr->p_memsz;
@@ -817,7 +817,7 @@ static void check_range_empty(void *addr, unsigned long len)
 
 /*
  * Copy a program segment into a huge page. If possible, try to copy the
- * smallest amount of data possible, unless the user disables this 
+ * smallest amount of data possible, unless the user disables this
  * optimization via the HUGETLB_ELFMAP environment variable.
  */
 static int prepare_segment(struct seg_info *seg)
@@ -866,7 +866,7 @@ static int prepare_segment(struct seg_info *seg)
 		return -1;
 	}
 
-	/* 
+	/*
 	 * Minimizing the amount of data copied will maximize performance.
 	 * By definition, the filesz portion of the segment contains
 	 * initialized data and must be copied.  If part of the memsz portion

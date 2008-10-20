@@ -295,7 +295,7 @@ void hugetlbfs_setup_morecore(void)
 	__morecore = &hugetlbfs_morecore;
 
 	/* Set some allocator options more appropriate for hugepages */
-	
+
 	if (shrink_ok)
 		mallopt(M_TRIM_THRESHOLD, hpage_size / 2);
 	else

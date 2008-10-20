@@ -404,7 +404,7 @@ convince gcc to invoke the ld.hugetlbfs script instead of the system
 linker, rather than modifying your build procedure to invoke the
 ld.hugetlbfs directly; the compilers may often add special libraries
 or other linker options which can be fiddly to reproduce by hand.
-To make this easier, 'make install' will install ld.hugetlbfs into 
+To make this easier, 'make install' will install ld.hugetlbfs into
 $PREFIX/share/libhugetlbfs and create an 'ld' symlink to it.
 
 Then with gcc, you invoke it as a linker with two options:

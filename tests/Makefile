@@ -103,11 +103,11 @@ obj64/libheapshrink.so: obj64/heapshrink-helper-pic.o
 
 $(LIB_TESTS:%=obj32/%): %: %.o obj32/testutils.o obj32/libtestutils.o
 	@$(VECHO) LD32 "(lib test)" $@
-	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS) -lhugetlbfs 
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS) -lhugetlbfs
 
 $(LIB_TESTS:%=obj64/%) $(LIB_TESTS_64:%=obj64/%): %: %.o obj64/testutils.o obj64/libtestutils.o
 	@$(VECHO) LD64 "(lib test)" $@
-	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs 
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs
 
 $(NOLIB_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 	@$(VECHO) LD32 "(nolib test)" $@
@@ -147,11 +147,11 @@ $(HUGELINK_RW_TESTS:%=obj64/%): %: %.o $(HUGETLBFS_LD) obj64/testutils.o
 
 $(STRESS_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 	@$(VECHO) LD32 "(lib test)" $@
-	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS) -lhugetlbfs 
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS) -lhugetlbfs
 
 $(STRESS_TESTS:%=obj64/%): %: %.o obj64/testutils.o
 	@$(VECHO) LD64 "(lib test)" $@
-	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs 
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs
 
 obj32/xB.%: $(SCRIPTS32).xB $(HUGETLBFS_LD) obj32/%.o obj32/testutils.o
 	@$(VECHO) LD32 "(xB test)" $@
@@ -179,11 +179,11 @@ obj64/xBDT.%: $(SCRIPTS64).xBDT $(HUGETLBFS_LD) obj64/%.o obj64/testutils.o
 
 $(HELPERS:%=obj32/%): %: %.o
 	@$(VECHO) LD32 "(helper)" $@
-	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS) -lhugetlbfs 
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS) -lhugetlbfs
 
 $(HELPERS:%=obj64/%): %: %.o
 	@$(VECHO) LD64 "(helper)" $@
-	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs 
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs
 
 clean:
 	@$(VECHO) CLEAN "(tests)"

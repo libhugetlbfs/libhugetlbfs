@@ -51,7 +51,7 @@ while [ -n "$1" ]; do
 	--)
 	    args=("${args[@]}" "$@")
 	    break
-	    ;;	   
+	    ;;
 	*)
 	    args[$i]="$arg"
 	    i=$[i+1]

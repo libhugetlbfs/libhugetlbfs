@@ -23,7 +23,7 @@
  *
  * All external functions declared here are library static and must be
  * internalised using a define of the following form:
- * 
+ *
  * 	#define foo __lh_foo
  */
 

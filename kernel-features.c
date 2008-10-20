@@ -41,7 +41,7 @@ static struct feature kernel_features[] = {
 		.name			= "private_reservations",
 		.required_version	= "2.6.27-rc1",
 	},
-}; 
+};
 
 static void debug_kernel_version(void)
 {
@@ -82,7 +82,7 @@ static int str_to_ver(const char *str, struct kernel_version *ver)
 
 	/* Advance the str by the number of characters indicated by sscanf */
 	str += nr_chars;
-		
+
 	/* Try to match a post/stable version */
 	err = sscanf(str, ".%u", &ver->post);
 	if (err == 1)
@@ -225,7 +225,7 @@ void setup_features()
 		struct kernel_version ver;
 		char *name = kernel_features[i].name;
 		char *pos;
-		
+
 		str_to_ver(kernel_features[i].required_version, &ver);
 
 		/* Has the user overridden feature detection? */
@@ -247,5 +247,5 @@ void setup_features()
 				kernel_features[i].name);
 			feature_mask |= (1UL << i);
 		}
-	}		
+	}
 }

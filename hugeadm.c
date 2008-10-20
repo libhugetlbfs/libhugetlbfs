@@ -260,7 +260,7 @@ int main(int argc, char** argv)
 	};
 
 	hugetlbfs_setup_debug();
-        setup_mounts();
+	setup_mounts();
 
 	while (ret != -1) {
 		ret = getopt_long(argc, argv, opts, long_opts, &index);
