@@ -81,6 +81,10 @@ function check_linkhuge_tests() {
     # system linker scripts use the SPECIAL keyword (for placing the got and
     # plt).  Our linker scripts do not use SPECIAL and are thus broken when the
     # system scripts use it.
+
+    # LINKHUGE_WORDSIZES is a copy of WORDSIZES with the exception that any
+    # word sizes for which the linkhuge tests should be skipped are prefixed
+    # with 'no' (ie. LINKHUGE_WORDSIZES="32 no64"
     LINKHUGE_WORDSIZES=""
     for bits in $WORDSIZES; do
         gcc -m$bits -Wl,--verbose 2> /dev/null | grep -q SPECIAL
@@ -89,7 +93,6 @@ function check_linkhuge_tests() {
         fi
         LINKHUGE_WORDSIZES="$LINKHUGE_WORDSIZES $bits"
     done
-echo "LINKHUGE_WORDSIZES = $LINKHUGE_WORDSIZES"
 }
 
 run_test_bits () {
@@ -141,11 +144,10 @@ skip_test () {
 
 maybe_run_linkhuge_test () {
     for bits in $LINKHUGE_WORDSIZES; do
-        if [ "$bits" == "${bits#no}" ]; then
-            run_test_bits $bits "$@"
-        else
-            skip_test_bits ${bits#no} "$@"
-        fi
+	case "$bits" in
+        no*) skip_test_bits ${bits#no} "$@" ;;
+          *) run_test_bits $bits "$@" ;;
+        esac
     done
 }
 
