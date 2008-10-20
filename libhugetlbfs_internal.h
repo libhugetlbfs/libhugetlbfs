@@ -136,4 +136,7 @@ extern ElfW(Word) plt_extrasz(ElfW(Dyn) *dyntab);
 #define PROC_HUGEPAGES_DIR "/proc/sys/vm/"
 #define SYSFS_HUGEPAGES_DIR "/sys/kernel/mm/hugepages/"
 
+#define hugetlbfs_test_pagesize __lh_hugetlbfs_test_pagesize
+long hugetlbfs_test_pagesize(const char *mount);
+
 #endif /* _LIBHUGETLBFS_INTERNAL_H */

@@ -25,7 +25,6 @@ long gethugepagesize(void);
 int gethugepagesizes(long pagesizes[], int n_elem);
 int getpagesizes(long pagesizes[], int n_elem);
 int hugetlbfs_test_path(const char *mount);
-long hugetlbfs_test_pagesize(const char *mount);
 const char *hugetlbfs_find_path(void);
 const char *hugetlbfs_find_path_for_size(long page_size);
 int hugetlbfs_unlinked_fd(void);
