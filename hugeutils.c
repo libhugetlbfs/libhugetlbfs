@@ -456,8 +456,14 @@ int get_pool_size(long size, struct hpage_pool *pool)
 	/*
 	 * Pick up those values which are basically stable with respect to
 	 * the admin; ie. only changed by them.
+	 *
+	 * nr_over may be negative if this kernel does not support overcommit
+	 * in that case we will consider it always 0 and max will track min
+	 * always.
 	 */
 	nr_over = get_huge_page_counter(size, HUGEPAGES_OC);
+	if (nr_over < 0)
+		nr_over = 0;
 
 	/* Sample the volatile values until they are stable. */
 	while (nr_used != it_used || nr_surp != it_surp || nr_resv != it_resv) {
@@ -469,6 +475,10 @@ int get_pool_size(long size, struct hpage_pool *pool)
 		it_surp = get_huge_page_counter(size, HUGEPAGES_SURP);
 		it_resv = get_huge_page_counter(size, HUGEPAGES_RSVD);
 	}
+	if (nr_surp < 0)
+		nr_surp = 0;
+	if (nr_resv < 0)
+		nr_resv = 0;
 
 	nr_static = nr_used - nr_surp;
 
@@ -526,6 +536,23 @@ int hpool_sizes(struct hpage_pool *pools, int pcnt)
 	}
 
 	return (which < pcnt) ? which : -1;
+}
+
+/*
+ * If we can find the default page size, and if we can find an overcommit
+ * control for it then the kernel must support overcommit.
+ */
+int kernel_has_overcommit(void)
+{
+	long default_size = file_read_ulong(MEMINFO, "Hugepagesize:");
+	default_size = size_to_smaller_unit(default_size);
+	if (default_size < 0)
+		return 0;
+
+	if (get_huge_page_counter(default_size, HUGEPAGES_OC) < 0)
+		return 0;
+
+	return 1;
 }
 
 /********************************************************************/
@@ -791,6 +818,9 @@ long get_huge_page_counter(long pagesize, unsigned int counter)
 	char *key;
 
 	if (select_pool_counter(counter, pagesize, file, &key))
+		return -1;
+
+	if (access(file, O_RDONLY))
 		return -1;
 
 	return file_read_ulong(file, key);

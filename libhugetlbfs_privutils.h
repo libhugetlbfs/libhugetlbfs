@@ -52,6 +52,9 @@ int set_nr_hugepages(long pagesize, unsigned long val);
 #define set_nr_overcommit_hugepages __pu_set_nr_overcommit_hugepages
 int set_nr_overcommit_hugepages(long pagesize, unsigned long val);
 
+#define kernel_has_overcommit __pu_kernel_has_overcommit
+int kernel_has_overcommit(void);
+
 #define read_meminfo __pu_read_meminfo
 long read_meminfo(const char *tag);
 

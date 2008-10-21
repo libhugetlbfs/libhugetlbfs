@@ -108,6 +108,7 @@ void pool_list(void)
 enum {
 	POOL_MIN,
 	POOL_MAX,
+	POOL_BOTH,
 };
 
 static long value_adjust(char *adjust_str, long base)
@@ -184,7 +185,10 @@ void pool_adjust(char *cmd, unsigned int counter)
 	min = pools[pos].minimum;
 	max = pools[pos].maximum;
 
-	if (counter == POOL_MIN) {
+	if (counter == POOL_BOTH) {
+		min = value_adjust(adjust_str, min);
+		max = min;
+	} else if (counter == POOL_MIN) {
 		min = value_adjust(adjust_str, min);
 		if (min > max)
 			max = min;
@@ -284,10 +288,18 @@ int main(int argc, char** argv)
 			break;
 
 		case LONG_POOL_MIN_ADJ:
-			pool_adjust(optarg, POOL_MIN);
+			if (! kernel_has_overcommit())
+				pool_adjust(optarg, POOL_BOTH);
+			else
+				pool_adjust(optarg, POOL_MIN);
 			break;
 
 		case LONG_POOL_MAX_ADJ:
+			if (! kernel_has_overcommit()) {
+				ERROR("kernel does not support overcommit, "
+					"max cannot be adjusted\n");
+				exit(EXIT_FAILURE);
+			}
 			pool_adjust(optarg, POOL_MAX);
 			break;
 
