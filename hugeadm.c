@@ -244,6 +244,8 @@ void page_sizes(int all)
 
 int main(int argc, char** argv)
 {
+	int ops;
+
 	char opts[] = "+h";
 	int ret = 0, index = 0;
 	struct option long_opts[] = {
@@ -262,6 +264,7 @@ int main(int argc, char** argv)
 	hugetlbfs_setup_debug();
 	setup_mounts();
 
+	ops = 0;
 	while (ret != -1) {
 		ret = getopt_long(argc, argv, opts, long_opts, &index);
 		switch (ret) {
@@ -301,10 +304,12 @@ int main(int argc, char** argv)
 			ret = -1;
 			break;
 		}
+		if (ret != -1)
+			ops++;
 	}
 	index = optind;
 
-	if ((argc - index) != 0) {
+	if ((argc - index) != 0 || ops == 0) {
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
