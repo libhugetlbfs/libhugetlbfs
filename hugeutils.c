@@ -241,7 +241,7 @@ static int select_pool_counter(unsigned int counter, unsigned long pagesize,
 	 * read /proc/meminfo.
 	 */
 	default_size = file_read_ulong(MEMINFO, "Hugepagesize:");
-	default_size *= 1024; /* Convert from kB to B */
+	default_size = size_to_smaller_unit(default_size); /* kB to B */
 	if (default_size < 0) {
 		ERROR("Cannot determine the default page size\n");
 		return -1;
