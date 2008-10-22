@@ -55,9 +55,22 @@ static struct hpage_size hpage_sizes[MAX_HPAGE_SIZES];
 static int nr_hpage_sizes;
 static int hpage_sizes_default_idx = -1;
 
+static int default_size;
+
 /********************************************************************/
 /* Internal functions                                               */
 /********************************************************************/
+
+/*
+ * Lookup the kernel default page size.
+ */
+long kernel_default_hugepage_size()
+{
+	if (default_size == 0) {
+		default_size = file_read_ulong(MEMINFO, "Hugepagesize:");
+		default_size = size_to_smaller_unit(default_size); /* kB to B */	}
+	return default_size;
+}
 
 #define BUF_SZ 256
 #define MEMINFO_SIZE	2048
@@ -240,8 +253,7 @@ static int select_pool_counter(unsigned int counter, unsigned long pagesize,
 	 * between libhugetlbfs and the test suite.  For now we will just
 	 * read /proc/meminfo.
 	 */
-	default_size = file_read_ulong(MEMINFO, "Hugepagesize:");
-	default_size = size_to_smaller_unit(default_size); /* kB to B */
+	default_size = kernel_default_hugepage_size();
 	if (default_size < 0) {
 		ERROR("Cannot determine the default page size\n");
 		return -1;
@@ -290,8 +302,7 @@ static void probe_default_hpage_size(void)
 	if (env && strlen(env) > 0)
 		size = parse_page_size(env);
 	else {
-		size = file_read_ulong(MEMINFO, "Hugepagesize:");
-		size *= 1024; /* convert from kB to B */
+		size = kernel_default_hugepage_size();
 	}
 
 	if (size >= 0) {
@@ -506,8 +517,7 @@ int hpool_sizes(struct hpage_pool *pools, int pcnt)
 	DIR *dir;
 	struct dirent *entry;
 
-	default_size = size_to_smaller_unit(file_read_ulong(MEMINFO,
-							"Hugepagesize:"));
+	default_size = kernel_default_hugepage_size();
 	if (default_size >= 0 && which < pcnt)
 		if (get_pool_size(default_size, &pools[which])) {
 			pools[which].is_default = 1;
@@ -543,8 +553,7 @@ int hpool_sizes(struct hpage_pool *pools, int pcnt)
  */
 int kernel_has_hugepages(void)
 {
-	long default_size = file_read_ulong(MEMINFO, "Hugepagesize:");
-	default_size = size_to_smaller_unit(default_size);
+	long default_size = kernel_default_hugepage_size();
 	if (default_size < 0)
 		return 0;
 
@@ -557,8 +566,7 @@ int kernel_has_hugepages(void)
  */
 int kernel_has_overcommit(void)
 {
-	long default_size = file_read_ulong(MEMINFO, "Hugepagesize:");
-	default_size = size_to_smaller_unit(default_size);
+	long default_size = kernel_default_hugepage_size();
 	if (default_size < 0)
 		return 0;
 
@@ -616,8 +624,8 @@ int gethugepagesizes(long pagesizes[], int n_elem)
 
 	errno = 0;
 
-	/* Get the system default size from /proc/meminfo */
-	default_size = read_meminfo("Hugepagesize:") * 1024;
+	/* Get the system default size. */
+	default_size = kernel_default_hugepage_size();
 	if (default_size < 0)
 		return 0;
 

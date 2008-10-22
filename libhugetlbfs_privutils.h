@@ -61,6 +61,9 @@ int kernel_has_overcommit(void);
 #define read_meminfo __pu_read_meminfo
 long read_meminfo(const char *tag);
 
+#define kernel_default_hugepage_size __pu_kernel_default_hugepage_size
+long kernel_default_hugepage_size(void);
+
 /* Kernel feature testing */
 /* This enum defines the bits in a feature bitmask */
 enum {
