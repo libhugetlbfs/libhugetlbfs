@@ -539,6 +539,19 @@ int hpool_sizes(struct hpage_pool *pools, int pcnt)
 }
 
 /*
+ * If we have a default page size then we support hugepages.
+ */
+int kernel_has_hugepages(void)
+{
+	long default_size = file_read_ulong(MEMINFO, "Hugepagesize:");
+	default_size = size_to_smaller_unit(default_size);
+	if (default_size < 0)
+		return 0;
+
+	return 1;
+}
+
+/*
  * If we can find the default page size, and if we can find an overcommit
  * control for it then the kernel must support overcommit.
  */

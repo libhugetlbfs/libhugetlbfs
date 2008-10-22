@@ -249,6 +249,7 @@ void page_sizes(int all)
 int main(int argc, char** argv)
 {
 	int ops;
+	int has_hugepages = kernel_has_hugepages();
 
 	char opts[] = "+h";
 	int ret = 0, index = 0;
@@ -283,6 +284,14 @@ int main(int argc, char** argv)
 			print_usage();
 			exit(EXIT_SUCCESS);
 
+		default:
+			/* All other commands require hugepage support. */
+			if (! has_hugepages) {
+				ERROR("kernel does not support huge pages\n");
+				exit(EXIT_FAILURE);
+			}
+		}
+		switch (ret) {
 		case LONG_POOL_LIST:
 			pool_list();
 			break;
