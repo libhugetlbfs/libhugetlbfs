@@ -26,16 +26,21 @@
 #include <dlfcn.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
+#include <stdarg.h>
 #include <hugetlbfs.h>
 
 #include "hugetests.h"
 
-#define REAL_SYSFS_DIR	"/sys/kernel/mm/hugepages/"
+int faked_data = 0;
 char fake_sysfs[] = "/tmp/sysfs-XXXXXX";
-DIR *(*real_opendir)(const char *name);
-int cleanup_dir = 0;
+char fake_meminfo[] = "/tmp/meminfo-XXXXXX";
 
-long (*real_read_meminfo)(const char *tag);
+#define REAL_SYSFS_DIR	"/sys/kernel/mm/hugepages/"
+DIR *(*real_opendir)(const char *name);
+
+int (*real_open)(const char *name, int flags, int mode);
+
 enum {
 	OVERRIDE_OFF,		/* Pass-through to real function */
 	OVERRIDE_ON,		/* Ovewrride with local function */
@@ -61,7 +66,7 @@ DIR *opendir(const char *name)
 		return real_opendir(name);
 	case OVERRIDE_ON:
 		/* Only safe to override of fake_sysfs was set up */
-		if (cleanup_dir)
+		if (faked_data)
 			return real_opendir(fake_sysfs);
 		else
 			FAIL("Trying to override opendir before initializing "
@@ -72,35 +77,59 @@ DIR *opendir(const char *name)
 	}
 }
 
-#define HPAGE_SIZE (16 * 1024)
+#define HPAGE_KB 2048
+#define __HPAGE_STR_QUOTE(val) #val
+#define __HPAGE_STR(val) __HPAGE_STR_QUOTE(val)
+#define HPAGE_STR __HPAGE_STR(HPAGE_KB)
 
 /*
- * Override read_meminfo to simulate various conditions
+ * Override open to simulate various contents for meminfo
  */
-long read_meminfo(const char *tag)
+int open(const char *file, int flags, ...)
 {
-	if (!real_read_meminfo)
-		real_read_meminfo = dlsym(RTLD_NEXT, "read_meminfo");
+	int mode = 0;
+	if (flags & O_CREAT) {
+		va_list arg;
+		va_start(arg, flags);
+		mode = va_arg(arg, int);
+		va_end(arg);
+	}
 
-	/* Only override calls that check the page size */
-	if (strcmp(tag, "Hugepagesize:"))
-		return real_read_meminfo(tag);
+	if (!real_open)
+		real_open = dlsym(RTLD_NEXT, "open");
 
 	switch (meminfo_state) {
-		case OVERRIDE_OFF:	return real_read_meminfo(tag);
-		case OVERRIDE_ON:	return HPAGE_SIZE;
-		default:		return -1;
+		case OVERRIDE_OFF:
+			break;
+		case OVERRIDE_ON: {
+			char fname[PATH_MAX];
+			sprintf(fname, "%s/meminfo-hugepages", fake_meminfo);
+			file = fname;
+			break;
+		}
+		case OVERRIDE_MISSING: {
+			char fname[PATH_MAX];
+			sprintf(fname, "%s/meminfo-none", fake_meminfo);
+			file = fname;
+			break;
+		}
+		default:
+			return -1;
 	}
+	return real_open(file, flags, mode);
 }
 
-void cleanup_fake_sysfs(void)
+void cleanup_fake_data(void)
 {
 	DIR *dir;
 	struct dirent *ent;
 	char fname[PATH_MAX+1];
 
-	cleanup_dir = 0;
-	dir = real_opendir(fake_sysfs);
+	meminfo_state = OVERRIDE_OFF;
+	sysfs_state = OVERRIDE_OFF;
+
+	faked_data = 0;
+	dir = opendir(fake_sysfs);
 	if (!dir)
 		FAIL("opendir %s: %s", fake_sysfs, strerror(errno));
 
@@ -115,19 +144,72 @@ void cleanup_fake_sysfs(void)
 	closedir(dir);
 	if (rmdir(fake_sysfs))
 		FAIL("rmdir %s: %s", fake_sysfs, strerror(errno));
+
+	sprintf(fname, "%s/meminfo-none", fake_meminfo);
+	if (unlink(fname) < 0)
+		FAIL("unlink %s: %s", fname, strerror(errno));
+	sprintf(fname, "%s/meminfo-hugepages", fake_meminfo);
+	if (unlink(fname) < 0)
+		FAIL("unlink %s: %s", fname, strerror(errno));
+	if (rmdir(fake_meminfo))
+		FAIL("rmdir %s: %s", fake_meminfo, strerror(errno));
 }
 
-void setup_fake_sysfs(long sizes[], int n_elem)
+char *meminfo_base = "\
+MemTotal:      4004132 kB\n\
+MemFree:       3563748 kB\n\
+Buffers:         34804 kB\n\
+Cached:         252544 kB\n\
+SwapCached:          0 kB\n\
+Active:         108912 kB\n\
+Inactive:       187420 kB\n\
+SwapTotal:     8008392 kB\n\
+SwapFree:      8008392 kB\n\
+Dirty:               4 kB\n\
+Writeback:           0 kB\n\
+AnonPages:        9100 kB\n\
+Mapped:           7908 kB\n\
+Slab:            40212 kB\n\
+SReclaimable:    33312 kB\n\
+SUnreclaim:       6900 kB\n\
+PageTables:       1016 kB\n\
+NFS_Unstable:        0 kB\n\
+Bounce:              0 kB\n\
+WritebackTmp:        0 kB\n\
+CommitLimit:   9974616 kB\n\
+Committed_AS:    29616 kB\n\
+VmallocTotal: 34359738367 kB\n\
+VmallocUsed:     23760 kB\n\
+VmallocChunk: 34359714543 kB\n\
+";
+
+char *meminfo_huge = "\
+HugePages_Total:    35\n\
+HugePages_Free:     35\n\
+HugePages_Rsvd:      0\n\
+HugePages_Surp:      0\n\
+Hugepagesize:     " HPAGE_STR " kB\n\
+";
+
+void setup_fake_data(long sizes[], int n_elem)
 {
+	int old_meminfo_state = meminfo_state;
+	int old_sysfs_state = sysfs_state;
+
 	int i;
 	char fname[PATH_MAX+1];
+	int fd;
 
-	if (cleanup_dir)
-		cleanup_fake_sysfs();
+	meminfo_state = OVERRIDE_OFF;
+	sysfs_state = OVERRIDE_OFF;
 
+	if (faked_data)
+		cleanup_fake_data();
+
+	/* Generate some fake sysfs data. */
 	if (!mkdtemp(fake_sysfs))
 		FAIL("mkdtemp: %s", strerror(errno));
-	cleanup_dir = 1;
+	faked_data = 1;
 
 	for (i = 0; i < n_elem; i++) {
 		snprintf(fname, PATH_MAX, "%s/hugepages-%lukB", fake_sysfs,
@@ -135,12 +217,42 @@ void setup_fake_sysfs(long sizes[], int n_elem)
 		if (mkdir(fname, 0700))
 			FAIL("mkdir %s: %s", fname, strerror(errno));
 	}
+
+	/* Generate fake meminfo data. */
+	if (!mkdtemp(fake_meminfo))
+		FAIL("mkdtemp: %s", strerror(errno));
+
+	sprintf(fname, "%s/meminfo-none", fake_meminfo);
+	fd = open(fname, O_WRONLY|O_CREAT);
+	if (fd < 0)
+		FAIL("open: %s", strerror(errno));
+	if (write(fd, meminfo_base,
+			strlen(meminfo_base)) != strlen(meminfo_base))
+		FAIL("write: %s", strerror(errno));
+	if (close(fd) < 0)
+		FAIL("close: %s", strerror(errno));
+
+	sprintf(fname, "%s/meminfo-hugepages", fake_meminfo);
+	fd = open(fname, O_WRONLY|O_CREAT);
+	if (fd < 0)
+		FAIL("open: %s", strerror(errno));
+	if (write(fd, meminfo_base,
+			strlen(meminfo_base)) != strlen(meminfo_base))
+		FAIL("write: %s", strerror(errno));
+	if (write(fd, meminfo_huge,
+			strlen(meminfo_huge)) != strlen(meminfo_huge))
+		FAIL("write: %s", strerror(errno));
+	if (close(fd) < 0)
+		FAIL("close: %s", strerror(errno));
+
+	meminfo_state = old_meminfo_state;
+	sysfs_state = old_sysfs_state;
 }
 
 void cleanup(void)
 {
-	if (cleanup_dir)
-		cleanup_fake_sysfs();
+	if (faked_data)
+		cleanup_fake_data();
 }
 
 void validate_sizes(int line, long actual_sizes[], int actual, int max_actual,
@@ -157,6 +269,14 @@ void validate_sizes(int line, long actual_sizes[], int actual, int max_actual,
 				break;
 		if (j >= actual)
 			FAIL("Line %i: Expected size %li not found in actual "
+				"results", line, expected_sizes[i]);
+	}
+	for (i = 0; i < actual; i++) {
+		for (j = 0; j < expected; j++)
+			if (actual_sizes[i] == expected_sizes[j])
+				break;
+		if (j >= expected)
+			FAIL("Line %i: Actual size %li not found in expected "
 				"results", line, expected_sizes[i]);
 	}
 
@@ -188,7 +308,7 @@ void validate_sizes(int line, long actual_sizes[], int actual, int max_actual,
 
 int main(int argc, char *argv[])
 {
-	long expected_sizes[MAX], actual_sizes[MAX], meminfo_size;
+	long expected_sizes[MAX], actual_sizes[MAX];
 	long base_size = sysconf(_SC_PAGESIZE);
 
 	test_init(argc, argv);
@@ -217,38 +337,36 @@ int main(int argc, char *argv[])
 	 * ===
 	 */
 
+	INIT_LIST(expected_sizes, HPAGE_KB * 1024, 1024 * 1024, 64 * 1024);
+	setup_fake_data(expected_sizes, 3);
+
 	/*
 	 * Check handling when /proc/meminfo indicates no huge page support
+	 * and the sysfs heirachy is not present.
 	 */
 	meminfo_state = OVERRIDE_MISSING;
+	sysfs_state = OVERRIDE_MISSING;
 
 	EXPECT_SIZES(gethugepagesizes, MAX, 0, expected_sizes);
 
 	INIT_LIST(expected_sizes, base_size);
 	EXPECT_SIZES(getpagesizes, MAX, 1, expected_sizes);
 
-	/*
-	 * When the sysfs heirarchy is not present ...
-	 */
-	sysfs_state = OVERRIDE_MISSING;
-
 	/* ... only the meminfo size is returned. */
 	meminfo_state = OVERRIDE_ON;
-	meminfo_size = read_meminfo("Hugepagesize:") * 1024;
 
-	INIT_LIST(expected_sizes, meminfo_size);
+	INIT_LIST(expected_sizes, HPAGE_KB * 1024);
 	EXPECT_SIZES(gethugepagesizes, MAX, 1, expected_sizes);
 
-	INIT_LIST(expected_sizes, base_size, meminfo_size);
+	INIT_LIST(expected_sizes, base_size, HPAGE_KB * 1024);
 	EXPECT_SIZES(getpagesizes, MAX, 2, expected_sizes);
 
 	/*
 	 * When sysfs defines additional sizes ...
 	 */
-	INIT_LIST(expected_sizes, meminfo_size, 1024 * 1024, 2048 * 1024);
-
-	setup_fake_sysfs(expected_sizes, 3);
 	sysfs_state = OVERRIDE_ON;
+
+	INIT_LIST(expected_sizes, HPAGE_KB * 1024, 1024 * 1024, 64 * 1024);
 
 	/* ... make sure all sizes are returned without duplicates */
 	/* ... while making sure we do not overstep our limit */
@@ -259,7 +377,7 @@ int main(int argc, char *argv[])
 	EXPECT_SIZES(gethugepagesizes, 4, 3, expected_sizes);
 
 	INIT_LIST(expected_sizes,
-			base_size, meminfo_size, 1024 * 1024, 2048 * 1024);
+			base_size, HPAGE_KB * 1024, 1024 * 1024, 64 * 1024);
 	EXPECT_SIZES(getpagesizes, MAX, 4, expected_sizes);
 	EXPECT_SIZES(getpagesizes, 1, 4, expected_sizes);
 	EXPECT_SIZES(getpagesizes, 2, 4, expected_sizes);
