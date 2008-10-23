@@ -19,6 +19,8 @@ for BITS in 32 64; do
     tot_config[$BITS]=0
     tot_signal[$BITS]=0
     tot_strange[$BITS]=0
+    tot_xpass[$BITS]=0
+    tot_xfail[$BITS]=0
     tot_skip[$BITS]=0
 done
 
@@ -110,6 +112,10 @@ run_test_bits () {
 		tot_config[$BITS]=$[tot_config[$BITS] + 1]
             elif [ "$rc" == "2" ]; then
 		tot_fail[$BITS]=$[tot_fail[$BITS] + 1]
+            elif [ "$rc" == "3" ]; then
+                tot_xfail[$BITS]=$[tot_xfail[$BITS] + 1]
+            elif [ "$rc" == "4" ]; then
+                tot_xpass[$BITS]=$[tot_xpass[$BITS] + 1]
 	    elif [ "$rc" -gt 127 ]; then
 		tot_signal[$BITS]=$[tot_signal[$BITS] + 1]
             else
@@ -421,5 +427,7 @@ echo -e "*                PASS:	${tot_pass[32]}\t${tot_pass[64]}"
 echo -e "*                FAIL:	${tot_fail[32]}\t${tot_fail[64]}"
 echo -e "*    Killed by signal:	${tot_signal[32]}\t${tot_signal[64]}"
 echo -e "*   Bad configuration:	${tot_config[32]}\t${tot_config[64]}"
+echo -e "*       Expected FAIL:	${tot_xfail[32]}\t${tot_xfail[64]}"
+echo -e "*     Unexpected PASS:	${tot_xpass[32]}\t${tot_xpass[64]}"
 echo -e "* Strange test result:	${tot_strange[32]}\t${tot_strange[64]}"
 echo -e "**********"

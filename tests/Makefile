@@ -16,6 +16,7 @@ LDSCRIPT_TESTS = zero_filesize_segment
 HUGELINK_TESTS = linkhuge linkhuge_nofd linkshare
 HUGELINK_RW_TESTS = linkhuge_rw
 STRESS_TESTS = mmap-gettest mmap-cow shm-gettest shm-getraw shm-fork
+WRAPPERS =
 HELPERS = get_hugetlbfs_path
 HELPER_LIBS = libheapshrink.so
 BADTOOLCHAIN = bad-toolchain.sh
@@ -66,7 +67,13 @@ ifdef CC64
 ALLTESTS += $(TESTS_64:%=obj64/%)
 endif
 
-all:	$(ALLTESTS) $(ALLHELPERS) $(ALLHELPERLIBS)
+objs_needing_wrappers = \
+	$(foreach W,$(WRAPPERS:%.sh=%),$(filter $(1)/$(W),$(ALLTESTS)))
+WRAPPERS32 = $(addsuffix .sh,$(call objs_needing_wrappers,obj32))
+WRAPPERS64 = $(addsuffix .sh,$(call objs_needing_wrappers,obj64))
+ALLWRAPPERS = $(WRAPPERS32) $(WRAPPERS64)
+
+all:	$(ALLTESTS) $(ALLHELPERS) $(ALLHELPERLIBS) $(ALLWRAPPERS)
 
 shmoverride_linked.c: shmoverride_unlinked.c
 	ln -s shmoverride_unlinked.c shmoverride_linked.c
@@ -185,6 +192,14 @@ $(HELPERS:%=obj64/%): %: %.o
 	@$(VECHO) LD64 "(helper)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs
 
+$(WRAPPERS32): obj32/%.sh: %.sh obj32/%
+	@$(VECHO) COPY "(wrapped test)" $@
+	@cp -f $< $@
+
+$(WRAPPERS64): obj64/%.sh: %.sh obj64/%
+	@$(VECHO) COPY "(wrapped test)" $@
+	@cp -f $< $@
+
 clean:
 	@$(VECHO) CLEAN "(tests)"
 	rm -f *~ *.o *.so *.a *.d core a.out
@@ -201,6 +216,7 @@ obj32/install:
 	$(INSTALL) -d $(DESTDIR)$(INST_TESTSDIR32)
 	$(INSTALL) -d $(DESTDIR)$(INST_TESTSDIR32)/obj32
 	$(INSTALL) -m 755 $(TESTS:%=obj32/%) $(DESTDIR)$(INST_TESTSDIR32)/obj32
+	$(INSTALL) -m 755 $(WRAPPERS32) $(DESTDIR)$(INST_TESTSDIR32)/obj32
 	$(INSTALL) -m 755 $(HELPERS:%=obj32/%) $(DESTDIR)$(INST_TESTSDIR32)/obj32
 	$(INSTALL) -m 755 $(HELPER_LIBS:%=obj32/%) $(DESTDIR)$(INST_TESTSDIR32)/obj32
 	$(INSTALL) -m 755 run_tests.sh $(DESTDIR)$(INST_TESTSDIR32)
@@ -210,6 +226,7 @@ obj64/install:
 	$(INSTALL) -d $(DESTDIR)$(INST_TESTSDIR64)
 	$(INSTALL) -d $(DESTDIR)$(INST_TESTSDIR64)/obj64
 	$(INSTALL) -m 755 $(TESTS:%=obj64/%) $(DESTDIR)$(INST_TESTSDIR64)/obj64
+	$(INSTALL) -m 755 $(WRAPPERS64) $(DESTDIR)$(INST_TESTSDIR64)/obj64
 	$(INSTALL) -m 755 $(HELPERS:%=obj64/%) $(DESTDIR)$(INST_TESTSDIR64)/obj64
 	$(INSTALL) -m 755 $(HELPER_LIBS:%=obj64/%) $(DESTDIR)$(INST_TESTSDIR64)/obj64
 	$(INSTALL) -m 755 $(TESTS_64:%=obj64/%) $(DESTDIR)$(INST_TESTSDIR64)/obj64

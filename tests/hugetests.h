@@ -31,6 +31,8 @@
 #define RC_PASS 	0
 #define RC_CONFIG 	1
 #define RC_FAIL		2
+#define RC_XFAIL	3	/* Expected Failure */
+#define RC_XPASS	4	/* Unexpected Pass */
 #define RC_BUG		99
 
 #define FOURGB (1UL << 32)
