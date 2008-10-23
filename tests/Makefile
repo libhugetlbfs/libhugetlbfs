@@ -16,7 +16,7 @@ LDSCRIPT_TESTS = zero_filesize_segment
 HUGELINK_TESTS = linkhuge linkhuge_nofd linkshare
 HUGELINK_RW_TESTS = linkhuge_rw
 STRESS_TESTS = mmap-gettest mmap-cow shm-gettest shm-getraw shm-fork
-WRAPPERS =
+WRAPPERS = quota
 HELPERS = get_hugetlbfs_path compare_kvers
 HELPER_LIBS = libheapshrink.so
 BADTOOLCHAIN = bad-toolchain.sh
@@ -217,6 +217,7 @@ obj32/install:
 	$(INSTALL) -d $(DESTDIR)$(INST_TESTSDIR32)/obj32
 	$(INSTALL) -m 755 $(TESTS:%=obj32/%) $(DESTDIR)$(INST_TESTSDIR32)/obj32
 	$(INSTALL) -m 755 $(WRAPPERS32) $(DESTDIR)$(INST_TESTSDIR32)/obj32
+	$(INSTALL) -m 755 wrapper-utils.sh $(DESTDIR)$(INST_TESTSDIR32)/obj32
 	$(INSTALL) -m 755 $(HELPERS:%=obj32/%) $(DESTDIR)$(INST_TESTSDIR32)/obj32
 	$(INSTALL) -m 755 $(HELPER_LIBS:%=obj32/%) $(DESTDIR)$(INST_TESTSDIR32)/obj32
 	$(INSTALL) -m 755 run_tests.sh $(DESTDIR)$(INST_TESTSDIR32)
@@ -227,6 +228,7 @@ obj64/install:
 	$(INSTALL) -d $(DESTDIR)$(INST_TESTSDIR64)/obj64
 	$(INSTALL) -m 755 $(TESTS:%=obj64/%) $(DESTDIR)$(INST_TESTSDIR64)/obj64
 	$(INSTALL) -m 755 $(WRAPPERS64) $(DESTDIR)$(INST_TESTSDIR64)/obj64
+	$(INSTALL) -m 755 wrapper-utils.sh $(DESTDIR)$(INST_TESTSDIR64)/obj64
 	$(INSTALL) -m 755 $(HELPERS:%=obj64/%) $(DESTDIR)$(INST_TESTSDIR64)/obj64
 	$(INSTALL) -m 755 $(HELPER_LIBS:%=obj64/%) $(DESTDIR)$(INST_TESTSDIR64)/obj64
 	$(INSTALL) -m 755 $(TESTS_64:%=obj64/%) $(DESTDIR)$(INST_TESTSDIR64)/obj64

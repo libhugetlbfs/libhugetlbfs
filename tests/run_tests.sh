@@ -346,7 +346,7 @@ check_linkhuge_tests
     run_test LD_PRELOAD=libhugetlbfs.so shmoverride_unlinked
 
 # Test hugetlbfs filesystem quota accounting
-    run_test quota
+    run_test quota.sh
 
 # Test accounting of HugePages_{Total|Free|Resv|Surp}
 #  Alters the size of the hugepage pool so should probably be run last
