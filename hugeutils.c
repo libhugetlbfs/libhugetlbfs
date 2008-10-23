@@ -629,11 +629,11 @@ int gethugepagesizes(long pagesizes[], int n_elem)
 	if (default_size < 0)
 		return 0;
 
-	if (n_elem && pagesizes)
+	if (pagesizes && (nr_sizes == n_elem))
+		return nr_sizes;
+	if (pagesizes)
 		pagesizes[nr_sizes] = default_size;
 	nr_sizes++;
-	if (n_elem && (nr_sizes == n_elem))
-		return nr_sizes;
 
 	/*
 	 * Scan sysfs to look for other sizes.
@@ -647,8 +647,7 @@ int gethugepagesizes(long pagesizes[], int n_elem)
 		} else
 			return -1;
 	}
-	while ((ent = readdir(sysfs)) &&
-				((n_elem == 0) || (nr_sizes < n_elem))) {
+	while ((ent = readdir(sysfs))) {
 		long size;
 
 		if (strncmp(ent->d_name, "hugepages-", 10))
@@ -661,7 +660,9 @@ int gethugepagesizes(long pagesizes[], int n_elem)
 
 		if (size < 0 || size == default_size)
 			continue;
-		if (n_elem && pagesizes)
+		if (pagesizes && (nr_sizes == n_elem))
+			return nr_sizes;
+		if (pagesizes)
 			pagesizes[nr_sizes] = size;
 		nr_sizes++;
 	}
@@ -684,10 +685,10 @@ int getpagesizes(long pagesizes[], int n_elem)
 		ret = gethugepagesizes(pagesizes, n_elem);
 	} else {
 		/* Install the base page size. */
-		if (n_elem && pagesizes)
+		if (pagesizes && n_elem == 0)
+			return 0;
+		if (pagesizes)
 			pagesizes[0] = sysconf(_SC_PAGESIZE);
-		if (n_elem == 1)
-			return 1;
 
 		ret = gethugepagesizes(pagesizes + 1, n_elem - 1);
 	}
