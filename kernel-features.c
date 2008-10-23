@@ -149,6 +149,17 @@ static int ver_cmp(struct kernel_version *a, struct kernel_version *b)
 	return 0;
 }
 
+int test_compare_kver(const char *a, const char *b)
+{
+	struct kernel_version ka, kb;
+
+	if (str_to_ver(a, &ka) < 0)
+		return -EINVAL;
+	if (str_to_ver(b, &kb) < 0)
+		return -EINVAL;
+	return ver_cmp(&ka, &kb);
+}
+
 int hugetlbfs_test_feature(int feature_code)
 {
 	if (feature_code >= HUGETLB_FEATURE_NR) {

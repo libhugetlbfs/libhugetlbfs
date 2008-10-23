@@ -74,4 +74,7 @@ enum {
 #define hugetlbfs_test_feature __pu_hugetlbfs_test_feature
 int hugetlbfs_test_feature(int feature_code);
 
+#define test_compare_kver __pu_test_compare_kver
+int test_compare_kver(const char *a, const char *b);
+
 #endif /* _LIBHUGETLBFS_PRIVUTILS_H */

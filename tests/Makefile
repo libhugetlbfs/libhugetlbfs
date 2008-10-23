@@ -17,7 +17,7 @@ HUGELINK_TESTS = linkhuge linkhuge_nofd linkshare
 HUGELINK_RW_TESTS = linkhuge_rw
 STRESS_TESTS = mmap-gettest mmap-cow shm-gettest shm-getraw shm-fork
 WRAPPERS =
-HELPERS = get_hugetlbfs_path
+HELPERS = get_hugetlbfs_path compare_kvers
 HELPER_LIBS = libheapshrink.so
 BADTOOLCHAIN = bad-toolchain.sh
 
