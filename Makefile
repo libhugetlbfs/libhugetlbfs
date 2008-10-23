@@ -31,8 +31,8 @@ ARCH = $(shell uname -m | sed -e s/i.86/i386/)
 ifeq ($(ARCH),ppc64)
 CC64 = gcc -m64
 ELF64 = elf64ppc
-LIB64 = lib64
-LIB32 = lib
+TMPLIB64 = lib64
+TMPLIB32 = lib
 ifneq ($(BUILDTYPE),NATIVEONLY)
 CC32 = gcc -m32
 ELF32 = elf32ppclinux
@@ -41,18 +41,18 @@ else
 ifeq ($(ARCH),ppc)
 CC32 = gcc -m32
 ELF32 = elf32ppclinux
-LIB32 = lib
+TMPLIB32 = lib
 else
 ifeq ($(ARCH),i386)
 CC32 = gcc
 ELF32 = elf_i386
-LIB32 = lib
+TMPLIB32 = lib
 else
 ifeq ($(ARCH),x86_64)
 CC64 = gcc -m64
 ELF64 = elf_x86_64
-LIB64 = lib64
-LIB32 = lib
+TMPLIB64 = lib64
+TMPLIB32 = lib
 ifneq ($(BUILDTYPE),NATIVEONLY)
 CC32 = gcc -m32
 ELF32 = elf_i386
@@ -60,19 +60,19 @@ endif
 else
 ifeq ($(ARCH),ia64)
 CC64 = gcc
-LIB64 = lib64
+TMPLIB64 = lib64
 CFLAGS += -DNO_ELFLINK
 else
 ifeq ($(ARCH),sparc64)
 CC64 = gcc -m64
-LIB64 = lib64
+TMPLIB64 = lib64
 CFLAGS += -DNO_ELFLINK
 else
 ifeq ($(ARCH),s390x)
 CC64 = gcc -m64
 CC32 = gcc -m31
-LIB64 = lib64
-LIB32 = lib
+TMPLIB64 = lib64
+TMPLIB32 = lib
 CFLAGS += -DNO_ELFLINK
 else
 $(error "Unrecognized architecture ($(ARCH))")
@@ -105,6 +105,30 @@ LIBOBJS64 += obj64/$(ELF64).o
 endif
 LIBOBJS32 += $(LIBOBJS:%=obj32/%)
 LIBOBJS64 += $(LIBOBJS:%=obj64/%)
+
+ifeq ($(LIB32),)
+LIB32 = $(TMPLIB32)
+endif
+
+ifdef TMPLIB64
+ifeq ($(LIB64),)
+LIB64 = $(TMPLIB64)
+endif
+endif
+
+# If TMPLIB64 is set, then sure we are not resolving LIB32 and LIB64 to the
+# same place
+ifdef TMPLIB64
+
+REALLIB32 = $(realpath $(PREFIX)/$(LIB32))
+REALLIB64 = $(realpath $(PREFIX)/$(LIB64))
+ifneq ($(realpath $(PREFIX)),)
+ifeq ($(REALLIB32),$(REALLIB64))
+$(error LIB32 ($(PREFIX)/$(LIB32) to $(REALLIB32)) and LIB64 ($(PREFIX)/$(LIB64) to $(REALLIB64)) are resolving to the same place. Manually specify LIB32 and LIB64. e.g. make PREFIX=$(PREFIX) LIB32=lib32 LIB64=lib64)
+endif
+endif
+
+endif
 
 HEADERDIR = $(PREFIX)/include
 LIBDIR32 = $(PREFIX)/$(LIB32)
