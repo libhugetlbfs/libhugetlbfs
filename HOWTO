@@ -91,6 +91,10 @@ Hugepage malloc()/morecore should still work without this patch, but
 the size of the hugepage heap will be limited (to around 256M for
 32-bit and 1TB for 64-bit).
 
+The 2.6.27 kernel introduced support for multiple huge page sizes for
+systems with the appropriate hardware support.  Unless specifically
+requested, libhugetlbfs will continue to use the default huge page size.
+
 Toolchain prerequisites
 -----------------------
 
@@ -119,22 +123,31 @@ For the running of the libhugetlbfs testsuite (see below), allocating 20
 static hugepages is recommended. Due to memory restrictions, the number
 of hugepages requested may not be allocated if the allocation is
 attempted at run-time. Users should verify the actual number of
-hugepages allocated by either
+hugepages allocated by:
 
-       cat /proc/sys/vm/nr_hugepages
+       hugeadm --pool-list
 
 or
 
-       grep HugePages_Free /proc/meminfo
+       grep HugePages_Total /proc/meminfo
 
 With 20 hugepages allocated, most tests should succeed. However, with
 smaller hugepages sizes, many more hugepages may be necessary.
 
 To use libhugetlbfs features, as well as to run the testsuite, hugetlbfs
-must be mounted:
+must be mounted.  Each hugetlbfs mount point is associated with a page
+size.  To choose the size, use the pagesize mount option.  If this option
+is omitted, the default huge page size will be used.
+
+To mount the default huge page size:
 
        mkdir -p /mnt/hugetlbfs
        mount -t hugetlbfs none /mnt/hugetlbfs
+
+To mount 64KB pages (assuming hardware support):
+
+       mkdir -p /mnt/hugetlbfs-64K
+       mount -t hugetlbfs none -opagesize=64k /mnt/hugetlbfs-64K
 
 If hugepages should be available to non-root users, the permissions on
 the mountpoint need to be set appropriately.
@@ -216,11 +229,18 @@ environment variables:
   directory referenced contains the right version of the library
   (32-bit or 64-bit) as appropriate to the binary you want to run.
 
-3. Set HUGETLB_MORECORE=yes
+3. Set HUGETLB_MORECORE
   This enables the hugepage malloc() feature, instructing libhugetlbfs
   to override libc's normal morecore() function with a hugepage
   version and use it for malloc().  From this point all malloc()s
-  should come from hugepage memory until it runs out.
+  should come from hugepage memory until it runs out.  This option can
+  be specified in two ways:
+
+  To use the default huge page size:
+       HUGETLB_MORECORE=yes
+
+  To use a specific huge page size:
+       HUGETLB_MORECORE=<pagesize>
 
 Usually it's preferable to set these environment variables on the
 command line of the program you wish to run, rather than using
@@ -312,6 +332,12 @@ for step 3.
    to back the shared memory segment with huge pages. In the event hugepages
    cannot be used, small pages will be used instead and a warning will be
    printed to explain the failure.
+
+   Note: It is not possible to select any huge page size other than the
+         system default for this option.  If the kernel supports multiple
+         huge page sizes, the size used for shared memory can be changed by
+         altering the default huge page size via the default_hugepagesz
+         kernel boot parameter.
 
 Using hugepage text, data, or BSS
 ---------------------------------
@@ -458,6 +484,22 @@ segments to be placed in hugepages:
 	HUGETLB_ELFMAP=RW	All segments (text/data/BSS)
 	HUGETLB_ELFMAP=no	No segments
 
+It is possible to select specific huge page sizes for read-only and writable
+segments by using the following advanced syntax:
+
+	HUGETLB_ELFMAP=[R[=<pagesize>]:[W[=<pagesize>]]
+
+For example:
+
+	Place read-only segments into 64k pages and writable into 16M pages
+	HUGETLB_ELFMAP=R=64k:W=16M
+
+	Use the default for read-only segments, 1G pages for writable segments
+	HUGETLB_ELFMAP=R:W=1G
+
+	Use 16M pages for writable segments only
+	HUGETLB_ELFMAP=W=16M
+
 	Default remapping behavior:
 	---------------------------
 
@@ -478,11 +520,18 @@ hugeedit [options] target-executable
 When target-executable is the only argument, hugeedit will display the default
 remapping mode without making any modifications.
 
+When a binary is remapped according to its default remapping policy, the
+system default huge page size will be used.
+
 	Environment variables:
 	----------------------
 
 There are a number of private environment variables which can affect
 libhugetlbfs:
+	HUGETLB_DEFAULT_PAGE_SIZE
+		Override the system default huge page size for all uses
+		except hugetlb-backed shared memory
+
 	HUGETLB_ELFMAP
 		Control or disable segment remapping (see above)
 
