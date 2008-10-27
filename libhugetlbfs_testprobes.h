@@ -32,4 +32,8 @@
 #ifndef _LIBHUGETLBFS_TESTPROBES_H
 #define _LIBHUGETLBFS_TESTPROBES_H
 
+#define kernel_default_hugepage_size_reset \
+		__tp_kernel_default_hugepage_size_reset
+void kernel_default_hugepage_size_reset(void);
+
 #endif /* _LIBHUGETLBFS_TESTPROBES_H */

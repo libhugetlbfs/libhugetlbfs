@@ -320,6 +320,7 @@ int main(int argc, char *argv[])
 	 */
 	meminfo_state = OVERRIDE_OFF;
 	sysfs_state = OVERRIDE_OFF;
+	kernel_default_hugepage_size_reset();
 
 	if (gethugepagesizes(actual_sizes, -1) != -1 || errno != EINVAL)
 		FAIL("Mishandled params (n_elem < 0)");
@@ -346,6 +347,7 @@ int main(int argc, char *argv[])
 	 */
 	meminfo_state = OVERRIDE_MISSING;
 	sysfs_state = OVERRIDE_MISSING;
+	kernel_default_hugepage_size_reset();
 
 	EXPECT_SIZES(gethugepagesizes, MAX, 0, expected_sizes);
 
@@ -354,6 +356,7 @@ int main(int argc, char *argv[])
 
 	/* ... only the meminfo size is returned. */
 	meminfo_state = OVERRIDE_ON;
+	kernel_default_hugepage_size_reset();
 
 	INIT_LIST(expected_sizes, HPAGE_KB * 1024);
 	EXPECT_SIZES(gethugepagesizes, MAX, 1, expected_sizes);
@@ -365,6 +368,7 @@ int main(int argc, char *argv[])
 	 * When sysfs defines additional sizes ...
 	 */
 	sysfs_state = OVERRIDE_ON;
+	kernel_default_hugepage_size_reset();
 
 	INIT_LIST(expected_sizes, HPAGE_KB * 1024, 1024 * 1024, 64 * 1024);
 
