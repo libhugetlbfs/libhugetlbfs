@@ -39,6 +39,7 @@
 #endif /* __LIBHUGETLBFS__ */
 
 #include "libhugetlbfs_privutils.h"
+#include "libhugetlbfs_testprobes.h"
 
 #define stringify_1(x)	#x
 #define stringify(x)	stringify_1(x)

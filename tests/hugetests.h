@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "libhugetlbfs_privutils.h"
+#include "libhugetlbfs_testprobes.h"
 
 #define DEBUG
 
