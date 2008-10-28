@@ -2,7 +2,7 @@ libhugetlbfs HOWTO
 ==================
 
 Author: David Gibson <dwg@au1.ibm.com>, Adam Litke <agl@us.ibm.com>, and others
-Last updated: Wednesday, May 21st, 2008
+Last updated: Tuesday, Oct 28th, 2008
 
 Introduction
 ============
@@ -107,6 +107,28 @@ recommended.  Older versions will work with restricted functionality.
 Configuration prerequisites
 ---------------------------
 
+Direct access to hugepage pool has been deprecated in favor of the
+hugeadm utility.  This utility can be used for finding the available
+hugepage pools and adjusting their minimum and maximum sizes depending
+on kernel support.
+
+To list all availabe hugepage pools and their current min and max values:
+	hugeadm --pool-list
+
+To set the 2MB pool minimum to 10 pages:
+	hugeadm --pool-pages-min 2MB:10
+
+Note: that the max pool size will be adjusted to keep the same number of
+overcommit pages available if the kernel support is available when min
+pages are adjusted
+
+To add 15 pages to the maximum for 2MB pages:
+	hugeadm --pool-pages-min 2MB:-5
+
+For more information see man 8 hugeadm
+
+The raw kernel interfaces (as described below) are still available.
+
 In kernels before 2.6.24, hugepages must be allocated at boot-time via
 the hugepages= command-line parameter or at run-time via the
 /proc/sys/vm/nr_hugepages sysctl. If memory is restricted on the system,
@@ -119,7 +141,7 @@ should be set to the maximum size of the hugepage pool. No hugepages
 need to be allocated via /proc/sys/vm/nr_hugepages or hugepages= in this
 case. Hugepages so allocated will be in the dynamic hugepage pool.
 
-For the running of the libhugetlbfs testsuite (see below), allocating 20
+For the running of the libhugetlbfs testsuite (see below), allocating 25
 static hugepages is recommended. Due to memory restrictions, the number
 of hugepages requested may not be allocated if the allocation is
 attempted at run-time. Users should verify the actual number of
@@ -131,7 +153,7 @@ or
 
        grep HugePages_Total /proc/meminfo
 
-With 20 hugepages allocated, most tests should succeed. However, with
+With 25 hugepages allocated, most tests should succeed. However, with
 smaller hugepages sizes, many more hugepages may be necessary.
 
 To use libhugetlbfs features, as well as to run the testsuite, hugetlbfs
