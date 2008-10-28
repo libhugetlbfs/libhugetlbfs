@@ -45,7 +45,7 @@ extern char *optarg;
 
 void print_usage()
 {
-	fprintf(stderr, "hugectl [options] target\n");
+	fprintf(stderr, "hugeadm [options]\n");
 	fprintf(stderr, "options:\n");
 
 	OPTION("--pool-list", "List all pools");
