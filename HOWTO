@@ -703,6 +703,16 @@ If an application fails to run, set the environment variable HUGETLB_DEBUG
 to 1. This causes additional diagnostics to be run. This information should
 be included when sending bug reports to the libhugetlbfs team.
 
+Specific Scenarios:
+-------------------
+
+ISSUE:	When using the --hugetlbfs-align or -zmax-page-size link options, the
+	linker complains about truncated relocations and the build fails.
+
+TRY:	Compile the program with the --relax linker option.  Either add
+	-Wl,--relax to CFLAGS or --relax to LDFLAGS.
+
+
 Trademarks
 ==========
 
