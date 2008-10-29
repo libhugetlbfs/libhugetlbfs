@@ -71,6 +71,10 @@ long kernel_default_hugepage_size()
 		default_size = size_to_smaller_unit(default_size); /* kB to B */	}
 	return default_size;
 }
+void kernel_default_hugepage_size_reset(void)
+{
+	default_size = 0;
+}
 
 #define BUF_SZ 256
 #define MEMINFO_SIZE	2048

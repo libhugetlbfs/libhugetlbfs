@@ -22,4 +22,5 @@ HTLBFS_2.1 {
 		getpagesizes;
 		hugetlbfs_find_path_for_size;
 		hugetlbfs_unlinked_fd_for_size;
+		__tp_*;
 };
