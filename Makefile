@@ -297,12 +297,12 @@ obj64/%.s:	%.c
 $(BIN_OBJ_DIR)/%.o: %.c
 	@$(VECHO) CCHOST $@
 	@mkdir -p $(BIN_OBJ_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ -c $<
 
 $(BIN_OBJ_DIR)/hugectl: $(BIN_OBJ_DIR)/hugectl.o
 	@$(VECHO) LDHOST $@
 	mkdir -p $(BIN_OBJ_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^
 
 $(BIN_OBJ_DIR)/hugeedit: $(BIN_OBJ_DIR)/hugeedit.o
 	@$(VECHO) LDHOST $@
