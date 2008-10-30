@@ -37,18 +37,19 @@ utility. See the \fBlibhugetlbfs\fP manual page for more details.
 The following options affect what memory regions are backed by hugepages.
 
 .TP
-.B --text,--data,--bss
-Back the text, data or BSS segments with hugepages. To be effective, the
-process must be relinked as described in the HOWTO to align the ELF segments.
-It is possible to partially back segments using the HUGETLB_FORCE_ELMAP
-environment variable as described in the \fBlibhugetlbfs\fP manual page.
+.B --text[=<size>],--data[=<size>],--bss[=<size>]
+Back the text, data or BSS segments with hugepages, optionally with pages
+of the specified size.  To be effective, the process must be relinked
+as described in the HOWTO to align the ELF segments.  It is possible to
+partially back segments using the HUGETLB_FORCE_ELMAP environment variable
+as described in the \fBlibhugetlbfs\fP manual page.
 
 .TP
-.B --heap
-Use the glibc morecore hook to back malloc() with hugepages. Note that this
-does not affect brk() segments and applications that use custom allocators
-potentially do not use hugepages for their heap even with this option
-specified.
+.B --heap[=<size>]
+Use the glibc morecore hook to back malloc() with hugepages, optionally
+with pages of the specified size.  Note that this does not affect brk()
+segments and applications that use custom allocators potentially do not
+use hugepages for their heap even with this option specified.
 
 .TP
 .B --shm

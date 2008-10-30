@@ -61,10 +61,10 @@ void print_usage()
 	OPTION("--help, -h", "Prints this message");
 	OPTION("--verbose <level>, -v", "Increases/sets tracing levels");
 
-	OPTION("--text", "Requests remapping of the program text");
-	OPTION("--data", "Requests remapping of the program data");
-	OPTION("--bss", "Requests remapping of the program bss");
-	OPTION("--heap", "Requests remapping of the program heap");
+	OPTION("--text[=<size>]", "Requests remapping of the program text");
+	OPTION("--data[=<size>]", "Requests remapping of the program data");
+	OPTION("--bss[=<size>]", "Requests remapping of the program bss");
+	OPTION("--heap[=<size>]", "Requests remapping of the program heap");
 	CONT("(malloc space)");
 	OPTION("--shm", "Requests remapping of shared memory segments");
 
@@ -154,49 +154,92 @@ void verbose_expose(void)
 #define LONG_LIBRARY	(LONG_BASE | 'l')
 
 /*
- * Mapping selectors, one bit per remappable/backable area as requested
+ * Mapping selectors, one per remappable/backable area as requested
  * by the user.  These are also used as returns from getopts where they
  * are offset from MAP_BASE, which must be removed before they are compared.
  */
-#define MAP_DISABLE	0x0001
-#define MAP_TEXT	0x0002
-#define MAP_DATA	0x0004
-#define MAP_BSS		0x0008
-#define MAP_HEAP	0x0010
-#define MAP_SHM		0x0020
+enum {
+	MAP_TEXT,
+	MAP_DATA,
+	MAP_BSS,
+	MAP_HEAP,
+	MAP_SHM,
+	MAP_DISABLE,
 
-void setup_mappings(int which)
+	MAP_COUNT,
+};
+char *map_size[MAP_COUNT];
+
+char default_size[] = "the default hugepage size";
+#define DEFAULT_SIZE default_size
+
+#define available(buf, ptr) ((int)(sizeof(buf) - (ptr - buf)))
+void setup_mappings(int count)
 {
-	char remap[3] = { 0, 0, 0 };
-	int n = 0;
+	char value[128];
+	char *ptr = value;
+	int needed;
 
 	/*
 	 * HUGETLB_ELFMAP should be set to either a combination of 'R' and 'W'
-	 * which indicate which segments should be remapped.  It may also be
-	 * set to 'no' to prevent remapping.
+	 * which indicate which segments should be remapped.  Each may take
+	 * an optional page size.  It may also be set to 'no' to prevent
+	 * remapping.
 	 */
-	if (which & MAP_TEXT)
-		remap[n++] = 'R';
-	if (which & (MAP_DATA|MAP_BSS)) {
-		if ((which & (MAP_DATA|MAP_BSS)) != (MAP_DATA|MAP_BSS))
-			WARNING("data and bss remapped together\n");
-		remap[n++] = 'W';
+
+	/*
+	 * Accumulate sections each with a ':' prefix to simplify later
+	 * handling.  We will elide the initial ':' before use.
+	 */
+	if (map_size[MAP_TEXT]) {
+		if (map_size[MAP_TEXT] == DEFAULT_SIZE)
+			needed = snprintf(ptr, available(value, ptr), ":R");
+		else
+			needed = snprintf(ptr, available(value, ptr),
+						":R=%s", map_size[MAP_TEXT]);
+		ptr += needed;
+		if (needed < 0 || available(value, ptr) < 0) {
+			ERROR("%s: bad size specification\n", map_size[MAP_TEXT]);
+			exit(EXIT_FAILURE);
+		}
 	}
-	if (which & MAP_DISABLE) {
-		if (which != MAP_DISABLE)
+	if (map_size[MAP_DATA] != 0 || map_size[MAP_BSS] != 0) {
+		char *size = map_size[MAP_BSS];
+		if (map_size[MAP_DATA])
+			size = map_size[MAP_DATA];
+		if (map_size[MAP_DATA] != map_size[MAP_BSS])
+			WARNING("data and bss remapped together in %s\n", size);
+
+		if (size == DEFAULT_SIZE)
+			needed = snprintf(ptr, available(value, ptr), ":W");
+		else
+			needed = snprintf(ptr, available(value, ptr),
+						":W=%s", size);
+		ptr += needed;
+		if (needed < 0 || available(value, ptr) < 0) {
+			ERROR("%s: bad size specification\n", size);
+			exit(EXIT_FAILURE);
+		}
+	}
+	*ptr = '\0';
+	if (ptr != value)
+		setup_environment("HUGETLB_ELFMAP", &value[1]);
+
+	if (map_size[MAP_DISABLE]) {
+		if (ptr != value)
 			WARNING("--disable masks requested remap\n");
-		n = 0;
-		remap[n++] = 'n';
-		remap[n++] = 'o';
+		setup_environment("HUGETLB_ELFMAP", "no");
 	}
 
-	if (n)
-		setup_environment("HUGETLB_ELFMAP", remap);
-
-	if (which & MAP_HEAP)
+	if (map_size[MAP_HEAP] == DEFAULT_SIZE)
 		setup_environment("HUGETLB_MORECORE", "yes");
+	else if (map_size[MAP_HEAP])
+		setup_environment("HUGETLB_MORECORE", map_size[MAP_HEAP]);
 
-	if (which & MAP_SHM)
+	if (map_size[MAP_SHM] && map_size[MAP_SHM] != DEFAULT_SIZE)
+		WARNING("shm segments may only be mapped in the "
+			"default hugepage size\n");
+	if (map_size[MAP_SHM])
 		setup_environment("HUGETLB_SHM", "yes");
 }
 
@@ -256,9 +299,16 @@ void library_path(char *path)
 	setup_environment("LD_LIBRARY_PATH", val);
 }
 
-void ldpreload(int which)
+void ldpreload(int count)
 {
-	if (which & (MAP_HEAP|MAP_SHM)) {
+	int allowed = 0;
+
+	if (map_size[MAP_HEAP])
+		allowed++;
+	if (map_size[MAP_SHM])
+		allowed++;
+
+	if (allowed == count) {
 		setup_environment("LD_PRELOAD", "libhugetlbfs.so");
 		WARNING("LD_PRELOAD in use for lone --heap/--shm\n");
 	} else {
@@ -284,12 +334,12 @@ int main(int argc, char** argv)
 		{"library-use-path",
 			       no_argument, NULL, LONG_NO_LIBRARY},
 
-		{"disable",    no_argument, NULL, MAP_BASE|MAP_DISABLE},
-		{"text",       no_argument, NULL, MAP_BASE|MAP_TEXT},
-		{"data",       no_argument, NULL, MAP_BASE|MAP_DATA},
-		{"bss",        no_argument, NULL, MAP_BASE|MAP_BSS},
-		{"heap",       no_argument, NULL, MAP_BASE|MAP_HEAP},
-		{"shm",        no_argument, NULL, MAP_BASE|MAP_SHM},
+		{"disable",    optional_argument, NULL, MAP_BASE|MAP_DISABLE},
+		{"text",       optional_argument, NULL, MAP_BASE|MAP_TEXT},
+		{"data",       optional_argument, NULL, MAP_BASE|MAP_DATA},
+		{"bss",        optional_argument, NULL, MAP_BASE|MAP_BSS},
+		{"heap",       optional_argument, NULL, MAP_BASE|MAP_HEAP},
+		{"shm",        optional_argument, NULL, MAP_BASE|MAP_SHM},
 
 		{0},
 	};
@@ -299,7 +349,11 @@ int main(int argc, char** argv)
 	while (ret != -1) {
 		ret = getopt_long(argc, argv, opts, long_opts, &index);
 		if (ret > 0 && (ret & MAP_BASE)) {
-			opt_mappings |= ret;
+			if (optarg)
+				map_size[ret & ~MAP_BASE] = optarg;
+			else
+				map_size[ret & ~MAP_BASE] = DEFAULT_SIZE;
+			opt_mappings++;
 			continue;
 		}
 		switch (ret) {
@@ -343,7 +397,6 @@ int main(int argc, char** argv)
 		}
 	}
 	index = optind;
-	opt_mappings &= ~MAP_BASE;
 
 	if (!opt_dry_run && (argc - index) < 1) {
 		print_usage();
