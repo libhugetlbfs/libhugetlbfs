@@ -89,7 +89,7 @@ void *get_huge_pages(size_t len, ghp_t flags)
 
 	/* Map the requested region */
 	buf = mmap(NULL, len, PROT_READ|PROT_WRITE,
-		 MAP_PRIVATE, heap_fd, len);
+		 MAP_PRIVATE, heap_fd, 0);
 	if (buf == MAP_FAILED) {
 		close(heap_fd);
 
