@@ -636,10 +636,19 @@ static int save_phdr(int table_idx, int phnum, const ElfW(Phdr) *phdr)
 static int verify_segment_layout(struct seg_layout *segs, int num_segs)
 {
 	int i;
+	long base_size = getpagesize();
 
 	for (i = 1; i < num_segs; i++) {
 		unsigned long prev_end = segs[i - 1].end;
 		unsigned long start = segs[i].start;
+
+		/*
+		 * Do not worry about the boundary between segments that will
+		 * not be remapped.
+		 */
+		if (segs[i - 1].page_size == base_size &&
+				segs[i].page_size == base_size)
+			continue;
 
 		/* Make sure alignment hasn't caused segments to overlap */
 		if (prev_end > start) {
