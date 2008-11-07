@@ -45,6 +45,13 @@ int open(const char *path, int flags, ...)
 		return fileno(f);
 	}
 
+	if (strcmp(path, "/proc/mounts") == 0) {
+		FILE *f;
+
+		f = popen("/bin/grep -vi hugetlbfs /proc/mounts", "r");
+		return fileno(f);
+	}
+
 	old_open = dlsym(RTLD_NEXT, "open");
 	if (flags & O_CREAT) {
 		va_list ap;
