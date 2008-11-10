@@ -35,7 +35,7 @@ static void *fallback_base_pages(size_t len, ghp_t flags)
 {
 	int fd;
 	void *buf;
-	DEBUG("get_huge_pages: Falling back to base pages\n");
+	DEBUG("get_hugepage_region: Falling back to base pages\n");
 
 	/*
 	 * Map /dev/zero instead of MAP_ANONYMOUS avoid VMA mergings. Freeing
@@ -77,6 +77,10 @@ void *get_huge_pages(size_t len, ghp_t flags)
 {
 	void *buf;
 	int heap_fd;
+
+	/* Catch an altogether-too easy typo */
+	if (flags & GHR_MASK)
+		ERROR("Improper use of GHR_* in get_huge_pages()\n");
 
 	/* Create a file descriptor for the new region */
 	heap_fd = hugetlbfs_unlinked_fd();
@@ -173,4 +177,56 @@ void free_huge_pages(void *ptr)
 		ERROR("hugepages_free using invalid or double free\n");
 
 	fclose(fd);
+}
+
+/**
+ * get_hugepage_region - Allocate an amount of memory backed by huge pages
+ *
+ * len: Size of the region to allocate
+ * flags: Flags specifying the behaviour of the function
+ *
+ * This function allocates a region of memory backed by huge pages. Care should
+ * be taken when using this function as a drop-in replacement for malloc() as
+ * memory can be wasted if the length is not hugepage-aligned. This function
+ * is more relaxed than get_huge_pages() in that it allows fallback to small
+ * pages when requested.
+ */
+void *get_hugepage_region(size_t len, ghr_t flags)
+{
+	size_t aligned_len, wastage;
+	void *buf;
+
+	/* Catch an altogether-too easy typo */
+	if (flags & GHP_MASK)
+		ERROR("Improper use of GHP_* in get_hugepage_region()\n");
+
+	/* Align the len parameter to a hugepage boundary and allocate */
+	aligned_len = ALIGN(len, gethugepagesize());
+	buf = get_huge_pages(aligned_len, GHP_DEFAULT);
+	if (buf == NULL && (flags & GHR_FALLBACK)) {
+		aligned_len = ALIGN(len, getpagesize());
+		buf = fallback_base_pages(len, flags);
+	}
+
+	/* Calculate wastage */
+	wastage = aligned_len - len;
+	if (wastage != 0)
+		DEBUG("get_hugepage_region: Wasted %zd bytes due to alignment\n",
+			wastage);
+
+	return buf;
+}
+
+/**
+ * free_hugepage_region - Free a region allocated by get_hugepage_region
+ * ptr - The pointer to the buffer returned by get_hugepage_region
+ *
+ * This function finds a region to free based on the contents of
+ * /proc/pid/maps. The assumption is made that the ptr is the start of
+ * a hugepage region allocated with get_hugepage_region. No checking is made
+ * that the pointer is to a hugepage backed region.
+ */
+void free_hugepage_region(void *ptr)
+{
+	free_huge_pages(ptr);
 }

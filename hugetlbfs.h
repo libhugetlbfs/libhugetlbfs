@@ -46,9 +46,30 @@ int hugetlbfs_unlinked_fd_for_size(long page_size);
  */
 typedef unsigned long ghp_t;
 #define GHP_DEFAULT	((ghp_t)0x01UL)
+#define GHP_MASK	(GHP_DEFAULT)
 
-/* Direct alloc functions */
+/* Direct alloc functions for hugepages */
 void *get_huge_pages(size_t len, ghp_t flags);
 void free_huge_pages(void *ptr);
+
+/*
+ * Region alloc flags and types
+ *
+ * GHR_DEFAULT  - Use a combination of flags deemed to be a sensible default
+ * 		  by the current implementation of the library
+ * GHR_FALLBACK - Use the default hugepage size if possible but fallback to
+ * 		  smaller pages if necessary
+ * GHR_STRICT   - Use hugepages of some size or return NULL
+ */
+typedef unsigned long ghr_t;
+#define GHR_STRICT	((ghr_t)0x10000000U)
+#define GHR_FALLBACK	((ghr_t)0x20000000U)
+#define GHR_DEFAULT	GHR_FALLBACK
+
+#define GHR_MASK	(GHR_FALLBACK|GHR_STRICT)
+
+/* Allocation functions for regions backed by hugepages */
+void *get_hugepage_region(size_t len, ghr_t flags);
+void free_hugepage_region(void *ptr);
 
 #endif /* _HUGETLBFS_H */

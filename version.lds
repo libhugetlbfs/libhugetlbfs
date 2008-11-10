@@ -18,6 +18,8 @@ HTLBFS_2.0 {
 
 HTLBFS_2.1 {
 	global:
+		get_hugepage_region;
+		free_hugepage_region;
 		gethugepagesizes;
 		getpagesizes;
 		hugetlbfs_find_path_for_size;
