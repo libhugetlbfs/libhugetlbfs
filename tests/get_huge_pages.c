@@ -62,58 +62,6 @@ void test_get_huge_pages(int num_hugepages)
 		FAIL("hugepage was not correctly freed");
 }
 
-void test_GHP_FALLBACK(void)
-{
-	int err;
-	long rsvd_hugepages = get_huge_page_counter(hpage_size, HUGEPAGES_RSVD);
-	long num_hugepages = get_huge_page_counter(hpage_size, HUGEPAGES_TOTAL)
-		- rsvd_hugepages;
-
-	/* We must disable overcommitted huge pages to test this */
-	oc_hugepages = get_huge_page_counter(hpage_size, HUGEPAGES_OC);
-	set_nr_overcommit_hugepages(hpage_size, 0);
-
-	/* We should be able to allocate the whole pool */
-	void *p = get_huge_pages(num_hugepages * hpage_size, GHP_DEFAULT);
-	if (p == NULL)
-		FAIL("test_GHP_FALLBACK(GHP_DEFAULT) failed for %ld hugepages",
-			num_hugepages);
-	memset(p, 1, hpage_size);
-	err = test_addr_huge(p + (num_hugepages - 1) * hpage_size);
-	if (err != 1)
-		FAIL("Returned page is not hugepage");
-	free_and_confirm_region_free(p, __LINE__);
-
-	/* We should fail allocating too much */
-	num_hugepages++;
-	p = get_huge_pages(num_hugepages * hpage_size, GHP_DEFAULT);
-	if (p != NULL)
-		FAIL("test_GHP_FALLBACK() for %ld expected fail, got success", num_hugepages);
-
-	/* GHP_FALLBACK should succeed by allocating base pages */
-	p = get_huge_pages(num_hugepages * hpage_size, GHP_FALLBACK);
-	if (p == NULL)
-		FAIL("test_GHP_FALLBACK(GHP_FALLBACK) failed for %ld hugepages",
-			num_hugepages);
-	memset(p, 1, hpage_size);
-	err = test_addr_huge(p + (num_hugepages - 1) * hpage_size);
-	if (err == 1)
-		FAIL("Returned page is not a base page");
-
-	/*
-	 * We allocate a second fallback region to see can they be told apart
-	 * on free. Merging VMAs would cause problems
-	 */
-	void *pb = get_huge_pages(num_hugepages * hpage_size, GHP_FALLBACK);
-	if (pb == NULL)
-		FAIL("test_GHP_FALLBACK(GHP_FALLBACK) x2 failed for %ld hugepages",
-			num_hugepages);
-	memset(pb, 1, hpage_size);
-
-	free_and_confirm_region_free(pb, __LINE__);
-	free_and_confirm_region_free(p, __LINE__);
-}
-
 int main(int argc, char *argv[])
 {
 	test_init(argc, argv);
@@ -121,7 +69,6 @@ int main(int argc, char *argv[])
 	check_free_huge_pages(4);
 	test_get_huge_pages(1);
 	test_get_huge_pages(4);
-	test_GHP_FALLBACK();
 
 	PASS();
 }

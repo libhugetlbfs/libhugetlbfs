@@ -65,15 +65,13 @@ static void *fallback_base_pages(size_t len, ghp_t flags)
 
 /**
  * get_huge_pages - Allocate an amount of memory backed by huge pages
- * len: Size of the region to allocate
+ * len: Size of the region to allocate, must be hugepage-aligned
  * flags: Flags specifying the behaviour of the function
  *
- * This function allocates a region of memory backed by huge pages and
- * at least hugepage-aligned. This is not a suitable drop-in for malloc()
- * and is only suitable in the event the length is expected to be
- * hugepage-aligned. However, a malloc-like library could use this function
- * to create additional heap similar in principal to what morecore does for
- * glibc malloc.
+ * This function allocates a region of memory that is backed by huge pages
+ * and hugepage-aligned. This is not a suitable drop-in for malloc() but a
+ * a malloc library could use this function to create a new fixed-size heap
+ * similar in principal to what morecore does for glibc malloc.
  */
 void *get_huge_pages(size_t len, ghp_t flags)
 {
@@ -93,10 +91,6 @@ void *get_huge_pages(size_t len, ghp_t flags)
 	if (buf == MAP_FAILED) {
 		close(heap_fd);
 
-		/* Try falling back to base pages if allowed */
-		if (flags & GHP_FALLBACK)
-			return fallback_base_pages(len, flags);
-
 		WARNING("get_huge_pages: New region mapping failed (flags: 0x%lX): %s\n",
 			flags, strerror(errno));
 		return NULL;
@@ -107,9 +101,9 @@ void *get_huge_pages(size_t len, ghp_t flags)
 		munmap(buf, len);
 		close(heap_fd);
 
-		/* Try falling back to base pages if allowed */
-		if (flags & GHP_FALLBACK)
-			return fallback_base_pages(len, flags);
+		WARNING("get_huge_pages: Prefaulting failed (flags: 0x%lX): %s\n",
+			flags, strerror(errno));
+		return NULL;
 	}
 
 	/* Close the file so we do not have to track the descriptor */

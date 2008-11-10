@@ -40,16 +40,12 @@ int hugetlbfs_unlinked_fd_for_size(long page_size);
 #define PF_LINUX_HUGETLB	0x100000
 
 /*
- * Direct alloc flags and types
+ * Direct hugepage allocation flags and types
  *
- * GHP_DEFAULT - Use a combination of flags deemed to be a sensible default
- * 		by the current implementation of the library
- * GHP_FALLBACK - Use the default hugepage size if possible but fallback to
- * 		smaller pages if necessary
+ * GHP_DEFAULT - Use the default hugepage size to back the region
  */
 typedef unsigned long ghp_t;
-#define GHP_FALLBACK	(0x01UL)
-#define GHP_DEFAULT	(0)
+#define GHP_DEFAULT	((ghp_t)0x01UL)
 
 /* Direct alloc functions */
 void *get_huge_pages(size_t len, ghp_t flags);
