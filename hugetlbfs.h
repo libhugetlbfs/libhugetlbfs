@@ -60,13 +60,17 @@ void free_huge_pages(void *ptr);
  * GHR_FALLBACK - Use the default hugepage size if possible but fallback to
  * 		  smaller pages if necessary
  * GHR_STRICT   - Use hugepages of some size or return NULL
+ * GHP_COLOR    - Use bytes wasted due to alignment to offset the buffer
+ *		  by a random cache line. This gives better average
+ *		  performance with many buffers
  */
 typedef unsigned long ghr_t;
 #define GHR_STRICT	((ghr_t)0x10000000U)
 #define GHR_FALLBACK	((ghr_t)0x20000000U)
-#define GHR_DEFAULT	GHR_FALLBACK
+#define GHR_COLOR	((ghr_t)0x40000000U)
+#define GHR_DEFAULT	(GHR_FALLBACK|GHR_COLOR)
 
-#define GHR_MASK	(GHR_FALLBACK|GHR_STRICT)
+#define GHR_MASK	(GHR_FALLBACK|GHR_STRICT|GHR_COLOR)
 
 /* Allocation functions for regions backed by hugepages */
 void *get_hugepage_region(size_t len, ghr_t flags);

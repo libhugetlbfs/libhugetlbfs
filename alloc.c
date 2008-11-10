@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 
@@ -179,6 +180,41 @@ void free_huge_pages(void *ptr)
 	fclose(fd);
 }
 
+/*
+ * Offset the buffer using bytes wasted due to alignment to avoid using the
+ * same cache lines for the start of every buffer returned by
+ * get_huge_pages(). A small effort is made to select a random cacheline
+ * rather than sequential lines to give decent behaviour on average.
+ */
+void *cachecolor(void *buf, size_t len, size_t color_bytes)
+{
+	static long cacheline_size = 0;
+	static int linemod = 0;
+	char *bytebuf = (char *)buf;
+	int numlines;
+	int line = 0;
+
+	/* Lookup our cacheline size once */
+	if (cacheline_size == 0) {
+		cacheline_size = sysconf(_SC_LEVEL2_CACHE_LINESIZE);
+		linemod = time(NULL);
+	}
+
+	numlines = color_bytes / cacheline_size;
+	DEBUG("%d lines of cacheline size %ld due to %zd wastage\n",
+		numlines, cacheline_size, color_bytes);
+	if (numlines) {
+		line = linemod % numlines;
+		bytebuf += cacheline_size * line;
+
+		/* Pseudo-ish random line selection */
+		linemod += len % numlines;
+	}
+	DEBUG("Using line offset %d from start\n", line);
+
+	return bytebuf;
+}
+
 /**
  * get_hugepage_region - Allocate an amount of memory backed by huge pages
  *
@@ -208,11 +244,15 @@ void *get_hugepage_region(size_t len, ghr_t flags)
 		buf = fallback_base_pages(len, flags);
 	}
 
-	/* Calculate wastage */
+	/* Calculate wastage for coloring */
 	wastage = aligned_len - len;
-	if (wastage != 0)
+	if (wastage != 0 && !(flags & GHR_COLOR))
 		DEBUG("get_hugepage_region: Wasted %zd bytes due to alignment\n",
 			wastage);
+
+	/* Only colour if requested */
+	if (flags & GHR_COLOR)
+		buf = cachecolor(buf, len, wastage);
 
 	return buf;
 }
@@ -228,5 +268,10 @@ void *get_hugepage_region(size_t len, ghr_t flags)
  */
 void free_hugepage_region(void *ptr)
 {
+	/* Buffers may be offset for cache line coloring */
+	DEBUG("free_hugepage_region(%p) unaligned\n", ptr);
+	ptr = (void *)ALIGN_DOWN((unsigned long)ptr, gethugepagesize());
+	DEBUG("free_hugepage_region(%p) aligned\n", ptr);
+
 	free_huge_pages(ptr);
 }

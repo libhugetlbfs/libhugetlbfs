@@ -47,11 +47,18 @@ Use base pages if there are an insufficient number of huge pages.
 .B GHR_STRICT
 Use hugepages or return NULL.
 
+.B GHR_COLOR
+When specified, bytes that would be wasted due to alignment are used to
+color the buffer by offsetting it by a random cacheline within the hugepage.
+This avoids a performance problem whereby multiple buffers use the same
+cache lines at the same offsets. If it is not important that the start of the
+buffer be page-aligned, specify this flag.
+
 .B GHR_DEFAULT
 
 The library chooses a sensible combination of flags for allocating a region of
 memory. The current default is:
-	GHR_FALLBACK
+	GHR_FALLBACK | GHR_COLOR
 
 .PP
 
