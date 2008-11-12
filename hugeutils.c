@@ -874,6 +874,22 @@ int set_nr_overcommit_hugepages(long pagesize, unsigned long val)
 	return set_huge_page_counter(pagesize, HUGEPAGES_OC, val);
 }
 
+long read_nr_overcommit(long page_size)
+{
+	if (!kernel_has_overcommit())
+		return -1;
+
+	return get_huge_page_counter(page_size, HUGEPAGES_OC);
+}
+
+void restore_overcommit_pages(long page_size, long oc_pool)
+{
+	if (!kernel_has_overcommit())
+		return;
+
+	set_nr_overcommit_hugepages(page_size, oc_pool);
+}
+
 /********************************************************************/
 /* Library user visible DIAGNOSES/DEBUGGING ONLY functions          */
 /********************************************************************/

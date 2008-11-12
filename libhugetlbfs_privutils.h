@@ -64,6 +64,12 @@ long read_meminfo(const char *tag);
 #define kernel_default_hugepage_size __pu_kernel_default_hugepage_size
 long kernel_default_hugepage_size(void);
 
+#define read_nr_overcommit __pu_read_nr_overcommit
+long read_nr_overcommit(long page_size);
+
+#define restore_overcommit_pages __pu_restore_overcommit_pages
+void restore_overcommit_pages(long page_size, long oc_pool);
+
 /* Kernel feature testing */
 /* This enum defines the bits in a feature bitmask */
 enum {
