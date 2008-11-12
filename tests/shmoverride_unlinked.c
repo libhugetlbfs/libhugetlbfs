@@ -45,6 +45,7 @@ extern int errno;
 #define DYNAMIC_SYSCTL "/proc/sys/vm/nr_overcommit_hugepages"
 static long saved_nr_hugepages = -1;
 static long hpage_size, bpage_size;
+static long oc_pool = -1;
 
 /* Required pool size for test */
 #define POOL_SIZE 4
@@ -196,6 +197,9 @@ void cleanup(void)
 	/* Restore the pool size. */
 	if (saved_nr_hugepages >= 0)
 		setup_hugetlb_pool(saved_nr_hugepages);
+
+	if (oc_pool > 0)
+		restore_overcommit_pages(hpage_size, oc_pool);
 }
 
 int main(int argc, char **argv)
@@ -212,6 +216,9 @@ int main(int argc, char **argv)
 	 */
 	hpage_size = local_read_meminfo("Hugepagesize:") * 1024;
 	bpage_size = getpagesize();
+	oc_pool = read_nr_overcommit(hpage_size);
+	if (oc_pool > 0)
+		set_nr_overcommit_hugepages(hpage_size, 0);
 
 	/* Run the test with small pages */
 	setenv("HUGETLB_SHM", "no", 1);
