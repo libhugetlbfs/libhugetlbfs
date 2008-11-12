@@ -26,9 +26,17 @@
 #include <hugetlbfs.h>
 #include "hugetests.h"
 
+long oc_pool = -1;
+long hpagesize;
+
+void cleanup(void)
+{
+	if (oc_pool > 0)
+		restore_overcommit_pages(hpagesize, oc_pool);
+}
+
 int main(int argc, char **argv)
 {
-	long hpagesize;
 	int freepages;
 	long size1, size2;
 	void *p1, *p2;
@@ -40,6 +48,13 @@ int main(int argc, char **argv)
 		CONFIG("Must have HUGETLB_MORECORE=yes");
 
 	hpagesize = check_hugepagesize();
+
+	/* Must be root because this test modifies the overcommit pool */
+	check_must_be_root();
+
+	oc_pool = read_nr_overcommit(hpagesize);
+	if (oc_pool > 0)
+		set_nr_overcommit_hugepages(hpagesize, 0);
 
 	freepages = get_huge_page_counter(hpagesize, HUGEPAGES_FREE);
 	if (freepages < 3)
