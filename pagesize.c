@@ -95,13 +95,13 @@ int main(int argc, char** argv)
 
 		case 'a':
 			opt_all = 1;
-			DEBUG("selecting all page sizes\n");
+			INFO("selecting all page sizes\n");
 			break;
 
 		case 'H':
 			opt_huge = 1;
 			opt_all = 1;
-			DEBUG("selecting only huge page sizes\n");
+			INFO("selecting only huge page sizes\n");
 			break;
 
 		case -1:

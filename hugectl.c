@@ -123,7 +123,7 @@ void verbose(char *which)
 void setup_environment(char *var, char *val)
 {
 	setenv(var, val, 1);
-	DEBUG("%s='%s'\n", var, val);
+	INFO("%s='%s'\n", var, val);
 
 	if (opt_dry_run)
 		printf("%s='%s'\n", var, val);
@@ -312,7 +312,7 @@ void ldpreload(int count)
 		setup_environment("LD_PRELOAD", "libhugetlbfs.so");
 		WARNING("LD_PRELOAD in use for lone --heap/--shm\n");
 	} else {
-		DEBUG("LD_PRELOAD not appropriate for this map combination\n");
+		WARNING("LD_PRELOAD not appropriate for this map combination\n");
 	}
 }
 
@@ -371,7 +371,7 @@ int main(int argc, char** argv)
 
 		case LONG_NO_PRELOAD:
 			opt_preload = 0;
-			DEBUG("LD_PRELOAD disabled\n");
+			INFO("LD_PRELOAD disabled\n");
 			break;
 
 		case LONG_DRY_RUN:
@@ -380,7 +380,7 @@ int main(int argc, char** argv)
 
 		case LONG_NO_LIBRARY:
 			opt_library = LIBRARY_DISABLE;
-			DEBUG("using LD_LIBRARY_PATH to find library\n");
+			INFO("using LD_LIBRARY_PATH to find library\n");
 			break;
 
 		case LONG_LIBRARY:

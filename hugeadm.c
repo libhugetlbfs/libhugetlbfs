@@ -162,7 +162,7 @@ void pool_adjust(char *cmd, unsigned int counter)
 		ERROR("%s: invalid resize specificiation\n", cmd);
 		exit(EXIT_FAILURE);
 	}
-	DEBUG("page_size<%s> adjust<%s> counter<%d>\n",
+	INFO("page_size<%s> adjust<%s> counter<%d>\n",
 					page_size_str, adjust_str, counter);
 
 	/* Convert and validate the page_size. */
@@ -198,15 +198,15 @@ void pool_adjust(char *cmd, unsigned int counter)
 			min = max;
 	}
 
-	DEBUG("%ld, %ld -> %ld, %ld\n", pools[pos].minimum, pools[pos].maximum,
+	INFO("%ld, %ld -> %ld, %ld\n", pools[pos].minimum, pools[pos].maximum,
 		min, max);
 
 	if ((pools[pos].maximum - pools[pos].minimum) < (max - min)) {
-		DEBUG("setting HUGEPAGES_OC to %ld\n", (max - min));
+		INFO("setting HUGEPAGES_OC to %ld\n", (max - min));
 		set_huge_page_counter(page_size, HUGEPAGES_OC, (max - min));
 	}
 	if (pools[pos].minimum != min) {
-		DEBUG("setting HUGEPAGES_TOTAL to %ld\n", min);
+		INFO("setting HUGEPAGES_TOTAL to %ld\n", min);
 		set_huge_page_counter(page_size, HUGEPAGES_TOTAL, min);
 	}
 	/*
@@ -216,12 +216,12 @@ void pool_adjust(char *cmd, unsigned int counter)
 	 */
 	get_pool_size(page_size, &pools[pos]);
 	if (pools[pos].minimum != min) {
-		ERROR("failed to set pool minimum to %ld became %ld\n",
+		WARNING("failed to set pool minimum to %ld became %ld\n",
 			min, pools[pos].minimum);
 		min = pools[pos].minimum;
 	}
 	if (pools[pos].maximum != max) {
-		DEBUG("setting HUGEPAGES_OC to %ld\n", (max - min));
+		INFO("setting HUGEPAGES_OC to %ld\n", (max - min));
 		set_huge_page_counter(page_size, HUGEPAGES_OC, (max - min));
 	}
 }
