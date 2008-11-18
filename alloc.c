@@ -36,7 +36,7 @@ static void *fallback_base_pages(size_t len, ghp_t flags)
 {
 	int fd;
 	void *buf;
-	DEBUG("get_hugepage_region: Falling back to base pages\n");
+	INFO("get_huge_pages: Falling back to base pages\n");
 
 	/*
 	 * Map /dev/zero instead of MAP_ANONYMOUS avoid VMA mergings. Freeing
@@ -86,7 +86,8 @@ void *get_huge_pages(size_t len, ghp_t flags)
 	/* Create a file descriptor for the new region */
 	heap_fd = hugetlbfs_unlinked_fd();
 	if (heap_fd < 0) {
-		ERROR("Couldn't open hugetlbfs file for %zd-sized heap\n", len);
+		WARNING("Couldn't open hugetlbfs file for %zd-sized heap\n",
+				len);
 		return NULL;
 	}
 
