@@ -74,7 +74,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	void *p;
 	long delta;
 
-	DEBUG("hugetlbfs_morecore(%ld) = ...\n", (long)increment);
+	INFO("hugetlbfs_morecore(%ld) = ...\n", (long)increment);
 
 	/*
 	 * how much to grow the heap by =
@@ -82,7 +82,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	 */
 	delta = (heaptop-heapbase) + increment - mapsize;
 
-	DEBUG("heapbase = %p, heaptop = %p, mapsize = %lx, delta=%ld\n",
+	INFO("heapbase = %p, heaptop = %p, mapsize = %lx, delta=%ld\n",
 	      heapbase, heaptop, mapsize, delta);
 
 	/* align to multiple of hugepagesize. */
@@ -91,7 +91,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	if (delta > 0) {
 		/* growing the heap */
 
-		DEBUG("Attempting to map %ld bytes\n", delta);
+		INFO("Attempting to map %ld bytes\n", delta);
 
 		/* map in (extend) more of the file at the end of our last map */
 		p = mmap(heapbase + mapsize, delta, PROT_READ|PROT_WRITE,
@@ -160,7 +160,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 			/* we need heaptop + increment == heapbase, so: */
 			increment = heapbase - heaptop;
 		}
-		DEBUG("Attempting to unmap %ld bytes @ %p\n", -delta,
+		INFO("Attempting to unmap %ld bytes @ %p\n", -delta,
 			heapbase + mapsize + delta);
 		ret = munmap(heapbase + mapsize + delta, -delta);
 		if (ret) {
@@ -186,7 +186,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	/* and we now have added this much more space to the heap */
 	heaptop = heaptop + increment;
 
-	DEBUG("... = %p\n", p);
+	INFO("... = %p\n", p);
 	return p;
 }
 
@@ -199,7 +199,7 @@ void hugetlbfs_setup_morecore(void)
 	if (! env)
 		return;
 	if (strcasecmp(env, "no") == 0) {
-		DEBUG("HUGETLB_MORECORE=%s, not setting up morecore\n",
+		INFO("HUGETLB_MORECORE=%s, not setting up morecore\n",
 								env);
 		return;
 	}
@@ -216,16 +216,16 @@ void hugetlbfs_setup_morecore(void)
 
 	if (hpage_size <= 0) {
 		if (errno == ENOSYS)
-			ERROR("Hugepages unavailable\n");
+			WARNING("Hugepages unavailable\n");
 		else if (errno == EOVERFLOW)
-			ERROR("Hugepage size too large\n");
+			WARNING("Hugepage size too large\n");
 		else if (errno == EINVAL)
-			ERROR("Invalid huge page size\n");
+			WARNING("Invalid huge page size\n");
 		else
-			ERROR("Hugepage size (%s)\n", strerror(errno));
+			WARNING("Hugepage size (%s)\n", strerror(errno));
 		return;
 	} else if (!hugetlbfs_find_path_for_size(hpage_size)) {
-		ERROR("Hugepage size %li unavailable", hpage_size);
+		WARNING("Hugepage size %li unavailable", hpage_size);
 		return;
 	}
 
@@ -235,7 +235,7 @@ void hugetlbfs_setup_morecore(void)
 	 * kernel guarantees them.  This can help NUMA performance quite a bit.
 	 */
 	if (hugetlbfs_test_feature(HUGETLB_FEATURE_PRIVATE_RESV)) {
-		DEBUG("Kernel has MAP_PRIVATE reservations.  Disabling "
+		INFO("Kernel has MAP_PRIVATE reservations.  Disabling "
 			"heap prefaulting.\n");
 		__hugetlbfs_prefault = 0;
 	}
@@ -261,17 +261,17 @@ void hugetlbfs_setup_morecore(void)
 
 	if (hpage_size <= 0) {
 		if (errno == ENOSYS)
-			ERROR("Hugepages unavailable\n");
+			WARNING("Hugepages unavailable\n");
 		else if (errno == EOVERFLOW || errno == ERANGE)
-			ERROR("Hugepage size too large\n");
+			WARNING("Hugepage size too large\n");
 		else
-			ERROR("Hugepage size (%s)\n", strerror(errno));
+			WARNING("Hugepage size (%s)\n", strerror(errno));
 		return;
 	}
 
 	heap_fd = hugetlbfs_unlinked_fd_for_size(hpage_size);
 	if (heap_fd < 0) {
-		ERROR("Couldn't open hugetlbfs file for morecore\n");
+		WARNING("Couldn't open hugetlbfs file for morecore\n");
 		return;
 	}
 
@@ -279,7 +279,7 @@ void hugetlbfs_setup_morecore(void)
 	if (env) {
 		heapaddr = strtoul(env, &ep, 16);
 		if (*ep != '\0') {
-			ERROR("Can't parse HUGETLB_MORECORE_HEAPBASE: %s\n",
+			WARNING("Can't parse HUGETLB_MORECORE_HEAPBASE: %s\n",
 			      env);
 			return;
 		}
@@ -289,7 +289,7 @@ void hugetlbfs_setup_morecore(void)
 	}
 	zero_fd = open("/dev/zero", O_RDONLY);
 
-	DEBUG("setup_morecore(): heapaddr = 0x%lx\n", heapaddr);
+	INFO("setup_morecore(): heapaddr = 0x%lx\n", heapaddr);
 
 	heaptop = heapbase = (void *)heapaddr;
 	__morecore = &hugetlbfs_morecore;
