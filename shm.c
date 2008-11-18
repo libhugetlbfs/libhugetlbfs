@@ -67,7 +67,7 @@ int shmget(key_t key, size_t size, int shmflg)
 				size, aligned_size);
 		}
 
-		DEBUG("hugetlb_shmem: Adding SHM_HUGETLB flag\n");
+		INFO("hugetlb_shmem: Adding SHM_HUGETLB flag\n");
 		shmflg |= SHM_HUGETLB;
 	} else {
 		DEBUG("hugetlb_shmem: shmget override not requested\n");
@@ -80,7 +80,7 @@ int shmget(key_t key, size_t size, int shmflg)
 			aligned_size, strerror(errno));
 		shmflg &= ~SHM_HUGETLB;
 		retval = real_shmget(key, size, shmflg);
-		DEBUG("Using small pages for shmget despite HUGETLB_SHM\n");
+		WARNING("Using small pages for shmget despite HUGETLB_SHM\n");
 	}
 
 	return retval;
