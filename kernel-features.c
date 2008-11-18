@@ -47,14 +47,14 @@ static void debug_kernel_version(void)
 {
 	struct kernel_version *ver = &running_kernel_version;
 
-	DEBUG("Parsed kernel version: [%u] . [%u] . [%u] ",
+	INFO("Parsed kernel version: [%u] . [%u] . [%u] ",
 		ver->major, ver->minor, ver->release);
 	if (ver->post)
-		DEBUG_CONT(" [post-release: %u]\n", ver->post);
+		INFO_CONT(" [post-release: %u]\n", ver->post);
 	else if (ver->pre)
-		DEBUG_CONT(" [pre-release: %u]\n", ver->pre);
+		INFO_CONT(" [pre-release: %u]\n", ver->pre);
 	else
-		DEBUG_CONT("\n");
+		INFO_CONT("\n");
 }
 
 static int str_to_ver(const char *str, struct kernel_version *ver)
@@ -241,12 +241,12 @@ void setup_features()
 
 		/* Has the user overridden feature detection? */
 		if (env && (pos = strstr(env, name))) {
-			DEBUG("Overriding feature %s: ", name);
+			INFO("Overriding feature %s: ", name);
 			/* If feature is preceeded by 'no_' then turn it off */
 			if (((pos - 3) >= env) && !strncmp(pos - 3, "no_", 3))
-				DEBUG_CONT("no\n");
+				INFO_CONT("no\n");
 			else {
-				DEBUG_CONT("yes\n");
+				INFO_CONT("yes\n");
 				feature_mask |= (1UL << i);
 			}
 			continue;
@@ -254,7 +254,7 @@ void setup_features()
 
 		/* Is the running kernel version newer? */
 		if (ver_cmp(&running_kernel_version, &ver) >= 0) {
-			DEBUG("Feature %s is present in this kernel\n",
+			INFO("Feature %s is present in this kernel\n",
 				kernel_features[i].name);
 			feature_mask |= (1UL << i);
 		}

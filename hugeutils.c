@@ -291,9 +291,10 @@ static void probe_default_hpage_size(void)
 	char *env;
 	long size;
 	int index;
+	int default_overrided;
 
 	if (nr_hpage_sizes == 0) {
-		DEBUG("No configured huge page sizes\n");
+		INFO("No configured huge page sizes\n");
 		hpage_sizes_default_idx = -1;
 		return;
 	}
@@ -303,7 +304,8 @@ static void probe_default_hpage_size(void)
 	 * system default size as reported by /proc/meminfo.
 	 */
 	env = getenv("HUGETLB_DEFAULT_PAGE_SIZE");
-	if (env && strlen(env) > 0)
+	default_overrided = env && strlen(env) > 0;
+	if (default_overrided)
 		size = parse_page_size(env);
 	else {
 		size = kernel_default_hugepage_size();
@@ -314,12 +316,22 @@ static void probe_default_hpage_size(void)
 		if (index >= 0)
 			hpage_sizes_default_idx = index;
 		else {
-			DEBUG("No mount point found for default huge page "
-				"size. Using first available mount point.\n");
+			/*
+			 * If the user specified HUGETLB_DEFAULT_PAGE_SIZE,
+			 * then this situation will alter semantics and they
+			 * should receive a WARNING.  Otherwise, this detail
+			 * is purely informational in nature.
+			 */
+			char msg[] = "No mount point found for default huge " \
+				"page size. Using first available mount point.";
+			if (default_overrided)
+				WARNING("%s", msg);
+			else
+				INFO("%s", msg);
 			hpage_sizes_default_idx = 0;
 		}
 	} else {
-		DEBUG("Unable to determine default huge page size\n");
+		ERROR("Unable to determine default huge page size\n");
 		hpage_sizes_default_idx = -1;
 	}
 }
@@ -339,7 +351,7 @@ static void add_hugetlbfs_mount(char *path, int user_mount)
 
 	size = hugetlbfs_test_pagesize(path);
 	if (size < 0) {
-		DEBUG("Unable to detect page size for path %s\n", path);
+		WARNING("Unable to detect page size for path %s\n", path);
 		return;
 	}
 
@@ -369,9 +381,9 @@ static void debug_show_page_sizes(void)
 {
 	int i;
 
-	DEBUG("Detected page sizes:\n");
+	INFO("Detected page sizes:\n");
 	for (i = 0; i < nr_hpage_sizes; i++)
-		DEBUG("   Size: %li kB %s  Mount: %s\n",
+		INFO("   Size: %li kB %s  Mount: %s\n",
 			hpage_sizes[i].pagesize / 1024,
 			i == hpage_sizes_default_idx ? "(default)" : "",
 			hpage_sizes[i].mount);
