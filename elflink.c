@@ -252,14 +252,14 @@ static int find_or_create_share_path(long page_size)
 	if (env) {
 		/* Given an explicit path */
 		if (hugetlbfs_test_path(env) != 1) {
-			ERROR("HUGETLB_SHARE_PATH %s is not on a hugetlbfs"
+			WARNING("HUGETLB_SHARE_PATH %s is not on a hugetlbfs"
 			      " filesystem\n", env);
 			return -1;
 		}
 
 		/* Make sure the page size matches */
 		if (page_size != hugetlbfs_test_pagesize(env)) {
-			ERROR("HUGETLB_SHARE_PATH %s is not valid for a %li "
+			WARNING("HUGETLB_SHARE_PATH %s is not valid for a %li "
 			      "kB page size\n", env, page_size / 1024);
 			return -1;
 		}
@@ -276,7 +276,7 @@ static int find_or_create_share_path(long page_size)
 
 	ret = mkdir(share_readonly_path, 0700);
 	if ((ret != 0) && (errno != EEXIST)) {
-		ERROR("Error creating share directory %s\n",
+		WARNING("Error creating share directory %s\n",
 			share_readonly_path);
 		return -1;
 	}
@@ -284,24 +284,24 @@ static int find_or_create_share_path(long page_size)
 	/* Check the share directory is sane */
 	ret = lstat(share_readonly_path, &sb);
 	if (ret != 0) {
-		ERROR("Couldn't stat() %s: %s\n", share_readonly_path,
+		WARNING("Couldn't stat() %s: %s\n", share_readonly_path,
 			strerror(errno));
 		return -1;
 	}
 
 	if (! S_ISDIR(sb.st_mode)) {
-		ERROR("%s is not a directory\n", share_readonly_path);
+		WARNING("%s is not a directory\n", share_readonly_path);
 		return -1;
 	}
 
 	if (sb.st_uid != getuid()) {
-		ERROR("%s has wrong owner (uid=%d instead of %d)\n",
+		WARNING("%s has wrong owner (uid=%d instead of %d)\n",
 		      share_readonly_path, sb.st_uid, getuid());
 		return -1;
 	}
 
 	if (sb.st_mode & (S_IWGRP | S_IWOTH)) {
-		ERROR("%s has bad permissions 0%03o\n",
+		WARNING("%s has bad permissions 0%03o\n",
 		      share_readonly_path, sb.st_mode);
 		return -1;
 	}
@@ -319,7 +319,7 @@ static void check_bss(unsigned long *start, unsigned long *end)
 
 	for (addr = start; addr < end; addr++) {
 		if (*addr != 0)
-			WARNING("Non-zero BSS data @ %p: %lx\n", addr, *addr);
+			DEBUG("Non-zero BSS data @ %p: %lx\n", addr, *addr);
 	}
 }
 
@@ -347,14 +347,14 @@ static int get_shared_file_name(struct seg_info *htlb_seg_info, char *file_path)
 	memset(binary, 0, sizeof(binary));
 	ret = readlink("/proc/self/exe", binary, PATH_MAX);
 	if (ret < 0) {
-		ERROR("shared_file: readlink() on /proc/self/exe "
+		WARNING("shared_file: readlink() on /proc/self/exe "
 		      "failed: %s\n", strerror(errno));
 		return -1;
 	}
 
 	binary2 = basename(binary);
 	if (!binary2) {
-		ERROR("shared_file: basename() on %s failed: %s\n",
+		WARNING("shared_file: basename() on %s failed: %s\n",
 		      binary, strerror(errno));
 		return -1;
 	}
@@ -605,7 +605,7 @@ static int save_phdr(int table_idx, int phnum, const ElfW(Phdr) *phdr)
 	int prot = 0;
 
 	if (table_idx >= MAX_HTLB_SEGS) {
-		ERROR("Executable has too many segments (max %d)\n",
+		WARNING("Executable has too many segments (max %d)\n",
 			MAX_HTLB_SEGS);
 		htlb_num_segs = 0;
 		return -1;
@@ -624,7 +624,7 @@ static int save_phdr(int table_idx, int phnum, const ElfW(Phdr) *phdr)
 	htlb_seg_table[table_idx].prot = prot;
 	htlb_seg_table[table_idx].index = phnum;
 
-	DEBUG("Segment %d (phdr %d): %#0lx-%#0lx  (filesz=%#0lx) "
+	INFO("Segment %d (phdr %d): %#0lx-%#0lx  (filesz=%#0lx) "
 		"(prot = %#0x)\n", table_idx, phnum,
 		(unsigned long)  phdr->p_vaddr,
 		(unsigned long) phdr->p_vaddr + phdr->p_memsz,
@@ -703,7 +703,8 @@ int parse_elf_normal(struct dl_phdr_info *info, size_t size, void *data)
 			continue;
 
 		if (i >= MAX_SEGS) {
-			ERROR("Maximum number of PT_LOAD segments exceeded\n");
+			WARNING("Maximum number of PT_LOAD segments"
+					"exceeded\n");
 			return 1;
 		}
 
@@ -772,14 +773,14 @@ int parse_elf_partial(struct dl_phdr_info *info, size_t size, void *data)
 		 */
 		memsz = info->dlpi_phdr[i].p_memsz;
 		if (memsz < gap) {
-			DEBUG("Segment %d's unaligned memsz is too small: "
+			INFO("Segment %d's unaligned memsz is too small: "
 					"%#0lx < %#0lx\n",
 					i, memsz, gap);
 			continue;
 		}
 		memsz -= gap;
 		if (memsz < (slice_end - vaddr)) {
-			DEBUG("Segment %d's aligned memsz is too small: "
+			INFO("Segment %d's aligned memsz is too small: "
 					"%#0lx < %#0lx\n",
 					i, memsz, slice_end - vaddr);
 			continue;
@@ -870,7 +871,7 @@ static int prepare_segment(struct seg_info *seg)
 	/* Create the temporary huge page mmap */
 	p = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, seg->fd, 0);
 	if (p == MAP_FAILED) {
-		ERROR("Couldn't map hugepage segment to copy data: %s\n",
+		WARNING("Couldn't map hugepage segment to copy data: %s\n",
 			strerror(errno));
 		return -1;
 	}
@@ -884,10 +885,10 @@ static int prepare_segment(struct seg_info *seg)
 	 * memsz region.  The rest of the memsz is understood to be zeroes and
 	 * need not be copied.
 	 */
-	DEBUG("Mapped hugeseg at %p. Copying %#0lx bytes and %#0lx extra bytes"
+	INFO("Mapped hugeseg at %p. Copying %#0lx bytes and %#0lx extra bytes"
 		" from %p...", p, seg->filesz, seg->extrasz, seg->vaddr);
 	memcpy(p + offset, seg->vaddr, seg->filesz + seg->extrasz);
-	DEBUG_CONT("done\n");
+	INFO_CONT("done\n");
 
 	munmap(p, size);
 
@@ -908,13 +909,13 @@ static int fork_and_prepare_segment(struct seg_info *htlb_seg_info)
 	int pid, ret, status;
 
 	if ((pid = fork()) < 0) {
-		DEBUG("fork failed");
+		WARNING("fork failed");
 		return -1;
 	}
 	if (pid == 0) {
 		ret = prepare_segment(htlb_seg_info);
 		if (ret < 0) {
-			DEBUG("Failed to prepare segment\n");
+			WARNING("Failed to prepare segment\n");
 			exit(1);
 		}
 		else
@@ -922,14 +923,14 @@ static int fork_and_prepare_segment(struct seg_info *htlb_seg_info)
 	}
 	ret = waitpid(pid, &status, 0);
 	if (ret == -1) {
-		DEBUG("waitpid failed");
+		WARNING("waitpid failed");
 		return -1;
 	}
 
 	if (WEXITSTATUS(status) != 0)
 		return -1;
 
-	DEBUG("Prepare succeeded\n");
+	INFO("Prepare succeeded\n");
 	return 0;
 }
 
@@ -992,8 +993,8 @@ static int find_or_prepare_shared_file(struct seg_info *htlb_seg_info)
 				/* Also got an exclusive file -> clean up */
 				ret = unlink(tmp_path);
 				if (ret != 0)
-					ERROR("shared_file: unable to clean up"
-					      " unneeded file %s: %s\n",
+					WARNING("shared_file: unable to clean "
+					      "up unneeded file %s: %s\n",
 					      tmp_path, strerror(errno));
 				close(fdx);
 			} else if (errnox != EEXIST) {
@@ -1014,16 +1015,16 @@ static int find_or_prepare_shared_file(struct seg_info *htlb_seg_info)
 
 			htlb_seg_info->fd = fdx;
 
-			DEBUG("Got unpopulated shared fd -- Preparing\n");
+			INFO("Got unpopulated shared fd -- Preparing\n");
 			ret = fork_and_prepare_segment(htlb_seg_info);
 			if (ret < 0)
 				goto fail;
 
-			DEBUG("Prepare succeeded\n");
+			INFO("Prepare succeeded\n");
 			/* move to permanent location */
 			ret = rename(tmp_path, final_path);
 			if (ret != 0) {
-				ERROR("shared_file: unable to rename %s"
+				WARNING("shared_file: unable to rename %s"
 				      " to %s: %s\n", tmp_path, final_path,
 				      strerror(errno));
 				goto fail;
@@ -1042,8 +1043,8 @@ static int find_or_prepare_shared_file(struct seg_info *htlb_seg_info)
 	if (fdx > 0) {
 		ret = unlink(tmp_path);
 		if (ret != 0)
-			ERROR("shared_file: Unable to clean up temp file %s on"
-			      " failure: %s\n", tmp_path, strerror(errno));
+			WARNING("shared_file: Unable to clean up temp file %s "
+			      "on failure: %s\n", tmp_path, strerror(errno));
 		close(fdx);
 	}
 
@@ -1072,7 +1073,7 @@ static int obtain_prepared_file(struct seg_info *htlb_seg_info)
 		if (ret == 0)
 			return 0;
 		/* but, fall through to unlinked files, if sharing fails */
-		DEBUG("Falling back to unlinked files\n");
+		WARNING("Falling back to unlinked files\n");
 	}
 	fd = hugetlbfs_unlinked_fd_for_size(hpage_size);
 	if (fd < 0)
@@ -1172,14 +1173,15 @@ static int set_hpage_sizes(const char *env)
 
 		if (size <= 0) {
 			if (errno == ENOSYS)
-				ERROR("Hugepages unavailable\n");
+				WARNING("Hugepages unavailable\n");
 			else if (errno == EOVERFLOW)
-				ERROR("Hugepage size too large\n");
+				WARNING("Hugepage size too large\n");
 			else
-				ERROR("Hugepage size (%s)\n", strerror(errno));
+				WARNING("Hugepage size (%s)\n",
+						strerror(errno));
 			size = 0;
 		} else if (!hugetlbfs_find_path_for_size(size)) {
-			ERROR("Hugepage size %li unavailable", size);
+			WARNING("Hugepage size %li unavailable", size);
 			size = 0;
 		}
 
@@ -1198,12 +1200,12 @@ static int check_env(void)
 
 	env = getenv("HUGETLB_ELFMAP");
 	if (env && (strcasecmp(env, "no") == 0)) {
-		DEBUG("HUGETLB_ELFMAP=%s, not attempting to remap program "
+		INFO("HUGETLB_ELFMAP=%s, not attempting to remap program "
 		      "segments\n", env);
 		return -1;
 	}
 	if (env && set_hpage_sizes(env)) {
-		ERROR("Cannot set elfmap page sizes: %s", strerror(errno));
+		WARNING("Cannot set elfmap page sizes: %s", strerror(errno));
 		return -1;
 	}
 
@@ -1212,17 +1214,19 @@ static int check_env(void)
 		env2 = getenv("HUGETLB_FORCE_ELFMAP");
 		if (env2 && (strcasecmp(env2, "yes") == 0)) {
 			force_remap = 1;
-			DEBUG("HUGETLB_FORCE_ELFMAP=%s, "
+			INFO("HUGETLB_FORCE_ELFMAP=%s, "
 					"enabling partial segment "
 					"remapping for non-relinked "
 					"binaries\n",
 					env2);
-			DEBUG("Disabling filesz copy optimization\n");
+			INFO("Disabling filesz copy optimization\n");
 			minimal_copy = 0;
 		} else {
 			if (&__executable_start) {
-				ERROR("LD_PRELOAD is incompatible with segment remapping\n");
-				ERROR("Segment remapping has been DISABLED\n");
+				WARNING("LD_PRELOAD is incompatible with "
+					"segment remapping\n");
+				WARNING("Segment remapping has been "
+					"DISABLED\n");
 				return -1;
 			}
 		}
@@ -1230,7 +1234,7 @@ static int check_env(void)
 
 	env = getenv("HUGETLB_MINIMAL_COPY");
 	if (minimal_copy && env && (strcasecmp(env, "no") == 0)) {
-		DEBUG("HUGETLB_MINIMAL_COPY=%s, disabling filesz copy "
+		INFO("HUGETLB_MINIMAL_COPY=%s, disabling filesz copy "
 			"optimization\n", env);
 		minimal_copy = 0;
 	}
@@ -1239,16 +1243,16 @@ static int check_env(void)
 	if (env)
 		sharing = atoi(env);
 	if (sharing == 2) {
-		ERROR("HUGETLB_SHARE=%d, however sharing of writable\n"
+		WARNING("HUGETLB_SHARE=%d, however sharing of writable\n"
 			"segments has been deprecated and is now disabled\n",
 			sharing);
 		sharing = 0;
 	} else {
-		DEBUG("HUGETLB_SHARE=%d, sharing ", sharing);
+		INFO("HUGETLB_SHARE=%d, sharing ", sharing);
 		if (sharing == 1) {
-			DEBUG_CONT("enabled for only read-only segments\n");
+			INFO_CONT("enabled for only read-only segments\n");
 		} else {
-			DEBUG_CONT("disabled\n");
+			INFO_CONT("disabled\n");
 			sharing = 0;
 		}
 	}
@@ -1268,7 +1272,7 @@ static int parse_elf()
 		dl_iterate_phdr(parse_elf_normal, NULL);
 
 	if (htlb_num_segs == 0) {
-		DEBUG("No segments were appropriate for remapping\n");
+		INFO("No segments were appropriate for remapping\n");
 		return -1;
 	}
 
@@ -1285,7 +1289,7 @@ void hugetlbfs_setup_elflink(void)
 	if (parse_elf())
 		return;
 
-	DEBUG("libhugetlbfs version: %s\n", VERSION);
+	INFO("libhugetlbfs version: %s\n", VERSION);
 
 	/* Do we need to find a share directory */
 	if (sharing) {
@@ -1298,15 +1302,18 @@ void hugetlbfs_setup_elflink(void)
 			hpage_readonly_size : gethugepagesize();
 
 		ret = find_or_create_share_path(page_size);
-		if (ret != 0)
+		if (ret != 0) {
+			WARNING("Segment remapping is disabled");
 			return;
+		}
 	}
 
 	/* Step 1.  Obtain hugepage files with our program data */
 	for (i = 0; i < htlb_num_segs; i++) {
 		ret = obtain_prepared_file(&htlb_seg_table[i]);
 		if (ret < 0) {
-			DEBUG("Failed to setup hugetlbfs file for segment %d\n", i);
+			WARNING("Failed to setup hugetlbfs file for segment "
+					"%d\n", i);
 
 			/* Close files we have already prepared */
 			for (; i >= 0; i--)
