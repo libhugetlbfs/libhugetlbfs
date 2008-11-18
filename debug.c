@@ -46,8 +46,10 @@ static void __hugetlbfs_init_debug(void)
 		__hugetlbfs_verbose = atoi(env);
 
 	env = getenv("HUGETLB_DEBUG");
-	if (env)
+	if (env) {
 		__hugetlbfs_debug = 1;
+		__hugetlbfs_verbose = VERBOSE_DEBUG;
+	}
 
 	env = getenv("HUGETLB_NO_PREFAULT");
 	if (env)

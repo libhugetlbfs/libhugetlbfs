@@ -90,12 +90,21 @@ extern long parse_page_size(const char *str);
 #ifndef REPORT_UTIL
 #define REPORT_UTIL "libhugetlbfs"
 #endif
+
+#define VERBOSE_ERROR	1
+#define VERBOSE_WARNING	2
+#define VERBOSE_INFO	3
+#define VERBOSE_DEBUG	4
+
 #ifndef REPORT
 #define REPORT(level, prefix, format, ...) \
 	do { \
-		if (__hugetlbfs_debug || __hugetlbfs_verbose >= level) { \
-			fprintf(stderr, REPORT_UTIL " [%s:%d]: " prefix ": " \
-				format, __hugetlbfs_hostname, getpid(), \
+		if (__hugetlbfs_verbose >= level) { \
+			fprintf(stderr, REPORT_UTIL); \
+			if (__hugetlbfs_verbose >= VERBOSE_DEBUG) \
+				fprintf(stderr, " [%s:%d]", \
+					__hugetlbfs_hostname, getpid()); \
+			fprintf(stderr, ": " prefix ": " format, \
 				##__VA_ARGS__); \
 			fflush(stderr); \
 		} \
@@ -103,7 +112,7 @@ extern long parse_page_size(const char *str);
 
 #define REPORT_CONT(level, prefix, ...) \
 	do { \
-		if (__hugetlbfs_debug || __hugetlbfs_verbose >= level) { \
+		if (__hugetlbfs_verbose >= level) { \
 			fprintf(stderr, ##__VA_ARGS__); \
 			fflush(stderr); \
 		} \
