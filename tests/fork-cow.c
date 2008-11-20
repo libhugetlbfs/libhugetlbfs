@@ -47,6 +47,18 @@
 #define RANDOM_CONSTANT		0x1234ABCD
 #define OTHER_CONSTANT		0xfeef5678
 
+/*
+ * The parent uses this to check if the child terminated badly.
+ */
+static void sigchld_handler(int signum, siginfo_t *si, void *uc)
+{
+	if (WEXITSTATUS(si->si_status) != 0)
+		FAIL("Child failed: %d", WEXITSTATUS(si->si_status));
+	if (WIFSIGNALED(si->si_status))
+		FAIL("Child recived signal %s",
+			strsignal(WTERMSIG(si->si_status)));
+}
+
 int main(int argc, char ** argv)
 {
 	int fd, ret, status;
@@ -56,8 +68,14 @@ int main(int argc, char ** argv)
 	unsigned int parent_readback;
 	long hpage_size;
 	pid_t pid;
+	struct sigaction sa = {
+		.sa_sigaction = sigchld_handler,
+		.sa_flags = SA_SIGINFO,
+	};
 
 	test_init(argc, argv);
+
+	check_free_huge_pages(2);
 
 	if (argc != 1)
 		CONFIG("Usage: fork-cow\n");
@@ -92,6 +110,10 @@ int main(int argc, char ** argv)
 	verbose_printf("Parent writes pre-fork...");
 	*p = RANDOM_CONSTANT;
 	verbose_printf("%x\n", RANDOM_CONSTANT);
+
+	ret = sigaction(SIGCHLD, &sa, NULL);
+	if (ret)
+		FAIL("sigaction(): %s", strerror(errno));
 
 	if ((pid = fork()) < 0)
 		FAIL("fork(): %s", strerror(errno));
@@ -149,10 +171,6 @@ int main(int argc, char ** argv)
 	ret = waitpid(pid, &status, 0);
 	if (ret < 0)
 		FAIL("waitpid(): %s", strerror(errno));
-	if (WEXITSTATUS(status) != 0)
-		FAIL("Child failed: %d", WEXITSTATUS(status));
-	if (WIFSIGNALED(status))
-		FAIL("Child recived signal %s", strsignal(WTERMSIG(status)));
 
 	PASS();
 }
