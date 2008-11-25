@@ -124,20 +124,12 @@ void *get_huge_pages(size_t len, ghp_t flags)
 }
 
 #define MAPS_BUF_SZ 4096
-/**
- * free_huge_pages - Free a region allocated that was backed by large pages
- * ptr - The pointer to the buffer returned by get_huge_pages()
- *
- * This function finds a region to free based on the contents of
- * /proc/pid/maps. The assumption is made that the ptr is the start of
- * a hugepage region allocated with free_huge_pages. No checking is made
- * that the pointer is to a hugepage backed region.
- */
-void free_huge_pages(void *ptr)
+static void __free_huge_pages(void *ptr, int aligned)
 {
 	FILE *fd;
 	char line[MAPS_BUF_SZ];
 	unsigned long start = 0, end = 0;
+	unsigned long palign = 0, hpalign = 0;
 
 	/*
 	 * /proc/self/maps is used to determine the length of the original
@@ -149,6 +141,15 @@ void free_huge_pages(void *ptr)
 	if (!fd) {
 		ERROR("Failed to open /proc/self/maps\n");
 		return;
+	}
+
+	/*
+	 * An unaligned address allocated by get_hugepage_region()
+	 * could be either page or hugepage aligned
+	 */
+	if (!aligned) {
+		palign = ALIGN_DOWN((unsigned long)ptr, getpagesize());
+		hpalign = ALIGN_DOWN((unsigned long)ptr, gethugepagesize());
 	}
 
 	/* Parse /proc/maps for address ranges line by line */
@@ -172,6 +173,13 @@ void free_huge_pages(void *ptr)
 			munmap(ptr, end - start);
 			break;
 		}
+
+		/* Check the unaligned possibilities */
+		if (!aligned && (start == palign || start == hpalign)) {
+			end = strtoull(bufptr, NULL, 16);
+			munmap((void *)start, end - start);
+			break;
+		}
 	}
 
 	/* Print a warning if the ptr appeared to point nowhere */
@@ -179,6 +187,20 @@ void free_huge_pages(void *ptr)
 		ERROR("hugepages_free using invalid or double free\n");
 
 	fclose(fd);
+}
+
+/**
+ * free_huge_pages - Free a region allocated that was backed by large pages
+ * ptr - The pointer to the buffer returned by get_huge_pages()
+ *
+ * This function finds a region to free based on the contents of
+ * /proc/pid/maps. The assumption is made that the ptr is the start of
+ * a hugepage region allocated with free_huge_pages. No checking is made
+ * that the pointer is to a hugepage backed region.
+ */
+void free_huge_pages(void *ptr)
+{
+	__free_huge_pages(ptr, 1);
 }
 
 /*
@@ -269,10 +291,5 @@ void *get_hugepage_region(size_t len, ghr_t flags)
  */
 void free_hugepage_region(void *ptr)
 {
-	/* Buffers may be offset for cache line coloring */
-	DEBUG("free_hugepage_region(%p) unaligned\n", ptr);
-	ptr = (void *)ALIGN_DOWN((unsigned long)ptr, gethugepagesize());
-	DEBUG("free_hugepage_region(%p) aligned\n", ptr);
-
-	free_huge_pages(ptr);
+	__free_huge_pages(ptr, 0);
 }

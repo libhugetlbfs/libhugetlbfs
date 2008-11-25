@@ -43,6 +43,12 @@ void free_and_confirm_region_free(void *p, int line) {
 		FAIL("free_hugepage_region did not free region at line %d", line);
 }
 
+int test_unaligned_addr_huge(void *p)
+{
+	p = (void *)((unsigned long)p & ~((gethugepagesize()) - 1));
+	return test_addr_huge(p);
+}
+
 #define TESTLEN ((num_hugepages - 1) * hpage_size + hpage_size / 2)
 
 void test_GHR_STRICT(int num_hugepages)
@@ -54,12 +60,12 @@ void test_GHR_STRICT(int num_hugepages)
 
 	memset(p, 1, TESTLEN);
 
-	err = test_addr_huge(p + (num_hugepages - 1) * hpage_size);
+	err = test_unaligned_addr_huge(p + (num_hugepages - 1) * hpage_size);
 	if (err != 1)
 		FAIL("Returned page is not hugepage");
 
 	free_and_confirm_region_free(p, __LINE__);
-	err = test_addr_huge(p);
+	err = test_unaligned_addr_huge(p);
 	if (err == 1)
 		FAIL("hugepage was not correctly freed");
 }
@@ -81,7 +87,7 @@ void test_GHR_FALLBACK(void)
 		FAIL("test_GHR_FALLBACK(GHR_DEFAULT) failed for %ld hugepages",
 			num_hugepages);
 	memset(p, 1, TESTLEN);
-	err = test_addr_huge(p + (num_hugepages - 1) * hpage_size);
+	err = test_unaligned_addr_huge(p + (num_hugepages - 1) * hpage_size);
 	if (err != 1)
 		FAIL("Returned page is not hugepage");
 	free_and_confirm_region_free(p, __LINE__);
@@ -98,7 +104,7 @@ void test_GHR_FALLBACK(void)
 		FAIL("test_GHR_FALLBACK(GHR_FALLBACK) failed for %ld hugepages",
 			num_hugepages);
 	memset(p, 1, TESTLEN);
-	err = test_addr_huge(p + (num_hugepages - 1) * hpage_size);
+	err = test_unaligned_addr_huge(p + (num_hugepages - 1) * hpage_size);
 	if (err == 1)
 		FAIL("Returned page is not a base page");
 
