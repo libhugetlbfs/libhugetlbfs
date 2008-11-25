@@ -29,6 +29,7 @@ SECTIONS
   .interp         : { *(.interp) } :text :interp
   .note.SuSE      : { *(.note.SuSE) } :text :note
   .note.ABI-tag	  : { *(.note.ABI-tag) } :text :note
+  .note.gnu.build-id : { *(.note.gnu.build-id) } :text :note
   .hash           : { *(.hash) } :text
   .dynsym         : { *(.dynsym) }
   .dynstr         : { *(.dynstr) }

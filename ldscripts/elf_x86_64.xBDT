@@ -31,6 +31,7 @@ SECTIONS
   .hash           : { *(.hash) } :htext
   .note.SuSE      : { *(.note.SuSE) } :htext :note
   .note.ABI-tag   : { *(.note.ABI-tag) } :htext :note
+  .note.gnu.build-id : { *(.note.gnu.build-id) } :htext :note
   .dynsym         : { *(.dynsym) } :htext
   .dynstr         : { *(.dynstr) } :htext
   .gnu.version    : { *(.gnu.version) } :htext
