@@ -56,7 +56,8 @@ int main(int argc, char *argv[])
 
 	for (i = 0; i < (hpage_size / sizeof(*q)); i++) {
 		if (q[i] != (RANDOM_CONSTANT ^ i))
-			FAIL("Mismatch");
+			FAIL("Mismatch at offset 0x%x: 0x%x instead of 0x%x",
+			     i, q[i], RANDOM_CONSTANT ^ i);
 	}
 
 	PASS();
