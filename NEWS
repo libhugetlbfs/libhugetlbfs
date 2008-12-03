@@ -1,3 +1,42 @@
+libhugetlbfs 2.1 "NM 64"
+======================================================================
+New Features
+* Multiple page size support
+* Add a more user friendly allocator that handles cache coloring
+* Add pagesize utility to display supported page sizes
+* Add hugeadm utility for managing hugepage pools
+* Add hugectl utility for running programs using hugepages
+* Add hugeedit utility for marking segments in aligned binaries for
+  huge page backing by default
+* Deprecated linker linker scripts
+* gethugepagesize() and getpagesizes() API added to programatically
+  discover supported hugepages
+* Manual pages for all API functions and utilities
+* Allow automatic backing of shared memory segments with hugepages
+* huge page regions will no longer prefault for kernels >= 2.6.27
+  improving mmap() performance and NUMA layout
+
+Bug Fixes
+* Add missing segment to interp section in linker scripts
+* Fix free_hugepage_region to handle segments that fell back to small
+  pages
+* Fix install when lib32 and lib64 resolve to the same place
+* Install header files so APIs can be used
+* Fix installation paths to make life easier for package maintainers
+* Do not export internal symbols unnecessarily
+* Prefault regions allocated by direct allocation API on kernels older
+  than 2.6.27
+* Gracefully fallback to using base pages for text/data when the
+  hugepage pool is too small
+* Fix handling of HUGETLB_SHARE_PATH environment variable
+* Relax remapping requirements
+
+Test suite Fixes
+* Added expected failure support
+* gethugepagesizes override for getting meminfo
+* Increase debug output for tests that fail
+* Summarise pass and failure counts
+
 libhugetlbfs 2.0 "Sandia Red"
 ======================================================================
 
