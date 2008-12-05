@@ -712,8 +712,8 @@ ISSUE:	When using the --hugetlbfs-align or -zmax-page-size link options, the
 TRY:	Compile the program with the --relax linker option.  Either add
 	-Wl,--relax to CFLAGS or --relax to LDFLAGS.
 
-ISSUE:  When using the xB linker script with a 32 bit binary on a host with NX
-        support enabled, the binary segfaults.
+ISSUE:  When using the xB linker script with a 32 bit binary on an x86 host with
+        NX support enabled, the binary segfaults.
 
 TRY:    Recompiling with the --hugetlbfs-align options and use the new relinking
         method or booting your kernel with noexec32=off.
