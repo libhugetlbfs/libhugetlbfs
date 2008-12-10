@@ -513,11 +513,11 @@ int get_pool_size(long size, struct hpage_pool *pool)
 		DEBUG("pagesize<%ld> min<%ld> max<%ld> "
 			"in-use<%ld>\n",
 			size, nr_static, nr_static + nr_over,
-			nr_used + nr_resv);
+			nr_used);
 		pool->pagesize = size;
 		pool->minimum = nr_static;
 		pool->maximum = nr_static + nr_over;
-		pool->size = nr_used + nr_resv;
+		pool->size = nr_used;
 		pool->is_default = 0;
 
 		return 1;
