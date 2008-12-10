@@ -235,7 +235,21 @@ int file_write_ulong(char *file, unsigned long val)
  */
 void hugetlbfs_setup_env()
 {
+	char *env;
 
+	env = getenv("HUGETLB_VERBOSE");
+	if (env)
+		__hugetlbfs_verbose = atoi(env);
+
+	env = getenv("HUGETLB_DEBUG");
+	if (env) {
+		__hugetlbfs_debug = 1;
+		__hugetlbfs_verbose = VERBOSE_DEBUG;
+	}
+
+	env = getenv("HUGETLB_NO_PREFAULT");
+	if (env)
+		__hugetlbfs_prefault = 0;
 }
 
 /*

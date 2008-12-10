@@ -36,24 +36,8 @@ static int initialized;
 
 static void __hugetlbfs_init_debug(void)
 {
-	char *env;
-
 	if (initialized)
 		return;
-
-	env = getenv("HUGETLB_VERBOSE");
-	if (env)
-		__hugetlbfs_verbose = atoi(env);
-
-	env = getenv("HUGETLB_DEBUG");
-	if (env) {
-		__hugetlbfs_debug = 1;
-		__hugetlbfs_verbose = VERBOSE_DEBUG;
-	}
-
-	env = getenv("HUGETLB_NO_PREFAULT");
-	if (env)
-		__hugetlbfs_prefault = 0;
 
 	gethostname(__hugetlbfs_hostname, sizeof(__hugetlbfs_hostname)-1);
 
