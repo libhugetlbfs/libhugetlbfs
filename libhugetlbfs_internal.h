@@ -55,6 +55,9 @@
 #define SLICE_HIGH_SHIFT	63
 #endif
 
+struct libhugeopts_t {
+};
+
 /*
  * When adding a library local variable externalise the symbol as
  * normal, plus add a #define of the form below.  This define effectively
@@ -70,6 +73,8 @@ extern int __hugetlbfs_verbose;
 extern int __hugetlbfs_debug;
 #define __hugetlbfs_prefault __lh___hugetlbfs_prefault
 extern int __hugetlbfs_prefault;
+#define hugetlbfs_setup_env __lh_hugetlbfs_setup_env
+extern void hugetlbfs_setup_env();
 #define hugetlbfs_setup_elflink __lh_hugetlbfs_setup_elflink
 extern void hugetlbfs_setup_elflink();
 #define hugetlbfs_setup_morecore __lh_hugetlbfs_setup_morecore
@@ -86,6 +91,8 @@ extern char __hugetlbfs_hostname[];
 extern int hugetlbfs_prefault(int fd, void *addr, size_t length);
 #define parse_page_size __lh_parse_page_size
 extern long parse_page_size(const char *str);
+#define __hugetlb_opts __lh__hugetlb_opts
+extern struct libhugeopts_t __hugetlb_opts;
 
 #ifndef REPORT_UTIL
 #define REPORT_UTIL "libhugetlbfs"

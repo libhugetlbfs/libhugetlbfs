@@ -21,6 +21,7 @@
 
 static void __attribute__ ((constructor)) setup_libhugetlbfs(void)
 {
+	hugetlbfs_setup_env();
 	hugetlbfs_setup_debug();
 	setup_mounts();
 	setup_features();

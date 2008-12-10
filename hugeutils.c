@@ -48,6 +48,8 @@
 #include "libhugetlbfs_internal.h"
 #include "hugetlbfs.h"
 
+struct libhugeopts_t __hugetlb_opts;
+
 static int hugepagesize_errno; /* = 0 */
 
 #define MAX_HPAGE_SIZES 10
@@ -225,6 +227,15 @@ int file_write_ulong(char *file, unsigned long val)
 	ret = fprintf(f, "%lu", val);
 	fclose(f);
 	return ret > 0 ? 0 : -1;
+}
+
+/*
+ * Reads the contents of hugetlb environment variables and save their
+ * values for later use.
+ */
+void hugetlbfs_setup_env()
+{
+
 }
 
 /*
