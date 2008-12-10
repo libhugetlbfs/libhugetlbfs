@@ -62,6 +62,9 @@ struct libhugeopts_t {
 	char		*ld_preload;
 	char		*elfmap;
 	char		*share_path;
+	char 		*features;
+	char		*path;
+	char		*def_page_size;
 };
 
 /*

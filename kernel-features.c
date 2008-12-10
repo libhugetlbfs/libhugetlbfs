@@ -214,7 +214,6 @@ static int check_features_env_valid(const char *env)
 void setup_features()
 {
 	struct utsname u;
-	char *env;
 	int i;
 
 	if (uname(&u)) {
@@ -226,10 +225,10 @@ void setup_features()
 	debug_kernel_version();
 
 	/* Check if the user has overrided any features */
-	env = getenv("HUGETLB_FEATURES");
-	if (env && check_features_env_valid(env) == -1) {
+	if (__hugetlb_opts.features &&
+		check_features_env_valid(__hugetlb_opts.features) == -1) {
 		ERROR("HUGETLB_FEATURES was invalid -- ignoring.\n");
-		env = NULL;
+		__hugetlb_opts.features = NULL;
 	}
 
 	for (i = 0; i < HUGETLB_FEATURE_NR; i++) {
@@ -240,10 +239,12 @@ void setup_features()
 		str_to_ver(kernel_features[i].required_version, &ver);
 
 		/* Has the user overridden feature detection? */
-		if (env && (pos = strstr(env, name))) {
+		if (__hugetlb_opts.features &&
+			(pos = strstr(__hugetlb_opts.features, name))) {
 			INFO("Overriding feature %s: ", name);
 			/* If feature is preceeded by 'no_' then turn it off */
-			if (((pos - 3) >= env) && !strncmp(pos - 3, "no_", 3))
+			if (((pos - 3) >= __hugetlb_opts.features) &&
+				!strncmp(pos - 3, "no_", 3))
 				INFO_CONT("no\n");
 			else {
 				INFO_CONT("yes\n");

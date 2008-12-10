@@ -256,6 +256,9 @@ void hugetlbfs_setup_env()
 	__hugetlb_opts.share_path = getenv("HUGETLB_SHARE_PATH");
 	__hugetlb_opts.elfmap = getenv("HUGETLB_ELFMAP");
 	__hugetlb_opts.ld_preload = getenv("LD_PRELOAD");
+	__hugetlb_opts.def_page_size = getenv("HUGETLB_DEFAULT_PAGE_SIZE");
+	__hugetlb_opts.path = getenv("HUGETLB_PATH");
+	__hugetlb_opts.features = getenv("HUGETLB_FEATURES");
 
 	env = getenv("HUGETLB_FORCE_ELFMAP");
 	if (env && (strcasecmp(env, "yes") == 0))
@@ -334,7 +337,6 @@ static int hpage_size_to_index(unsigned long size)
 
 static void probe_default_hpage_size(void)
 {
-	char *env;
 	long size;
 	int index;
 	int default_overrided;
@@ -349,10 +351,9 @@ static void probe_default_hpage_size(void)
 	 * Check if the user specified a default size, otherwise use the
 	 * system default size as reported by /proc/meminfo.
 	 */
-	env = getenv("HUGETLB_DEFAULT_PAGE_SIZE");
-	default_overrided = env && strlen(env) > 0;
-	if (default_overrided)
-		size = parse_page_size(env);
+	if (__hugetlb_opts.def_page_size &&
+		strlen(__hugetlb_opts.def_page_size) > 0)
+		size = parse_page_size(__hugetlb_opts.def_page_size);
 	else {
 		size = kernel_default_hugepage_size();
 	}
@@ -481,28 +482,26 @@ static void find_mounts(void)
 
 void setup_mounts(void)
 {
-	char *env;
 	int do_scan = 1;
 
 	/* If HUGETLB_PATH is set, only add mounts specified there */
-	env = getenv("HUGETLB_PATH");
-	while (env) {
+	while (__hugetlb_opts.path) {
 		char path[PATH_MAX + 1];
-		char *next = strchrnul(env, ':');
+		char *next = strchrnul(__hugetlb_opts.path, ':');
 
 		do_scan = 0;
-		if (next - env > PATH_MAX) {
+		if (next - __hugetlb_opts.path > PATH_MAX) {
 			ERROR("Path too long in HUGETLB_PATH -- "
 				"ignoring environment\n");
 			break;
 		}
 
-		strncpy(path, env, next - env);
-		path[next - env] = '\0';
+		strncpy(path, __hugetlb_opts.path, next - __hugetlb_opts.path);
+		path[next - __hugetlb_opts.path] = '\0';
 		add_hugetlbfs_mount(path, 1);
 
 		/* skip the ':' token */
-		env = *next == '\0' ? NULL : next + 1;
+		__hugetlb_opts.path = *next == '\0' ? NULL : next + 1;
 	}
 
 	/* Then probe all mounted filesystems */
