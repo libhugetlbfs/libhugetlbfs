@@ -510,8 +510,8 @@ int get_pool_size(long size, struct hpage_pool *pool)
 	nr_static = nr_used - nr_surp;
 
 	if (nr_static >= 0) {
-		DEBUG("size<%ld> min<%ld> max<%ld> "
-			"size<%ld>\n",
+		DEBUG("pagesize<%ld> min<%ld> max<%ld> "
+			"in-use<%ld>\n",
 			size, nr_static, nr_static + nr_over,
 			nr_used + nr_resv);
 		pool->pagesize = size;
