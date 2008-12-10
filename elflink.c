@@ -168,8 +168,6 @@ struct seg_layout {
 
 static struct seg_info htlb_seg_table[MAX_HTLB_SEGS];
 static int htlb_num_segs;
-static int minimal_copy = 1;
-static int sharing; /* =0 */
 static unsigned long force_remap; /* =0 */
 static long hpage_readonly_size, hpage_writable_size;
 
@@ -239,7 +237,6 @@ static void check_memsz()
  */
 static int find_or_create_share_path(long page_size)
 {
-	char *env;
 	const char *base_path;
 	struct stat sb;
 	int ret;
@@ -248,22 +245,24 @@ static int find_or_create_share_path(long page_size)
 	if (!page_size)
 		return 0;
 
-	env = getenv("HUGETLB_SHARE_PATH");
-	if (env) {
+	if (__hugetlb_opts.share_path) {
 		/* Given an explicit path */
-		if (hugetlbfs_test_path(env) != 1) {
+		if (hugetlbfs_test_path(__hugetlb_opts.share_path) != 1) {
 			WARNING("HUGETLB_SHARE_PATH %s is not on a hugetlbfs"
-			      " filesystem\n", env);
+			      " filesystem\n", __hugetlb_opts.share_path);
 			return -1;
 		}
 
 		/* Make sure the page size matches */
-		if (page_size != hugetlbfs_test_pagesize(env)) {
+		if (page_size !=
+			hugetlbfs_test_pagesize(__hugetlb_opts.share_path)) {
 			WARNING("HUGETLB_SHARE_PATH %s is not valid for a %li "
-			      "kB page size\n", env, page_size / 1024);
+			      "kB page size\n", __hugetlb_opts.share_path,
+				page_size / 1024);
 			return -1;
 		}
-		assemble_path(share_readonly_path, "%s", env);
+		assemble_path(share_readonly_path, "%s",
+				__hugetlb_opts.share_path);
 		return 0;
 	}
 
@@ -480,7 +479,7 @@ static void get_extracopy(struct seg_info *seg, const Elf_Phdr *phdr, int phnum)
 	start = seg->vaddr + seg->filesz;
 	if (seg->filesz == seg->memsz)
 		return;
-	if (!minimal_copy)
+	if (!__hugetlb_opts.min_copy)
 		goto bail2;
 
 	/* Find dynamic program header */
@@ -1067,7 +1066,7 @@ static int obtain_prepared_file(struct seg_info *htlb_seg_info)
 	long hpage_size = htlb_seg_info->page_size;
 
 	/* Share only read-only segments */
-	if (sharing && !(htlb_seg_info->prot & PROT_WRITE)) {
+	if (__hugetlb_opts.sharing && !(htlb_seg_info->prot & PROT_WRITE)) {
 		/* first, try to share */
 		ret = find_or_prepare_shared_file(htlb_seg_info);
 		if (ret == 0)
@@ -1195,32 +1194,29 @@ static int set_hpage_sizes(const char *env)
 
 static int check_env(void)
 {
-	char *env, *env2;
 	extern Elf_Ehdr __executable_start __attribute__((weak));
 
-	env = getenv("HUGETLB_ELFMAP");
-	if (env && (strcasecmp(env, "no") == 0)) {
+	if (__hugetlb_opts.elfmap &&
+		(strcasecmp(__hugetlb_opts.elfmap, "no") == 0)) {
 		INFO("HUGETLB_ELFMAP=%s, not attempting to remap program "
-		      "segments\n", env);
+		      "segments\n", __hugetlb_opts.elfmap);
 		return -1;
 	}
-	if (env && set_hpage_sizes(env)) {
+	if (__hugetlb_opts.elfmap && set_hpage_sizes(__hugetlb_opts.elfmap)) {
 		WARNING("Cannot set elfmap page sizes: %s", strerror(errno));
 		return -1;
 	}
 
-	env = getenv("LD_PRELOAD");
-	if (env && strstr(env, "libhugetlbfs")) {
-		env2 = getenv("HUGETLB_FORCE_ELFMAP");
-		if (env2 && (strcasecmp(env2, "yes") == 0)) {
+	if (__hugetlb_opts.ld_preload &&
+		strstr(__hugetlb_opts.ld_preload, "libhugetlbfs")) {
+		if (__hugetlb_opts.force_elfmap) {
 			force_remap = 1;
-			INFO("HUGETLB_FORCE_ELFMAP=%s, "
+			INFO("HUGETLB_FORCE_ELFMAP=yes, "
 					"enabling partial segment "
 					"remapping for non-relinked "
-					"binaries\n",
-					env2);
+					"binaries\n");
 			INFO("Disabling filesz copy optimization\n");
-			minimal_copy = 0;
+			__hugetlb_opts.min_copy = 0;
 		} else {
 			if (&__executable_start) {
 				WARNING("LD_PRELOAD is incompatible with "
@@ -1232,28 +1228,18 @@ static int check_env(void)
 		}
 	}
 
-	env = getenv("HUGETLB_MINIMAL_COPY");
-	if (minimal_copy && env && (strcasecmp(env, "no") == 0)) {
-		INFO("HUGETLB_MINIMAL_COPY=%s, disabling filesz copy "
-			"optimization\n", env);
-		minimal_copy = 0;
-	}
-
-	env = getenv("HUGETLB_SHARE");
-	if (env)
-		sharing = atoi(env);
-	if (sharing == 2) {
+	if (__hugetlb_opts.sharing == 2) {
 		WARNING("HUGETLB_SHARE=%d, however sharing of writable\n"
 			"segments has been deprecated and is now disabled\n",
-			sharing);
-		sharing = 0;
+			__hugetlb_opts.sharing);
+		__hugetlb_opts.sharing = 0;
 	} else {
-		INFO("HUGETLB_SHARE=%d, sharing ", sharing);
-		if (sharing == 1) {
+		INFO("HUGETLB_SHARE=%d, sharing ", __hugetlb_opts.sharing);
+		if (__hugetlb_opts.sharing == 1) {
 			INFO_CONT("enabled for only read-only segments\n");
 		} else {
 			INFO_CONT("disabled\n");
-			sharing = 0;
+			__hugetlb_opts.sharing = 0;
 		}
 	}
 
@@ -1292,7 +1278,7 @@ void hugetlbfs_setup_elflink(void)
 	INFO("libhugetlbfs version: %s\n", VERSION);
 
 	/* Do we need to find a share directory */
-	if (sharing) {
+	if (__hugetlb_opts.sharing) {
 		/*
 		 * If HUGETLB_ELFMAP is undefined but a shareable segment has
 		 * PF_LINUX_HUGETLB set, segment remapping will occur using the

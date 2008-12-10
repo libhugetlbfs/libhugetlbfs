@@ -237,6 +237,8 @@ void hugetlbfs_setup_env()
 {
 	char *env;
 
+	__hugetlb_opts.min_copy = 1;
+
 	env = getenv("HUGETLB_VERBOSE");
 	if (env)
 		__hugetlbfs_verbose = atoi(env);
@@ -250,6 +252,25 @@ void hugetlbfs_setup_env()
 	env = getenv("HUGETLB_NO_PREFAULT");
 	if (env)
 		__hugetlbfs_prefault = 0;
+
+	__hugetlb_opts.share_path = getenv("HUGETLB_SHARE_PATH");
+	__hugetlb_opts.elfmap = getenv("HUGETLB_ELFMAP");
+	__hugetlb_opts.ld_preload = getenv("LD_PRELOAD");
+
+	env = getenv("HUGETLB_FORCE_ELFMAP");
+	if (env && (strcasecmp(env, "yes") == 0))
+		__hugetlb_opts.force_elfmap = 1;
+
+	env = getenv("HUGETLB_MINIMAL_COPY");
+	if (__hugetlb_opts.min_copy && env && (strcasecmp(env, "no") == 0)) {
+		INFO("HUGETLB_MINIMAL_COPY=%s, disabling filesz copy "
+			"optimization\n", env);
+		__hugetlb_opts.min_copy = 0;
+	}
+
+	env = getenv("HUGETLB_SHARE");
+	if (env)
+		__hugetlb_opts.sharing = atoi(env);
 }
 
 /*

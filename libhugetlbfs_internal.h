@@ -56,6 +56,12 @@
 #endif
 
 struct libhugeopts_t {
+	int		min_copy;
+	int		sharing;
+	unsigned long	force_elfmap;
+	char		*ld_preload;
+	char		*elfmap;
+	char		*share_path;
 };
 
 /*
