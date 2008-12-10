@@ -345,8 +345,10 @@ check_linkhuge_tests
     run_test get_hugepage_region
 
 # Test overriding of shmget()
-    run_test shmoverride_linked
-    run_test LD_PRELOAD=libhugetlbfs.so shmoverride_unlinked
+    run_test HUGETLB_SHM=no shmoverride_linked
+    run_test HUGETLB_SHM=yes shmoverride_linked
+    run_test HUGETLB_SHM=no LD_PRELOAD=libhugetlbfs.so shmoverride_unlinked
+    run_test HUGETLB_SHM=yes LD_PRELOAD=libhugetlbfs.so shmoverride_unlinked
 
 # Test hugetlbfs filesystem quota accounting
     run_test quota.sh

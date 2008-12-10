@@ -204,6 +204,8 @@ void cleanup(void)
 
 int main(int argc, char **argv)
 {
+	char *env;
+
 	test_init(argc, argv);
 	check_must_be_root();
 	local_check_free_huge_pages(POOL_SIZE);
@@ -220,21 +222,27 @@ int main(int argc, char **argv)
 	if (oc_pool > 0)
 		set_nr_overcommit_hugepages(hpage_size, 0);
 
-	/* Run the test with small pages */
-	setenv("HUGETLB_SHM", "no", 1);
-	run_test("override-not-requested-aligned", 1, 0, POOL_SIZE, 0);
+	env = getenv("HUGETLB_SHM");
 
-	/* Run the test with large pages */
-	setenv("HUGETLB_SHM", "yes", 1);
-	run_test("override-requested-aligned", 1, 0, POOL_SIZE, 1);
+	/* Now that all env parsing is in one location and is only done once
+	 * during library init, we cannot modify the value of HGUETLB_SHM
+	 * in the middle of the test, instead run the tests that fit with
+	 * the current value of HUGETLB_SHM
+	 */
+	if (env && strcasecmp(env, "yes") == 0) {
+		/* Run the test with large pages */
+		run_test("override-requested-aligned", 1, 0, POOL_SIZE, 1);
 
-	/* Run the test with large pages but with an unaligned size */
-	setenv("HUGETLB_SHM", "yes", 1);
-	run_test("override-requested-unaligned", 1, 1, POOL_SIZE, 2);
+		/* Run the test with large pages but with an unaligned size */
+		run_test("override-requested-unaligned", 1, 1, POOL_SIZE, 2);
 
-	/* Run the test with no pool but requested large pages */
-	setup_hugetlb_pool(0);
-	run_test("override-requested-aligned-nopool", 1, 0, 0, 0);
+		/* Run the test with no pool but requested large pages */
+		setup_hugetlb_pool(0);
+		run_test("override-requested-aligned-nopool", 1, 0, 0, 0);
+	} else {
+		/* Run the test with small pages */
+		run_test("override-not-requested-aligned", 1, 0, POOL_SIZE, 0);
+	}
 
 	PASS();
 }
