@@ -292,6 +292,8 @@ int main(int argc, char** argv)
 			}
 		}
 		switch (ret) {
+		case -1:
+			break;
 		case LONG_POOL_LIST:
 			pool_list();
 			break;
