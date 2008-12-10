@@ -34,9 +34,7 @@ int shmget(key_t key, size_t size, int shmflg)
 	static int (*real_shmget)(key_t key, size_t size, int shmflg) = NULL;
 	char *error;
 	int retval;
-	char *hugetlbshm_env;
 	size_t aligned_size = size;
-	int hugetlbshm_enabled = 0;
 
 	DEBUG("hugetlb_shmem: entering overridden shmget() call\n");
 
@@ -49,13 +47,8 @@ int shmget(key_t key, size_t size, int shmflg)
 		}
 	}
 
-	/* Determine if shmget() calls should be overridden */
-	hugetlbshm_env = getenv("HUGETLB_SHM");
-	if (hugetlbshm_env && !strcmp(hugetlbshm_env, "yes"))
-		hugetlbshm_enabled = 1;
-
 	/* Align the size and set SHM_HUGETLB on request */
-	if (hugetlbshm_enabled) {
+	if (__hugetlb_opts.shm_enabled) {
 		/*
 		 * Use /proc/meminfo because shm always uses the system
 		 * default huge page size.
@@ -75,7 +68,7 @@ int shmget(key_t key, size_t size, int shmflg)
 
 	/* Call the "real" shmget. If hugepages fail, use small pages */
 	retval = real_shmget(key, aligned_size, shmflg);
-	if (retval == -1 && hugetlbshm_enabled) {
+	if (retval == -1 && __hugetlb_opts.shm_enabled) {
 		WARNING("While overriding shmget(%zd) to add SHM_HUGETLB: %s\n",
 			aligned_size, strerror(errno));
 		shmflg &= ~SHM_HUGETLB;

@@ -295,6 +295,11 @@ void hugetlbfs_setup_env()
 	env = getenv("HUGETLB_MORECORE_SHRINK");
 	if (env && strcasecmp(env, "yes") == 0)
 		__hugetlb_opts.shrink_ok = 1;
+
+	/* Determine if shmget() calls should be overridden */
+	env = getenv("HUGETLB_SHM");
+	if (env && !strcmp(env, "yes"))
+		__hugetlb_opts.shm_enabled = 1;
 }
 
 /*
