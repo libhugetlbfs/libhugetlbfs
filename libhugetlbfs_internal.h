@@ -58,6 +58,7 @@
 struct libhugeopts_t {
 	int		min_copy;
 	int		sharing;
+	int		shrink_ok;
 	unsigned long	force_elfmap;
 	char		*ld_preload;
 	char		*elfmap;
@@ -65,6 +66,8 @@ struct libhugeopts_t {
 	char 		*features;
 	char		*path;
 	char		*def_page_size;
+	char		*morecore;
+	char		*heapbase;
 };
 
 /*

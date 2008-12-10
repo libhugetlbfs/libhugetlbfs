@@ -259,6 +259,8 @@ void hugetlbfs_setup_env()
 	__hugetlb_opts.def_page_size = getenv("HUGETLB_DEFAULT_PAGE_SIZE");
 	__hugetlb_opts.path = getenv("HUGETLB_PATH");
 	__hugetlb_opts.features = getenv("HUGETLB_FEATURES");
+	__hugetlb_opts.morecore = getenv("HUGETLB_MORECORE");
+	__hugetlb_opts.heapbase = getenv("HUGETLB_MORECORE_HEAPBASE");
 
 	env = getenv("HUGETLB_FORCE_ELFMAP");
 	if (env && (strcasecmp(env, "yes") == 0))
@@ -274,6 +276,25 @@ void hugetlbfs_setup_env()
 	env = getenv("HUGETLB_SHARE");
 	if (env)
 		__hugetlb_opts.sharing = atoi(env);
+
+	/*
+	 * We have been seeing some unexpected behavior from malloc when
+	 * heap shrinking is enabled, so heap shrinking is disabled by
+	 * default.
+	 *
+	 * If malloc has been called successfully before setup_morecore,
+	 * glibc will notice a gap between the previous top-of-heap and
+	 * the new top-of-heap when it calls hugetlbfs_morecore.  It treats
+	 * this as a "foreign sbrk."  Unfortunately, the "foreign sbrk"
+	 * handling code will then immediately try to free the memory
+	 * allocated by hugetlbfs_morecore!
+	 *
+	 * This behavior has been reported to the ptmalloc2 maintainer,
+	 * along with a patch to correct the behavior.
+	 */
+	env = getenv("HUGETLB_MORECORE_SHRINK");
+	if (env && strcasecmp(env, "yes") == 0)
+		__hugetlb_opts.shrink_ok = 1;
 }
 
 /*

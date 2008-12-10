@@ -34,7 +34,6 @@
 #include "libhugetlbfs_internal.h"
 
 static int heap_fd;
-static int shrink_ok;		/* default = 0; no shrink */
 static int zero_fd;
 
 static void *heapbase;
@@ -133,7 +132,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	} else if (delta < 0) {
 		/* shrinking the heap */
 
-		if (!shrink_ok) {
+		if (!__hugetlb_opts.shrink_ok) {
 			/* shouldn't ever get here */
 			WARNING("Heap shrinking is turned off\n");
 			return NULL;
@@ -192,15 +191,14 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 
 void hugetlbfs_setup_morecore(void)
 {
-	char *env, *ep;
+	char *ep;
 	unsigned long heapaddr;
 
-	env = getenv("HUGETLB_MORECORE");
-	if (! env)
+	if (! __hugetlb_opts.morecore)
 		return;
-	if (strcasecmp(env, "no") == 0) {
+	if (strcasecmp(__hugetlb_opts.morecore, "no") == 0) {
 		INFO("HUGETLB_MORECORE=%s, not setting up morecore\n",
-								env);
+						__hugetlb_opts.morecore);
 		return;
 	}
 
@@ -209,10 +207,10 @@ void hugetlbfs_setup_morecore(void)
 	 * This can be set explicitly by setting HUGETLB_MORECORE to a valid
 	 * page size string or by setting HUGETLB_DEFAULT_PAGE_SIZE.
 	 */
-	if (strncasecmp(env, "y", 1) == 0)
+	if (strncasecmp(__hugetlb_opts.morecore, "y", 1) == 0)
 		hpage_size = gethugepagesize();
 	else
-		hpage_size = parse_page_size(env);
+		hpage_size = parse_page_size(__hugetlb_opts.morecore);
 
 	if (hpage_size <= 0) {
 		if (errno == ENOSYS)
@@ -240,25 +238,6 @@ void hugetlbfs_setup_morecore(void)
 		__hugetlbfs_prefault = 0;
 	}
 
-	/*
-	 * We have been seeing some unexpected behavior from malloc when
-	 * heap shrinking is enabled, so heap shrinking is disabled by
-	 * default.
-	 *
-	 * If malloc has been called successfully before setup_morecore,
-	 * glibc will notice a gap between the previous top-of-heap and
-	 * the new top-of-heap when it calls hugetlbfs_morecore.  It treats
-	 * this as a "foreign sbrk."  Unfortunately, the "foreign sbrk"
-	 * handling code will then immediately try to free the memory
-	 * allocated by hugetlbfs_morecore!
-	 *
-	 * This behavior has been reported to the ptmalloc2 maintainer,
-	 * along with a patch to correct the behavior.
-	 */
-	env = getenv("HUGETLB_MORECORE_SHRINK");
-	if (env && strcasecmp(env, "yes") == 0)
-		shrink_ok = 1;
-
 	if (hpage_size <= 0) {
 		if (errno == ENOSYS)
 			WARNING("Hugepages unavailable\n");
@@ -275,12 +254,11 @@ void hugetlbfs_setup_morecore(void)
 		return;
 	}
 
-	env = getenv("HUGETLB_MORECORE_HEAPBASE");
-	if (env) {
-		heapaddr = strtoul(env, &ep, 16);
+	if (__hugetlb_opts.heapbase) {
+		heapaddr = strtoul(__hugetlb_opts.heapbase, &ep, 16);
 		if (*ep != '\0') {
 			WARNING("Can't parse HUGETLB_MORECORE_HEAPBASE: %s\n",
-			      env);
+			      __hugetlb_opts.heapbase);
 			return;
 		}
 	} else {
@@ -296,7 +274,7 @@ void hugetlbfs_setup_morecore(void)
 
 	/* Set some allocator options more appropriate for hugepages */
 
-	if (shrink_ok)
+	if (__hugetlb_opts.shrink_ok)
 		mallopt(M_TRIM_THRESHOLD, hpage_size / 2);
 	else
 		mallopt(M_TRIM_THRESHOLD, -1);
