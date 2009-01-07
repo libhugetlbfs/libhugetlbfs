@@ -377,8 +377,9 @@ static void probe_default_hpage_size(void)
 	 * Check if the user specified a default size, otherwise use the
 	 * system default size as reported by /proc/meminfo.
 	 */
-	if (__hugetlb_opts.def_page_size &&
-		strlen(__hugetlb_opts.def_page_size) > 0)
+	default_overrided = (__hugetlb_opts.def_page_size &&
+				strlen(__hugetlb_opts.def_page_size) > 0);
+	if (default_overrided)
 		size = parse_page_size(__hugetlb_opts.def_page_size);
 	else {
 		size = kernel_default_hugepage_size();
