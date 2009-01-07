@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <string.h>
 #include <limits.h>
+#include <mntent.h>
 
 #define _GNU_SOURCE /* for getopt_long */
 #include <unistd.h>
@@ -43,11 +44,18 @@ extern char *optarg;
 #define OPTION(opts, text)	fprintf(stderr, " %-25s  %s\n", opts, text)
 #define CONT(text) 		fprintf(stderr, " %-25s  %s\n", "", text)
 
+#define PROCMOUNTS "/proc/mounts"
+#define FS_NAME "hugetlbfs"
+#define MIN_COL 20
+#define MAX_SIZE_MNTENT (64 + PATH_MAX + 32 + 128 + 2 * sizeof(int))
+#define FORMAT_LEN 20
+
 void print_usage()
 {
 	fprintf(stderr, "hugeadm [options]\n");
 	fprintf(stderr, "options:\n");
 
+	OPTION("--list-all-mounts", "List all current hugetlbfs mount points");
 	OPTION("--pool-list", "List all pools");
 	OPTION("--pool-pages-min <size>:[+|-]<count>", "");
 	CONT("Adjust pool 'size' lower bound");
@@ -67,6 +75,7 @@ int opt_dry_run = 0;
  * getopts return values for options which are long only.
  */
 #define LONG_POOL		('p' << 8)
+#define LONG_LIST_ALL_MOUNTS	(LONG_POOL|'A')
 #define LONG_POOL_LIST		(LONG_POOL|'l')
 #define LONG_POOL_MIN_ADJ	(LONG_POOL|'m')
 #define LONG_POOL_MAX_ADJ	(LONG_POOL|'M')
@@ -102,6 +111,87 @@ void pool_list(void)
 		printf("%10ld %8ld %8ld %8ld %8s\n", pools[pos].pagesize,
 			pools[pos].minimum, pools[pos].size,
 			pools[pos].maximum, (pools[pos].is_default) ? "*" : "");
+	}
+}
+
+struct mount_list
+{
+	struct mntent entry;
+	char data[MAX_SIZE_MNTENT];
+	struct mount_list *next;
+};
+
+void print_mounts(struct mount_list *current, int longest)
+{
+	char format_str[FORMAT_LEN];
+
+	snprintf(format_str, FORMAT_LEN, "%%-%ds %%s\n", longest);
+	printf(format_str, "Mount Point", "Options");
+	while (current) {
+		printf(format_str, current->entry.mnt_dir,
+				   current->entry.mnt_opts);
+		current = current->next;
+	}
+}
+
+void mounts_list_all(void)
+{
+	FILE *mounts;
+	struct mount_list *list, *current, *previous = NULL;
+	int length, longest = MIN_COL;
+
+	/* First try /proc/mounts, then /etc/mtab */
+	mounts = setmntent(PROCMOUNTS, "r");
+	if (!mounts) {
+		mounts = setmntent(MOUNTED, "r");
+		if (!mounts) {
+			ERROR("unable to open %s or %s for reading",
+				PROCMOUNTS, MOUNTED);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	list = malloc(sizeof(struct mount_list));
+	if (!list) {
+		ERROR("out of memory");
+		exit(EXIT_FAILURE);
+	}
+
+	list->next = NULL;
+	current = list;
+	while (getmntent_r(mounts, &(current->entry), current->data, MAX_SIZE_MNTENT)) {
+		if (strcasecmp(current->entry.mnt_type, FS_NAME) == 0) {
+			length = strlen(current->entry.mnt_dir);
+			if (length > longest)
+				longest = length;
+
+			current->next = malloc(sizeof(struct mount_list));
+			if (!current->next) {
+				ERROR("out of memory");
+				exit(EXIT_FAILURE);
+			}
+			previous = current;
+			current = current->next;
+			current->next = NULL;
+		}
+	}
+
+	endmntent(mounts);
+
+	if (previous) {
+		free(previous->next);
+		previous->next = NULL;
+		print_mounts(list, longest);
+	} else {
+		/* No hugetlbfs mounts were found */
+		printf("No hugetlbfs mount point found.\n");
+	}
+
+	current = list;
+	while (current) {
+		previous = current;
+		current = current->next;
+		free(previous);
 	}
 }
 
@@ -256,6 +346,7 @@ int main(int argc, char** argv)
 	struct option long_opts[] = {
 		{"help",       no_argument, NULL, 'h'},
 
+		{"list-all-mounts", no_argument, NULL, LONG_LIST_ALL_MOUNTS},
 		{"pool-list", no_argument, NULL, LONG_POOL_LIST},
 		{"pool-pages-min", required_argument, NULL, LONG_POOL_MIN_ADJ},
 		{"pool-pages-max", required_argument, NULL, LONG_POOL_MAX_ADJ},
@@ -294,6 +385,11 @@ int main(int argc, char** argv)
 		switch (ret) {
 		case -1:
 			break;
+
+		case LONG_LIST_ALL_MOUNTS:
+			mounts_list_all();
+			break;
+
 		case LONG_POOL_LIST:
 			pool_list();
 			break;
