@@ -130,6 +130,7 @@ static void __free_huge_pages(void *ptr, int aligned)
 	char line[MAPS_BUF_SZ];
 	unsigned long start = 0, end = 0;
 	unsigned long palign = 0, hpalign = 0;
+	unsigned long hpalign_end = 0;
 
 	/*
 	 * /proc/self/maps is used to determine the length of the original
@@ -174,17 +175,39 @@ static void __free_huge_pages(void *ptr, int aligned)
 			break;
 		}
 
-		/* Check the unaligned possibilities */
-		if (!aligned && (start == palign || start == hpalign)) {
+		/* If the passed address is aligned, just move along */
+		if (aligned)
+			continue;
+
+		/*
+		 * If an address is hpage-aligned, record it but keep looking.
+		 * We might find a page-aligned or exact address later
+		 */
+		if (start == hpalign) {
+			hpalign_end = strtoull(bufptr, NULL, 16);
+			continue;
+		}
+
+		/* If an address is page-aligned, free it */
+		if (start == palign) {
 			end = strtoull(bufptr, NULL, 16);
 			munmap((void *)start, end - start);
 			break;
 		}
+
 	}
 
-	/* Print a warning if the ptr appeared to point nowhere */
-	if (end == 0)
-		ERROR("hugepages_free using invalid or double free\n");
+	/*
+	 * If no exact or page-aligned address was found, check for a
+	 * hpage-aligned address. If found, free it, otherwise warn that
+	 * the ptr pointed nowhere
+	 */
+	if (end == 0) {
+		if (hpalign_end == 0)
+			ERROR("hugepages_free using invalid or double free\n");
+		else
+			munmap((void *)hpalign, hpalign_end - hpalign);
+	}
 
 	fclose(fd);
 }
