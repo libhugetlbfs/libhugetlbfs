@@ -191,22 +191,22 @@ tests/%:
 tools:  $(foreach file,$(INSTALL_BIN),$(BIN_OBJ_DIR)/$(file))
 
 check:	all
-	cd tests; ./run_tests.sh
+	cd tests; ./run_tests.py
 
 checkv:	all
-	cd tests; ./run_tests.sh -vV
+	cd tests; ./run_tests.py -vV
 
 func:	all
-	cd tests; ./run_tests.sh -t func
+	cd tests; ./run_tests.py -t func
 
 funcv:	all
-	cd tests; ./run_tests.sh -t func -vV
+	cd tests; ./run_tests.py -t func -vV
 
 stress:	all
-	cd tests; ./run_tests.sh -t stress
+	cd tests; ./run_tests.py -t stress
 
 stressv: all
-	cd tests; ./run_tests.sh -t stress -vV
+	cd tests; ./run_tests.py -t stress -vV
 
 # Don't want to remake objects just 'cos the directory timestamp changes
 $(OBJDIRS): %:
