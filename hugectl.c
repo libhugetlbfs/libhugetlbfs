@@ -73,6 +73,8 @@ void print_usage()
 	OPTION("--dry-run", "describe what would be done without doing it");
 
 	OPTION("--library-use-path", "Use the system library path");
+	OPTION("--share-text", "Share text segments between multiple");
+	CONT("application instances");
 	OPTION("--library-path <path>", "Select a library prefix");
 	CONT("(Default: "
 #ifdef LIBDIR32
@@ -150,6 +152,7 @@ void verbose_expose(void)
 
 #define LONG_DRY_RUN	(LONG_BASE | 'd')
 
+#define LONG_SHARE	(LONG_BASE | 's')
 #define LONG_NO_LIBRARY	(LONG_BASE | 'L')
 #define LONG_LIBRARY	(LONG_BASE | 'l')
 
@@ -320,6 +323,7 @@ int main(int argc, char** argv)
 {
 	int opt_mappings = 0;
 	int opt_preload = 1;
+	int opt_share = 0;
 	char *opt_library = NULL;
 
 	char opts[] = "+hv";
@@ -333,6 +337,7 @@ int main(int argc, char** argv)
 			       required_argument, NULL, LONG_LIBRARY},
 		{"library-use-path",
 			       no_argument, NULL, LONG_NO_LIBRARY},
+		{"share-text", no_argument, NULL, LONG_SHARE},
 
 		{"disable",    optional_argument, NULL, MAP_BASE|MAP_DISABLE},
 		{"text",       optional_argument, NULL, MAP_BASE|MAP_TEXT},
@@ -387,6 +392,10 @@ int main(int argc, char** argv)
 			opt_library = optarg;
 			break;
 
+		case LONG_SHARE:
+			opt_share = 1;
+			break;
+
 		case -1:
 			break;
 
@@ -413,6 +422,9 @@ int main(int argc, char** argv)
 
 	if (opt_preload)
 		ldpreload(opt_mappings);
+
+	if (opt_share)
+		setup_environment("HUGETLB_SHARE", "1");
 
 	if (opt_dry_run)
 		exit(EXIT_SUCCESS);

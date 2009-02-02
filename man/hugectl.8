@@ -57,6 +57,12 @@ This option overrides shmget() to back shared memory regions with hugepages
 if possible. Segment size requests will be aligned to fit to the default
 hugepage size region.
 
+.TP
+.B --share-text
+Request that multiple application instances share text segments that are
+backed with huge pages.  This option sets the environment variable
+HUGETLB_SHARE to 1.
+
 .PP
 The following options affect how \fBhugectl\fP behaves.
 
