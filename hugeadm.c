@@ -73,6 +73,14 @@ void print_usage()
 	CONT("Adjust pool 'size' upper bound");
 	OPTION("--create-mounts", "Creates a mount point for each available");
 	CONT("huge page size on this system under /var/lib/hugetlbfs");
+	OPTION("--create-user-mounts <user>", "");
+	CONT("Creates a mount point for each available huge");
+	CONT("page size under /var/lib/hugetlbfs/<user>");
+	CONT("usable by user <user>");
+	OPTION("--create-group-mounts <group>", "");
+	CONT("Creates a mount point for each available huge");
+	CONT("page size under /var/lib/hugetlbfs/<group>");
+	CONT("usable by group <group>");
 
 	OPTION("--page-sizes", "Display page sizes that a configured pool");
 	OPTION("--page-sizes-all",
@@ -98,9 +106,11 @@ int opt_dry_run = 0;
 #define LONG_PAGE_SIZES	(LONG_PAGE|'s')
 #define LONG_PAGE_AVAIL	(LONG_PAGE|'a')
 
-#define LONG_MOUNTS		('m' << 8)
-#define LONG_CREATE_MOUNTS	(LONG_MOUNTS|'C')
-#define LONG_LIST_ALL_MOUNTS	(LONG_MOUNTS|'A')
+#define LONG_MOUNTS			('m' << 8)
+#define LONG_CREATE_MOUNTS		(LONG_MOUNTS|'C')
+#define LONG_CREATE_USER_MOUNTS		(LONG_MOUNTS|'U')
+#define LONG_CREATE_GROUP_MOUNTS	(LONG_MOUNTS|'G')
+#define LONG_LIST_ALL_MOUNTS		(LONG_MOUNTS|'A')
 
 #define MAX_POOLS	32
 
@@ -541,6 +551,8 @@ int main(int argc, char** argv)
 		{"pool-pages-min", required_argument, NULL, LONG_POOL_MIN_ADJ},
 		{"pool-pages-max", required_argument, NULL, LONG_POOL_MAX_ADJ},
 		{"create-mounts", no_argument, NULL, LONG_CREATE_MOUNTS},
+		{"create-user-mounts", required_argument, NULL, LONG_CREATE_USER_MOUNTS},
+		{"create-group-mounts", required_argument, NULL, LONG_CREATE_GROUP_MOUNTS},
 
 		{"page-sizes", no_argument, NULL, LONG_PAGE_SIZES},
 		{"page-sizes-all", no_argument, NULL, LONG_PAGE_AVAIL},
@@ -609,6 +621,16 @@ int main(int argc, char** argv)
 		case LONG_CREATE_MOUNTS:
 			snprintf(base, PATH_MAX, "%s", MOUNT_DIR);
 			create_mounts(NULL, NULL, base, S_IRWXU | S_IRWXG);
+			break;
+
+		case LONG_CREATE_USER_MOUNTS:
+			snprintf(base, PATH_MAX, "%s/user", MOUNT_DIR);
+			create_mounts(optarg, NULL, base, S_IRWXU);
+			break;
+
+		case LONG_CREATE_GROUP_MOUNTS:
+			snprintf(base, PATH_MAX, "%s/group", MOUNT_DIR);
+			create_mounts(NULL, optarg, base, S_IRWXG);
 			break;
 
 		case LONG_PAGE_SIZES:
