@@ -29,6 +29,13 @@
 #include <string.h>
 #include <limits.h>
 #include <mntent.h>
+#include <unistd.h>
+#include <grp.h>
+#include <pwd.h>
+
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/mount.h>
 
 #define _GNU_SOURCE /* for getopt_long */
 #include <unistd.h>
@@ -43,6 +50,9 @@ extern char *optarg;
 
 #define OPTION(opts, text)	fprintf(stderr, " %-25s  %s\n", opts, text)
 #define CONT(text) 		fprintf(stderr, " %-25s  %s\n", "", text)
+
+#define MOUNT_DIR "/var/lib/hugetlbfs"
+#define OPT_MAX 4096
 
 #define PROCMOUNTS "/proc/mounts"
 #define FS_NAME "hugetlbfs"
@@ -61,10 +71,15 @@ void print_usage()
 	CONT("Adjust pool 'size' lower bound");
 	OPTION("--pool-pages-max <size>:[+|-]<count>", "");
 	CONT("Adjust pool 'size' upper bound");
+	OPTION("--create-mounts", "Creates a mount point for each available");
+	CONT("huge page size on this system under /var/lib/hugetlbfs");
 
 	OPTION("--page-sizes", "Display page sizes that a configured pool");
 	OPTION("--page-sizes-all",
 			"Display page sizes support by the hardware");
+	OPTION("--dry-run", "Print the equivalent shell commands for what");
+	CONT("the specified options would have done without");
+	CONT("taking any action");
 
 	OPTION("--help, -h", "Prints this message");
 }
@@ -75,7 +90,6 @@ int opt_dry_run = 0;
  * getopts return values for options which are long only.
  */
 #define LONG_POOL		('p' << 8)
-#define LONG_LIST_ALL_MOUNTS	(LONG_POOL|'A')
 #define LONG_POOL_LIST		(LONG_POOL|'l')
 #define LONG_POOL_MIN_ADJ	(LONG_POOL|'m')
 #define LONG_POOL_MAX_ADJ	(LONG_POOL|'M')
@@ -83,6 +97,10 @@ int opt_dry_run = 0;
 #define LONG_PAGE	('P' << 8)
 #define LONG_PAGE_SIZES	(LONG_PAGE|'s')
 #define LONG_PAGE_AVAIL	(LONG_PAGE|'a')
+
+#define LONG_MOUNTS		('m' << 8)
+#define LONG_CREATE_MOUNTS	(LONG_MOUNTS|'C')
+#define LONG_LIST_ALL_MOUNTS	(LONG_MOUNTS|'A')
 
 #define MAX_POOLS	32
 
@@ -192,6 +210,177 @@ void mounts_list_all(void)
 		previous = current;
 		current = current->next;
 		free(previous);
+	}
+}
+
+int make_dir(char *path, mode_t mode, uid_t uid, gid_t gid)
+{
+	struct passwd *pwd;
+	struct group *grp;
+
+	if (opt_dry_run) {
+		pwd = getpwuid(uid);
+		grp = getgrgid(gid);
+		printf("if [ ! -e %s ]\n", path);
+		printf("then\n");
+		printf(" mkdir %s\n", path);
+		printf(" chown %s:%s %s\n", pwd->pw_name, grp->gr_name, path);
+		printf(" chmod %o %s\n", mode, path);
+		printf("fi\n");
+		return 0;
+	}
+
+	if (mkdir(path, mode)) {
+		if (errno != EEXIST) {
+			ERROR("Unable to create dir %s, error: %s\n",
+				path, strerror(errno));
+			return 1;
+		}
+	} else {
+		if (chown(path, uid, gid)) {
+			ERROR("Unable to change ownership of %s, error: %s\n",
+				path, strerror(errno));
+			return 1;
+		}
+
+		if (chmod(path, mode)) {
+			ERROR("Unable to change permission on %s, error: %s\n",
+				path, strerror(errno));
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+/**
+ * ensure_dir will build the entire directory structure up to and
+ * including path, all directories built will be owned by
+ * user:group and permissions will be set to mode.
+ */
+int ensure_dir(char *path, mode_t mode, uid_t uid, gid_t gid)
+{
+	char *idx;
+
+	if (!path || strlen(path) == 0)
+		return 0;
+
+	idx = strchr(path + 1, '/');
+
+	do {
+		if (idx)
+			*idx = '\0';
+
+		if (make_dir(path, mode, uid, gid))
+			return 1;
+
+		if (idx) {
+			*idx = '/';
+			idx++;
+		}
+	} while ((idx = strchr(idx, '/')) != NULL);
+
+	if (make_dir(path, mode, uid, gid))
+		return 1;
+
+	return 0;
+}
+
+int mount_dir(char *path, char *options, mode_t mode, uid_t uid, gid_t gid)
+{
+	struct passwd *pwd;
+	struct group *grp;
+
+	if (opt_dry_run) {
+		pwd = getpwuid(uid);
+		grp = getgrgid(gid);
+		printf("mount -t %s none %s -o %s\n", FS_NAME,
+			path, options);
+		printf("chown %s:%s %s\n", pwd->pw_name, grp->gr_name,
+			path);
+		printf("chmod %o %s\n", mode, path);
+	} else {
+		if (mount("none", path, FS_NAME, 0, options)) {
+			ERROR("Unable to mount %s, error: %s\n",
+				path, strerror(errno));
+			return 1;
+		}
+
+		if (chown(path, uid, gid)) {
+			ERROR("Unable to change ownership of %s, error: %s\n",
+				path, strerror(errno));
+			return 1;
+		}
+
+		if (chmod(path, mode)) {
+			ERROR("Unable to set permissions on %s, error: %s\n",
+				path, strerror(errno));
+			return 1;
+		}
+	}
+	return 0;
+}
+
+
+void create_mounts(char *user, char *group, char *base, mode_t mode)
+{
+	struct hpage_pool pools[MAX_POOLS];
+	char path[PATH_MAX];
+	char options[OPT_MAX];
+	int cnt, pos;
+	struct passwd *pwd;
+	struct group *grp;
+	uid_t uid = 0;
+	gid_t gid = 0;
+
+	if (geteuid() != 0) {
+		ERROR("Mounts can only be created by root\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (user) {
+		pwd = getpwnam(user);
+		if (!pwd) {
+			ERROR("Could not find specified user %s\n", user);
+			exit(EXIT_FAILURE);
+		}
+		uid = pwd->pw_uid;
+	} else if (group) {
+		grp = getgrnam(group);
+		if (!grp) {
+			ERROR("Could not find specified group %s\n", group);
+			exit(EXIT_FAILURE);
+		}
+		gid = grp->gr_gid;
+	}
+
+	if (ensure_dir(base,
+		S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH, 0, 0))
+		exit(EXIT_FAILURE);
+
+	cnt = hpool_sizes(pools, MAX_POOLS);
+	if (cnt < 0) {
+		ERROR("Unable to obtain pools list\n");
+		exit(EXIT_FAILURE);
+	}
+
+	for (pos=0; cnt--; pos++) {
+		if (user)
+			snprintf(path, PATH_MAX, "%s/%s/pagesize-%ld",
+				base, user, pools[pos].pagesize);
+		else if (group)
+			snprintf(path, PATH_MAX, "%s/%s/pagesize-%ld",
+				base, group, pools[pos].pagesize);
+		else
+			snprintf(path, PATH_MAX, "%s/pagesize-%ld",
+				base, pools[pos].pagesize);
+		snprintf(options, OPT_MAX, "pagesize=%ld",
+				pools[pos].pagesize);
+		if (ensure_dir(path, mode, uid, gid))
+			exit(EXIT_FAILURE);
+
+		if (mount_dir(path, options, mode, uid, gid))
+			exit(EXIT_FAILURE);
 	}
 }
 
@@ -341,7 +530,8 @@ int main(int argc, char** argv)
 	int ops;
 	int has_hugepages = kernel_has_hugepages();
 
-	char opts[] = "+h";
+	char opts[] = "+hd";
+	char base[PATH_MAX];
 	int ret = 0, index = 0;
 	struct option long_opts[] = {
 		{"help",       no_argument, NULL, 'h'},
@@ -350,9 +540,11 @@ int main(int argc, char** argv)
 		{"pool-list", no_argument, NULL, LONG_POOL_LIST},
 		{"pool-pages-min", required_argument, NULL, LONG_POOL_MIN_ADJ},
 		{"pool-pages-max", required_argument, NULL, LONG_POOL_MAX_ADJ},
+		{"create-mounts", no_argument, NULL, LONG_CREATE_MOUNTS},
 
 		{"page-sizes", no_argument, NULL, LONG_PAGE_SIZES},
 		{"page-sizes-all", no_argument, NULL, LONG_PAGE_AVAIL},
+		{"dry-run", no_argument, NULL, 'd'},
 
 		{0},
 	};
@@ -374,6 +566,10 @@ int main(int argc, char** argv)
 		case 'h':
 			print_usage();
 			exit(EXIT_SUCCESS);
+
+		case 'd':
+			opt_dry_run = 1;
+			continue;
 
 		default:
 			/* All other commands require hugepage support. */
@@ -408,6 +604,11 @@ int main(int argc, char** argv)
 				exit(EXIT_FAILURE);
 			}
 			pool_adjust(optarg, POOL_MAX);
+			break;
+
+		case LONG_CREATE_MOUNTS:
+			snprintf(base, PATH_MAX, "%s", MOUNT_DIR);
+			create_mounts(NULL, NULL, base, S_IRWXU | S_IRWXG);
 			break;
 
 		case LONG_PAGE_SIZES:

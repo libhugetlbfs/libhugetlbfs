@@ -29,6 +29,17 @@ allocate pages if applications request more hugepages than the minimum size
 of the pool. There is no guarantee that more pages than this minimum pool
 size can be allocated.
 
+The following options create mounts hugetlbfs mount points.
+
+.TP
+.B --create-mounts
+
+This creates mount points for each supported huge page size under
+/var/lib/hugetlbfs.  After creation they are mounts and are owned by
+root:root with permissions set to 770.  Each mount point is named
+pagesize-<size in bytes>.
+
+
 The following options display information about the pools.
 
 .TP
