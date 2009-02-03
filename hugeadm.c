@@ -81,6 +81,10 @@ void print_usage()
 	CONT("Creates a mount point for each available huge");
 	CONT("page size under /var/lib/hugetlbfs/<group>");
 	CONT("usable by group <group>");
+	OPTION("--create-global-mounts", "");
+	CONT("Creates a mount point for each available huge");
+	CONT("page size under /var/lib/hugetlbfs/global");
+	CONT("for use by anyone");
 
 	OPTION("--page-sizes", "Display page sizes that a configured pool");
 	OPTION("--page-sizes-all",
@@ -109,7 +113,8 @@ int opt_dry_run = 0;
 #define LONG_MOUNTS			('m' << 8)
 #define LONG_CREATE_MOUNTS		(LONG_MOUNTS|'C')
 #define LONG_CREATE_USER_MOUNTS		(LONG_MOUNTS|'U')
-#define LONG_CREATE_GROUP_MOUNTS	(LONG_MOUNTS|'G')
+#define LONG_CREATE_GROUP_MOUNTS	(LONG_MOUNTS|'g')
+#define LONG_CREATE_GLOBAL_MOUNTS	(LONG_MOUNTS|'G')
 #define LONG_LIST_ALL_MOUNTS		(LONG_MOUNTS|'A')
 
 #define MAX_POOLS	32
@@ -553,6 +558,7 @@ int main(int argc, char** argv)
 		{"create-mounts", no_argument, NULL, LONG_CREATE_MOUNTS},
 		{"create-user-mounts", required_argument, NULL, LONG_CREATE_USER_MOUNTS},
 		{"create-group-mounts", required_argument, NULL, LONG_CREATE_GROUP_MOUNTS},
+		{"create-global-mounts", no_argument, NULL, LONG_CREATE_GLOBAL_MOUNTS},
 
 		{"page-sizes", no_argument, NULL, LONG_PAGE_SIZES},
 		{"page-sizes-all", no_argument, NULL, LONG_PAGE_AVAIL},
@@ -631,6 +637,11 @@ int main(int argc, char** argv)
 		case LONG_CREATE_GROUP_MOUNTS:
 			snprintf(base, PATH_MAX, "%s/group", MOUNT_DIR);
 			create_mounts(NULL, optarg, base, S_IRWXG);
+			break;
+
+		case LONG_CREATE_GLOBAL_MOUNTS:
+			snprintf(base, PATH_MAX, "%s/global", MOUNT_DIR);
+			create_mounts(NULL, NULL, base, S_IRWXU | S_IRWXG | S_IRWXO);
 			break;
 
 		case LONG_PAGE_SIZES:
