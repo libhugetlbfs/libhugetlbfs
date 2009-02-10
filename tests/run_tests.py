@@ -561,10 +561,10 @@ def stress_tests():
     # This is to catch off-by-ones or races in the kernel allocated that
     # can make allocating all hugepages a problem
     if nr_pages > 1:
-        do_test("shm-fork %i %i" % (threads, nr_pages / 2))
-    do_test("shm-fork %i %i" % (threads, nr_pages))
+        do_test("shm-fork.sh %i %i" % (threads, nr_pages / 2))
+    do_test("shm-fork.sh %i %i" % (threads, nr_pages))
 
-    do_test("shm-getraw %i %s" % (nr_pages, "/dev/full"))
+    do_test("shm-getraw.sh %i %s" % (nr_pages, "/dev/full"))
     restore_shm_sysctl(sysctls)
 
 
