@@ -1,3 +1,18 @@
+libhugetlbfs 2.2 "Barkers Extra Hot"
+======================================================================
+New Features
+* Refactored environment variable parsing to read once and store values
+* Add --list-mounts and --list-all-mounts options to hugeadm
+* Rework test suite to run for all avaialbe page sizes
+* Add --create-mounts for root only, --create-user-mounts,
+  --create-group-mounts, and --create-global-mounts options to hugeadm
+* Add --share-text option to hugectl
+
+Test Suite Fixes
+* Added wrapper to shm-fork and shm-getraw tests that makes runs on
+  hpage sizes different from default expected failures
+* Reworked shmoverride tests to handle new env parsing
+
 libhugetlbfs 2.1 "NM 64"
 ======================================================================
 New Features
