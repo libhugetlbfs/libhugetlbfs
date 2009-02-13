@@ -305,6 +305,8 @@ int mount_dir(char *path, char *options, mode_t mode, uid_t uid, gid_t gid)
 {
 	struct passwd *pwd;
 	struct group *grp;
+	struct mntent entry;
+	FILE *mounts;
 
 	if (opt_dry_run) {
 		pwd = getpwuid(uid);
@@ -319,6 +321,23 @@ int mount_dir(char *path, char *options, mode_t mode, uid_t uid, gid_t gid)
 			ERROR("Unable to mount %s, error: %s\n",
 				path, strerror(errno));
 			return 1;
+		}
+
+		mounts = setmntent(MOUNTED, "a+");
+		if (mounts) {
+			entry.mnt_fsname = FS_NAME;
+			entry.mnt_dir = path;
+			entry.mnt_type = FS_NAME;
+			entry.mnt_opts = options;
+			entry.mnt_freq = 0;
+			entry.mnt_passno = 0;
+			if (addmntent(mounts, &entry))
+				WARNING("Unable to add entry %s to %s, error: %s\n",
+					path, MOUNTED, strerror(errno));
+			endmntent(mounts);
+		} else {
+			WARNING("Unable to open %s, error: %s\n",
+				MOUNTED, strerror(errno));
 		}
 
 		if (chown(path, uid, gid)) {
