@@ -208,8 +208,9 @@ def get_pagesizes():
     active mount points and at least one huge page allocated to the pool.
     """
     sizes = set()
+    out = ""
     (rc, out) = bash(cmd_env('') + "hugeadm --page-sizes")
-    if rc != 0: return sizes
+    if rc != 0 or out == "": return sizes
 
     for size in out.split("\n"): sizes.add(int(size))
     return sizes
@@ -598,6 +599,11 @@ def main():
     if len(testsets) == 0: testsets = set(["func", "stress"])
     if len(wordsizes) == 0: wordsizes = set([32, 64])
     if len(pagesizes) == 0: pagesizes = get_pagesizes()
+
+    if len(pagesizes) == 0:
+        print "Unable to find available page sizes, are you sure hugetlbfs"
+        print "is mounted and there are available huge pages?"
+        return 1
 
     setup_env(env_override, env_defaults)
     init_results()
