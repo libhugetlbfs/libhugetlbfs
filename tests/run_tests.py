@@ -536,7 +536,7 @@ def functional_tests():
 
     # Test accounting of HugePages_{Total|Free|Resv|Surp}
     #  Alters the size of the hugepage pool so should probably be run last
-    do_test("counters")
+    do_test("counters.sh")
 
 def stress_tests():
     """
