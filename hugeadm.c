@@ -84,7 +84,7 @@ void print_usage()
 	OPTION("--create-global-mounts", "");
 	CONT("Creates a mount point for each available huge");
 	CONT("page size under /var/lib/hugetlbfs/global");
-	CONT("for use by anyone");
+	CONT("usable by anyone");
 
 	OPTION("--page-sizes", "Display page sizes that a configured pool");
 	OPTION("--page-sizes-all",
