@@ -186,7 +186,7 @@ long file_read_ulong(char *file, const char *tag)
 	readerr = errno;
 	close(fd);
 	if (len < 0) {
-		ERROR("Error reading %s: %s\n", file, strerror(errno));
+		ERROR("Error reading %s: %s\n", file, strerror(readerr));
 		return -1;
 	}
 	if (len == sizeof(buf)) {
