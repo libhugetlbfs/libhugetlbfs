@@ -77,25 +77,25 @@ static void *fallback_base_pages(size_t len, ghp_t flags)
 void *get_huge_pages(size_t len, ghp_t flags)
 {
 	void *buf;
-	int heap_fd;
+	int buf_fd;
 
 	/* Catch an altogether-too easy typo */
 	if (flags & GHR_MASK)
 		ERROR("Improper use of GHR_* in get_huge_pages()\n");
 
 	/* Create a file descriptor for the new region */
-	heap_fd = hugetlbfs_unlinked_fd();
-	if (heap_fd < 0) {
-		WARNING("Couldn't open hugetlbfs file for %zd-sized heap\n",
+	buf_fd = hugetlbfs_unlinked_fd();
+	if (buf_fd < 0) {
+		WARNING("Couldn't open hugetlbfs file for %zd-sized buffer\n",
 				len);
 		return NULL;
 	}
 
 	/* Map the requested region */
 	buf = mmap(NULL, len, PROT_READ|PROT_WRITE,
-		 MAP_PRIVATE, heap_fd, 0);
+		 MAP_PRIVATE, buf_fd, 0);
 	if (buf == MAP_FAILED) {
-		close(heap_fd);
+		close(buf_fd);
 
 		WARNING("get_huge_pages: New region mapping failed (flags: 0x%lX): %s\n",
 			flags, strerror(errno));
@@ -103,9 +103,9 @@ void *get_huge_pages(size_t len, ghp_t flags)
 	}
 
 	/* Fault the region to ensure accesses succeed */
-	if (hugetlbfs_prefault(heap_fd, buf, len) != 0) {
+	if (hugetlbfs_prefault(buf_fd, buf, len) != 0) {
 		munmap(buf, len);
-		close(heap_fd);
+		close(buf_fd);
 
 		WARNING("get_huge_pages: Prefaulting failed (flags: 0x%lX): %s\n",
 			flags, strerror(errno));
@@ -113,8 +113,8 @@ void *get_huge_pages(size_t len, ghp_t flags)
 	}
 
 	/* Close the file so we do not have to track the descriptor */
-	if (close(heap_fd) != 0) {
-		WARNING("Failed to close new heap fd: %s\n", strerror(errno));
+	if (close(buf_fd) != 0) {
+		WARNING("Failed to close new buffer fd: %s\n", strerror(errno));
 		munmap(buf, len);
 		return NULL;
 	}
