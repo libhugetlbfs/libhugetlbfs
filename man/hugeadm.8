@@ -117,6 +117,15 @@ there is not guarantee that the system can allocate the pages on demand when
 the number of huge pages requested by applications is between the Minimum and
 Maximum pool sizes.
 
+.TP
+.B --hard
+
+
+This option is specified with --pool-pages-min to retry allocations multiple
+times on failure to allocate the desired count of pages. It initially tries
+to resize the pool up to 5 times and continues to try if progress is being
+made towards the resize.
+
 .SH SEE ALSO
 .I oprofile(1),
 .I pagesize(1),

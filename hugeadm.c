@@ -67,6 +67,9 @@ void print_usage()
 
 	OPTION("--list-all-mounts", "List all current hugetlbfs mount points");
 	OPTION("--pool-list", "List all pools");
+	OPTION("--hard", "specified with --pool-pages-min to make");
+	CONT("multiple attempts at adjusting the pool size to the");
+	CONT("specified count on failure");
 	OPTION("--pool-pages-min <size>:[+|-]<count>", "");
 	CONT("Adjust pool 'size' lower bound");
 	OPTION("--pool-pages-max <size>:[+|-]<count>", "");
@@ -97,6 +100,7 @@ void print_usage()
 }
 
 int opt_dry_run = 0;
+int opt_hard = 0;
 
 /*
  * getopts return values for options which are long only.
@@ -105,6 +109,8 @@ int opt_dry_run = 0;
 #define LONG_POOL_LIST		(LONG_POOL|'l')
 #define LONG_POOL_MIN_ADJ	(LONG_POOL|'m')
 #define LONG_POOL_MAX_ADJ	(LONG_POOL|'M')
+
+#define LONG_HARD		('h' << 8)
 
 #define LONG_PAGE	('P' << 8)
 #define LONG_PAGE_SIZES	(LONG_PAGE|'s')
@@ -465,6 +471,7 @@ void pool_adjust(char *cmd, unsigned int counter)
 
 	unsigned long min;
 	unsigned long max;
+	unsigned long last_pool_value;
 
 	/* Extract the pagesize and adjustment. */
 	page_size_str = strtok_r(cmd, ":", &iter);
@@ -518,16 +525,38 @@ void pool_adjust(char *cmd, unsigned int counter)
 		INFO("setting HUGEPAGES_OC to %ld\n", (max - min));
 		set_huge_page_counter(page_size, HUGEPAGES_OC, (max - min));
 	}
-	if (pools[pos].minimum != min) {
-		INFO("setting HUGEPAGES_TOTAL to %ld\n", min);
+
+	if (opt_hard)
+		cnt = 5;
+	else
+		cnt = -1;
+
+	INFO("setting HUGEPAGES_TOTAL to %ld\n", min);
+	set_huge_page_counter(page_size, HUGEPAGES_TOTAL, min);
+	get_pool_size(page_size, &pools[pos]);
+
+	/* If we fail to make an allocation, retry if user requests */
+	last_pool_value = pools[pos].minimum;
+	while ((pools[pos].minimum != min) && (cnt > 0)) {
+		/* Make note if progress is being made and sleep for IO */
+		if (last_pool_value == pools[pos].minimum)
+			cnt--;
+		else
+			cnt = 5;
+		sleep(6);
+
+		last_pool_value = pools[pos].minimum;
+		INFO("Retrying allocation HUGEPAGES_TOTAL to %ld current %ld\n",
+							min, pools[pos].minimum);
 		set_huge_page_counter(page_size, HUGEPAGES_TOTAL, min);
+		get_pool_size(page_size, &pools[pos]);
 	}
+
 	/*
 	 * HUGEPAGES_TOTAL is not guarenteed to check to exactly the figure
 	 * requested should there be insufficient pages.  Check the new
 	 * value and adjust HUGEPAGES_OC accordingly.
 	 */
-	get_pool_size(page_size, &pools[pos]);
 	if (pools[pos].minimum != min) {
 		WARNING("failed to set pool minimum to %ld became %ld\n",
 			min, pools[pos].minimum);
@@ -566,6 +595,7 @@ int main(int argc, char** argv)
 
 	char opts[] = "+hd";
 	char base[PATH_MAX];
+	char * opt_min_adj = NULL;
 	int ret = 0, index = 0;
 	struct option long_opts[] = {
 		{"help",       no_argument, NULL, 'h'},
@@ -574,6 +604,7 @@ int main(int argc, char** argv)
 		{"pool-list", no_argument, NULL, LONG_POOL_LIST},
 		{"pool-pages-min", required_argument, NULL, LONG_POOL_MIN_ADJ},
 		{"pool-pages-max", required_argument, NULL, LONG_POOL_MAX_ADJ},
+		{"hard", no_argument, NULL, LONG_HARD},
 		{"create-mounts", no_argument, NULL, LONG_CREATE_MOUNTS},
 		{"create-user-mounts", required_argument, NULL, LONG_CREATE_USER_MOUNTS},
 		{"create-group-mounts", required_argument, NULL, LONG_CREATE_GROUP_MOUNTS},
@@ -619,6 +650,10 @@ int main(int argc, char** argv)
 		case -1:
 			break;
 
+		case LONG_HARD:
+			opt_hard = 1;
+			continue;
+
 		case LONG_LIST_ALL_MOUNTS:
 			mounts_list_all();
 			break;
@@ -628,10 +663,7 @@ int main(int argc, char** argv)
 			break;
 
 		case LONG_POOL_MIN_ADJ:
-			if (! kernel_has_overcommit())
-				pool_adjust(optarg, POOL_BOTH);
-			else
-				pool_adjust(optarg, POOL_MIN);
+			opt_min_adj = optarg;
 			break;
 
 		case LONG_POOL_MAX_ADJ:
@@ -679,6 +711,14 @@ int main(int argc, char** argv)
 		if (ret != -1)
 			ops++;
 	}
+
+	if (opt_min_adj != NULL) {
+		if (! kernel_has_overcommit())
+			pool_adjust(opt_min_adj, POOL_BOTH);
+		else
+			pool_adjust(opt_min_adj, POOL_MIN);
+	}
+
 	index = optind;
 
 	if ((argc - index) != 0 || ops == 0) {
