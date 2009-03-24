@@ -595,8 +595,8 @@ int main(int argc, char** argv)
 
 	char opts[] = "+hd";
 	char base[PATH_MAX];
-	char * opt_min_adj = NULL;
-	int ret = 0, index = 0;
+	char *opt_min_adj[MAX_POOLS];
+	int ret = 0, index = 0, minadj_count = 0;
 	struct option long_opts[] = {
 		{"help",       no_argument, NULL, 'h'},
 
@@ -663,7 +663,7 @@ int main(int argc, char** argv)
 			break;
 
 		case LONG_POOL_MIN_ADJ:
-			opt_min_adj = optarg;
+			opt_min_adj[minadj_count++] = optarg;
 			break;
 
 		case LONG_POOL_MAX_ADJ:
@@ -712,11 +712,11 @@ int main(int argc, char** argv)
 			ops++;
 	}
 
-	if (opt_min_adj != NULL) {
+	while (--minadj_count >= 0) {
 		if (! kernel_has_overcommit())
-			pool_adjust(opt_min_adj, POOL_BOTH);
+			pool_adjust(opt_min_adj[minadj_count], POOL_BOTH);
 		else
-			pool_adjust(opt_min_adj, POOL_MIN);
+			pool_adjust(opt_min_adj[minadj_count], POOL_MIN);
 	}
 
 	index = optind;
