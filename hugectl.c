@@ -69,6 +69,7 @@ void print_usage()
 	OPTION("--shm", "Requests remapping of shared memory segments");
 
 	OPTION("--no-preload", "Disable preloading the libhugetlbfs library");
+	OPTION("--force-preload", "Force preloading the libhugetlbfs library");
 
 	OPTION("--dry-run", "describe what would be done without doing it");
 
@@ -87,6 +88,7 @@ void print_usage()
 }
 
 int opt_dry_run = 0;
+int opt_force_preload = 0;
 int verbose_level = VERBOSITY_DEFAULT;
 
 void verbose_init(void)
@@ -148,13 +150,14 @@ void verbose_expose(void)
 #define MAP_BASE	0x1000
 #define LONG_BASE	0x2000
 
-#define LONG_NO_PRELOAD	(LONG_BASE | 'p')
+#define LONG_NO_PRELOAD		(LONG_BASE | 'p')
+#define LONG_FORCE_PRELOAD	(LONG_BASE | 'F')
 
-#define LONG_DRY_RUN	(LONG_BASE | 'd')
+#define LONG_DRY_RUN		(LONG_BASE | 'd')
 
-#define LONG_SHARE	(LONG_BASE | 's')
-#define LONG_NO_LIBRARY	(LONG_BASE | 'L')
-#define LONG_LIBRARY	(LONG_BASE | 'l')
+#define LONG_SHARE		(LONG_BASE | 's')
+#define LONG_NO_LIBRARY		(LONG_BASE | 'L')
+#define LONG_LIBRARY		(LONG_BASE | 'l')
 
 /*
  * Mapping selectors, one per remappable/backable area as requested
@@ -311,9 +314,10 @@ void ldpreload(int count)
 	if (map_size[MAP_SHM])
 		allowed++;
 
-	if (allowed == count) {
+	if ((allowed == count) || opt_force_preload) {
 		setup_environment("LD_PRELOAD", "libhugetlbfs.so");
-		WARNING("LD_PRELOAD in use for lone --heap/--shm\n");
+		if (allowed == count)
+			INFO("LD_PRELOAD in use for lone --heap/--shm\n");
 	} else {
 		WARNING("LD_PRELOAD not appropriate for this map combination\n");
 	}
@@ -332,6 +336,8 @@ int main(int argc, char** argv)
 		{"help",       no_argument, NULL, 'h'},
 		{"verbose",    required_argument, NULL, 'v' },
 		{"no-preload", no_argument, NULL, LONG_NO_PRELOAD},
+		{"force-preload",
+			       no_argument, NULL, LONG_FORCE_PRELOAD},
 		{"dry-run",    no_argument, NULL, LONG_DRY_RUN},
 		{"library-path",
 			       required_argument, NULL, LONG_LIBRARY},
@@ -377,6 +383,12 @@ int main(int argc, char** argv)
 		case LONG_NO_PRELOAD:
 			opt_preload = 0;
 			INFO("LD_PRELOAD disabled\n");
+			break;
+
+		case LONG_FORCE_PRELOAD:
+			opt_preload = 1;
+			opt_force_preload = 1;
+			INFO("Forcing ld preload\n");
 			break;
 
 		case LONG_DRY_RUN:

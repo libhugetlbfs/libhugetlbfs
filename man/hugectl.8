@@ -74,6 +74,14 @@ linked against the library. \fBhugectl\fP may pre-load the library by mistake
 and this option prevents that.
 
 .TP
+.B --force-preload
+Force pre-loading of the \fBlibhugetlbfs\fP library. This option is used when
+the segments of the binary are aligned to the hugepage boundary of interest
+but the binary is not linked against libhugetlbfs. This is useful on PPC64
+where binaries are aligned to 64K as required by the ABI and the kernel is
+using a 4K base pagesize.
+
+.TP
 .B --dry-run
 Instead of running the process, the \fBhugectl\fP utility will describe what
 environment variables it set for \fBlibhugetlbfs\fP. This is useful if
