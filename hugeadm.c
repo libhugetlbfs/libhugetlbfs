@@ -60,6 +60,9 @@ extern char *optarg;
 #define MAX_SIZE_MNTENT (64 + PATH_MAX + 32 + 128 + 2 * sizeof(int))
 #define FORMAT_LEN 20
 
+#define SWAP_FREE "SwapFree:"
+#define SWAP_TOTAL "SwapTotal:"
+
 void print_usage()
 {
 	fprintf(stderr, "hugeadm [options]\n");
@@ -424,6 +427,28 @@ void create_mounts(char *user, char *group, char *base, mode_t mode)
 	}
 }
 
+/**
+ * check_swap shouldn't change the behavior of any of its
+ * callers, it only prints a message to the user if something
+ * is being done that might fail without swap available.  i.e.
+ * resizing a huge page pool
+ */
+void check_swap()
+{
+	long swap_sz;
+	long swap_total;
+
+	swap_total = read_meminfo(SWAP_TOTAL);
+	if (swap_total <= 0) {
+		WARNING("There is no swap space configured, resizing hugepage pool may fail\n");
+		return;
+	}
+
+	swap_sz = read_meminfo(SWAP_FREE);
+	if (swap_sz <= gethugepagesize())
+		WARNING("There is very little swap space free, resizing hugepage pool may fail\n");
+}
+
 enum {
 	POOL_MIN,
 	POOL_MAX,
@@ -501,6 +526,8 @@ void pool_adjust(char *cmd, unsigned int counter)
 		ERROR("%s: unknown page size\n", page_size_str);
 		exit(EXIT_FAILURE);
 	}
+
+	check_swap();
 
 	min = pools[pos].minimum;
 	max = pools[pos].maximum;
