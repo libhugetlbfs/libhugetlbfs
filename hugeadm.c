@@ -99,6 +99,9 @@ void print_usage()
 	CONT("the specified options would have done without");
 	CONT("taking any action");
 
+	OPTION("--explain", "Gives a overview of the status of the system");
+	CONT("with respect to huge page availability");
+
 	OPTION("--help, -h", "Prints this message");
 }
 
@@ -125,6 +128,8 @@ int opt_hard = 0;
 #define LONG_CREATE_GROUP_MOUNTS	(LONG_MOUNTS|'g')
 #define LONG_CREATE_GLOBAL_MOUNTS	(LONG_MOUNTS|'G')
 #define LONG_LIST_ALL_MOUNTS		(LONG_MOUNTS|'A')
+
+#define LONG_EXPLAIN	('e' << 8)
 
 #define MAX_POOLS	32
 
@@ -615,6 +620,16 @@ void page_sizes(int all)
 	}
 }
 
+void explain()
+{
+	mounts_list_all();
+	printf("\nHuge page pools:\n");
+	pool_list();
+	printf("\nHuge page sizes with configured pools:\n");
+	page_sizes(0);
+	check_swap();
+}
+
 int main(int argc, char** argv)
 {
 	int ops;
@@ -640,6 +655,7 @@ int main(int argc, char** argv)
 		{"page-sizes", no_argument, NULL, LONG_PAGE_SIZES},
 		{"page-sizes-all", no_argument, NULL, LONG_PAGE_AVAIL},
 		{"dry-run", no_argument, NULL, 'd'},
+		{"explain", no_argument, NULL, LONG_EXPLAIN},
 
 		{0},
 	};
@@ -728,6 +744,10 @@ int main(int argc, char** argv)
 
 		case LONG_PAGE_AVAIL:
 			page_sizes(1);
+			break;
+
+		case LONG_EXPLAIN:
+			explain();
 			break;
 
 		default:
