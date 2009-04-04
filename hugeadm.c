@@ -42,6 +42,13 @@
 #include <getopt.h>
 
 #define REPORT_UTIL "hugeadm"
+#define REPORT(level, prefix, format, ...)                                    \
+	do {                                                                  \
+		if (verbose_level >= level)                                   \
+			fprintf(stderr, "hugeadm:" prefix ": " format,       \
+				##__VA_ARGS__);                               \
+	} while (0);
+
 #include "libhugetlbfs_internal.h"
 #include "hugetlbfs.h"
 
@@ -102,11 +109,66 @@ void print_usage()
 	OPTION("--explain", "Gives a overview of the status of the system");
 	CONT("with respect to huge page availability");
 
+	OPTION("--verbose <level>, -v", "Increases/sets tracing levels");
 	OPTION("--help, -h", "Prints this message");
 }
 
 int opt_dry_run = 0;
 int opt_hard = 0;
+int verbose_level = VERBOSITY_DEFAULT;
+
+void setup_environment(char *var, char *val)
+{
+	setenv(var, val, 1);
+	INFO("%s='%s'\n", var, val);
+
+	if (opt_dry_run)
+		printf("%s='%s'\n", var, val);
+}
+
+void verbose_init(void)
+{
+	char *env;
+
+	env = getenv("HUGETLB_VERBOSE");
+	if (env)
+		verbose_level = atoi(env);
+	env = getenv("HUGETLB_DEBUG");
+	if (env)
+		verbose_level = VERBOSITY_MAX;
+}
+
+void verbose(char *which)
+{
+	int new_level;
+
+	if (which) {
+		new_level = atoi(which);
+		if (new_level < 0 || new_level > 99) {
+			ERROR("%d: verbosity out of range 0-99\n",
+				new_level);
+			exit(EXIT_FAILURE);
+		}
+	} else {
+		new_level = verbose_level + 1;
+		if (new_level == 100) {
+			WARNING("verbosity limited to 99\n");
+			new_level--;
+		}
+	}
+	verbose_level = new_level;
+}
+
+void verbose_expose(void)
+{
+	char level[3];
+
+	if (verbose_level == 99) {
+		setup_environment("HUGETLB_DEBUG", "yes");
+	}
+	snprintf(level, sizeof(level), "%d", verbose_level);
+	setup_environment("HUGETLB_VERBOSE", level);
+}
 
 /*
  * getopts return values for options which are long only.
@@ -683,12 +745,17 @@ int main(int argc, char** argv)
 	int ops;
 	int has_hugepages = kernel_has_hugepages();
 
-	char opts[] = "+hd";
+	char opts[] = "+hdv";
 	char base[PATH_MAX];
-	char *opt_min_adj[MAX_POOLS];
-	int ret = 0, index = 0, minadj_count = 0;
+	char *opt_min_adj[MAX_POOLS], *opt_max_adj[MAX_POOLS];
+	char *opt_user_mounts = NULL, *opt_group_mounts = NULL;
+	int opt_list_mounts = 0, opt_pool_list = 0, opt_create_mounts = 0;
+	int opt_global_mounts = 0, opt_pgsizes = 0, opt_pgsizes_all = 0;
+	int opt_explain = 0, minadj_count = 0, maxadj_count = 0;
+	int ret = 0, index = 0;
 	struct option long_opts[] = {
 		{"help",       no_argument, NULL, 'h'},
+		{"verbose",    required_argument, NULL, 'v' },
 
 		{"list-all-mounts", no_argument, NULL, LONG_LIST_ALL_MOUNTS},
 		{"pool-list", no_argument, NULL, LONG_POOL_LIST},
@@ -710,6 +777,7 @@ int main(int argc, char** argv)
 
 	hugetlbfs_setup_debug();
 	setup_mounts();
+	verbose_init();
 
 	ops = 0;
 	while (ret != -1) {
@@ -725,6 +793,10 @@ int main(int argc, char** argv)
 		case 'h':
 			print_usage();
 			exit(EXIT_SUCCESS);
+
+		case 'v':
+			verbose(optarg);
+			continue;
 
 		case 'd':
 			opt_dry_run = 1;
@@ -746,11 +818,11 @@ int main(int argc, char** argv)
 			continue;
 
 		case LONG_LIST_ALL_MOUNTS:
-			mounts_list_all();
+			opt_list_mounts = 1;
 			break;
 
 		case LONG_POOL_LIST:
-			pool_list();
+			opt_pool_list = 1;
 			break;
 
 		case LONG_POOL_MIN_ADJ:
@@ -763,39 +835,35 @@ int main(int argc, char** argv)
 					"max cannot be adjusted\n");
 				exit(EXIT_FAILURE);
 			}
-			pool_adjust(optarg, POOL_MAX);
-			break;
+			opt_min_adj[minadj_count++] = optarg;
+                        break;
 
 		case LONG_CREATE_MOUNTS:
-			snprintf(base, PATH_MAX, "%s", MOUNT_DIR);
-			create_mounts(NULL, NULL, base, S_IRWXU | S_IRWXG);
+			opt_create_mounts = 1;
 			break;
 
 		case LONG_CREATE_USER_MOUNTS:
-			snprintf(base, PATH_MAX, "%s/user", MOUNT_DIR);
-			create_mounts(optarg, NULL, base, S_IRWXU);
+			opt_user_mounts = optarg;
 			break;
 
 		case LONG_CREATE_GROUP_MOUNTS:
-			snprintf(base, PATH_MAX, "%s/group", MOUNT_DIR);
-			create_mounts(NULL, optarg, base, S_IRWXG);
+			opt_group_mounts = optarg;
 			break;
 
 		case LONG_CREATE_GLOBAL_MOUNTS:
-			snprintf(base, PATH_MAX, "%s/global", MOUNT_DIR);
-			create_mounts(NULL, NULL, base, S_IRWXU | S_IRWXG | S_IRWXO);
+			opt_global_mounts = 1;
 			break;
 
 		case LONG_PAGE_SIZES:
-			page_sizes(0);
+			opt_pgsizes = 1;
 			break;
 
 		case LONG_PAGE_AVAIL:
-			page_sizes(1);
+			opt_pgsizes_all = 1;
 			break;
 
 		case LONG_EXPLAIN:
-			explain();
+			opt_explain = 1;
 			break;
 
 		default:
@@ -807,12 +875,53 @@ int main(int argc, char** argv)
 			ops++;
 	}
 
+	verbose_expose();
+
+	if (opt_list_mounts)
+		mounts_list_all();
+
+	if (opt_pool_list)
+		pool_list();
+
 	while (--minadj_count >= 0) {
 		if (! kernel_has_overcommit())
 			pool_adjust(opt_min_adj[minadj_count], POOL_BOTH);
 		else
 			pool_adjust(opt_min_adj[minadj_count], POOL_MIN);
 	}
+
+	while (--maxadj_count >=0)
+			pool_adjust(opt_max_adj[maxadj_count], POOL_MAX);
+
+	if (opt_create_mounts) {
+		snprintf(base, PATH_MAX, "%s", MOUNT_DIR);
+		create_mounts(NULL, NULL, base, S_IRWXU | S_IRWXG);
+	}
+
+
+	if (opt_user_mounts != NULL) {
+		snprintf(base, PATH_MAX, "%s/user", MOUNT_DIR);
+		create_mounts(optarg, NULL, base, S_IRWXU);
+	}
+
+	if (opt_group_mounts) {
+		snprintf(base, PATH_MAX, "%s/group", MOUNT_DIR);
+		create_mounts(NULL, optarg, base, S_IRWXG);
+	}
+
+	if (opt_global_mounts) {
+		snprintf(base, PATH_MAX, "%s/global", MOUNT_DIR);
+		create_mounts(NULL, NULL, base, S_IRWXU | S_IRWXG | S_IRWXO);
+	}
+
+	if (opt_pgsizes)
+		page_sizes(0);
+
+	if (opt_pgsizes_all)
+		page_sizes(1);
+
+	if (opt_explain)
+		explain();
 
 	index = optind;
 

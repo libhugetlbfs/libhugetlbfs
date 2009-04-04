@@ -126,6 +126,16 @@ times on failure to allocate the desired count of pages. It initially tries
 to resize the pool up to 5 times and continues to try if progress is being
 made towards the resize.
 
+.PP
+The following options affect the verbosity of libhugetlbfs.
+
+.TP
+.B --verbose <level>, -v
+The default value for the verbosity level is 1 and the range of the value can
+be set with --verbose from 0 to 99. The higher the value, the more verbose the
+library will be. 0 is quiet and 3 will output much debugging information. The
+verbosity level is increased by one each time -v is specified.
+
 .SH SEE ALSO
 .I oprofile(1),
 .I pagesize(1),
