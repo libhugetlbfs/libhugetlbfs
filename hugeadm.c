@@ -181,11 +181,16 @@ void print_mounts(struct mount_list *current, int longest)
 	}
 }
 
-void mounts_list_all(void)
+/* collect_active_mounts returns a list of active hugetlbfs
+ * mount points, and, if longest is not NULL, the number of
+ * characters in the longest mount point to ease output
+ * formatting.  Caller is expected to free the list of mounts.
+ */
+struct mount_list *collect_active_mounts(int *longest)
 {
 	FILE *mounts;
 	struct mount_list *list, *current, *previous = NULL;
-	int length, longest = MIN_COL;
+	int length;
 
 	/* First try /proc/mounts, then /etc/mtab */
 	mounts = setmntent(PROCMOUNTS, "r");
@@ -209,8 +214,8 @@ void mounts_list_all(void)
 	while (getmntent_r(mounts, &(current->entry), current->data, MAX_SIZE_MNTENT)) {
 		if (strcasecmp(current->entry.mnt_type, FS_NAME) == 0) {
 			length = strlen(current->entry.mnt_dir);
-			if (length > longest)
-				longest = length;
+			if (longest && length > *longest)
+				*longest = length;
 
 			current->next = malloc(sizeof(struct mount_list));
 			if (!current->next) {
@@ -228,16 +233,28 @@ void mounts_list_all(void)
 	if (previous) {
 		free(previous->next);
 		previous->next = NULL;
-		print_mounts(list, longest);
-	} else {
-		/* No hugetlbfs mounts were found */
-		printf("No hugetlbfs mount point found.\n");
+		return list;
+	}
+	return NULL;
+}
+
+void mounts_list_all(void)
+{
+	struct mount_list *list, *previous;
+	int longest = MIN_COL;
+
+	list = collect_active_mounts(&longest);
+
+	if (!list) {
+		ERROR("No hugetlbfs mount points found\n");
+		return;
 	}
 
-	current = list;
-	while (current) {
-		previous = current;
-		current = current->next;
+	print_mounts(list, longest);
+
+	while (list) {
+		previous = list;
+		list = list->next;
 		free(previous);
 	}
 }
