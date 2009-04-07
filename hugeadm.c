@@ -332,12 +332,42 @@ int ensure_dir(char *path, mode_t mode, uid_t uid, gid_t gid)
 	return 0;
 }
 
+int check_if_already_mounted(struct mount_list *list, char *path)
+{
+	while (list) {
+		if (!strcmp(list->entry.mnt_dir, path))
+			return 1;
+		list = list->next;
+	}
+	return 0;
+}
+
 int mount_dir(char *path, char *options, mode_t mode, uid_t uid, gid_t gid)
 {
 	struct passwd *pwd;
 	struct group *grp;
 	struct mntent entry;
 	FILE *mounts;
+	struct mount_list *list, *previous;
+
+	list = collect_active_mounts(NULL);
+
+	if (list && check_if_already_mounted(list, path)) {
+		WARNING("Directory %s is already mounted.\n", path);
+
+		while (list) {
+			previous = list;
+			list = list->next;
+			free(previous);
+		}
+		return 0;
+	}
+
+	while (list) {
+		previous = list;
+		list = list->next;
+		free(previous);
+	}
 
 	if (opt_dry_run) {
 		pwd = getpwuid(uid);
