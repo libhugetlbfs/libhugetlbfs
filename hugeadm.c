@@ -181,7 +181,8 @@ void print_mounts(struct mount_list *current, int longest)
 	}
 }
 
-/* collect_active_mounts returns a list of active hugetlbfs
+/*
+ * collect_active_mounts returns a list of active hugetlbfs
  * mount points, and, if longest is not NULL, the number of
  * characters in the longest mount point to ease output
  * formatting.  Caller is expected to free the list of mounts.
