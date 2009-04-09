@@ -1,3 +1,21 @@
+libhugetlbfs 2.3 "NuMex Sunglo"
+======================================================================
+New Features
+* added --force-preload option to hugectl for backing segments with
+  64kb pages on ppc64 when app was not linked with libhugetlbfs
+* added --explain swtich to hugadm to give a quick overview of the
+  system wrt huge pages
+* hugeadm warns if min pool size is being adjusted without sufficient
+  swap space configured
+* added --hard switch to ask hugeadm to try multiple times to resize
+  a huge page pool
+* added --create-*-mounts switches to create mount points for hugetlbfs
+  usable by specific users, groups, or globally
+
+Bug Fixes
+* hugeadm will no longer mount a directory multiple times
+* hugeadm adds all new mount points to /etc/mtab
+
 libhugetlbfs 2.2 "Barkers Extra Hot"
 ======================================================================
 New Features
