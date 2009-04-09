@@ -120,7 +120,7 @@ int verbose_level = VERBOSITY_DEFAULT;
 void setup_environment(char *var, char *val)
 {
 	setenv(var, val, 1);
-	INFO("%s='%s'\n", var, val);
+	DEBUG("%s='%s'\n", var, val);
 
 	if (opt_dry_run)
 		printf("%s='%s'\n", var, val);
