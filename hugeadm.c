@@ -560,6 +560,8 @@ void check_swap()
 	}
 
 	swap_sz = read_meminfo(SWAP_FREE);
+	/* meminfo keeps values in kb, but we use bytes for hpage sizes */
+	swap_sz *= 1024;
 	if (swap_sz <= gethugepagesize())
 		WARNING("There is very little swap space free, resizing hugepage pool may fail\n");
 }
