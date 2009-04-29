@@ -612,6 +612,7 @@ void pool_adjust(char *cmd, unsigned int counter)
 	long page_size;
 
 	unsigned long min;
+	unsigned long min_orig;
 	unsigned long max;
 	unsigned long last_pool_value;
 
@@ -644,9 +645,7 @@ void pool_adjust(char *cmd, unsigned int counter)
 		exit(EXIT_FAILURE);
 	}
 
-	check_swap();
-
-	min = pools[pos].minimum;
+	min_orig = min = pools[pos].minimum;
 	max = pools[pos].maximum;
 
 	if (counter == POOL_BOTH) {
@@ -674,6 +673,9 @@ void pool_adjust(char *cmd, unsigned int counter)
 		cnt = 5;
 	else
 		cnt = -1;
+
+	if (min > min_orig)
+		check_swap();
 
 	INFO("setting HUGEPAGES_TOTAL to %ld\n", min);
 	set_huge_page_counter(page_size, HUGEPAGES_TOTAL, min);
