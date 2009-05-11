@@ -118,6 +118,28 @@ the number of huge pages requested by applications is between the Minimum and
 Maximum pool sizes.
 
 .TP
+.B --enable-zone-movable
+
+This option enables the use of the MOVABLE zone for the allocation of
+hugepages. This zone is created when kernelcore= or movablecore= are specified
+on the kernel command line but the zone is not used for the allocation of
+huge pages by default as the intended use for the zone may be to guarantee
+that memory can be off-lined and hot-removed. The kernel guarantees that
+the pages within this zone can be reclaimed unlike some kernel buffers
+for example. Unless pages are locked with mlock(), the hugepage pool can
+grow to at least the size of the movable zone once this option is set. Use
+sysctl to permanently enable the use of the MOVABLE zone for the allocation
+of huge pages.
+
+.TP
+.B --disable-zone-movable
+
+This option disables the use of the MOVABLE zone for the future allocation of
+huge pages. Note that existing huge pages are not reclaimed from the zone.
+Use sysctl to permanently disable the use of the MOVABLE zone for the
+allocation of huge pages.
+
+.TP
 .B --hard
 
 

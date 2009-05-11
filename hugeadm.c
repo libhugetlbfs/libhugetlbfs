@@ -62,6 +62,7 @@ extern char *optarg;
 #define OPT_MAX 4096
 
 #define PROCMOUNTS "/proc/mounts"
+#define PROCHUGEPAGES_MOVABLE "/proc/sys/vm/hugepages_treat_as_movable"
 #define FS_NAME "hugetlbfs"
 #define MIN_COL 20
 #define MAX_SIZE_MNTENT (64 + PATH_MAX + 32 + 128 + 2 * sizeof(int))
@@ -84,6 +85,8 @@ void print_usage()
 	CONT("Adjust pool 'size' lower bound");
 	OPTION("--pool-pages-max <size>:[+|-]<count>", "");
 	CONT("Adjust pool 'size' upper bound");
+	OPTION("--enable-zone-movable", "Use ZONE_MOVABLE for huge pages");
+	OPTION("--disable-zone-movable", "Do not use ZONE_MOVABLE for huge pages");
 	OPTION("--create-mounts", "Creates a mount point for each available");
 	CONT("huge page size on this system under /var/lib/hugetlbfs");
 	OPTION("--create-user-mounts <user>", "");
@@ -115,6 +118,7 @@ void print_usage()
 
 int opt_dry_run = 0;
 int opt_hard = 0;
+int opt_movable = -1;
 int verbose_level = VERBOSITY_DEFAULT;
 
 void setup_environment(char *var, char *val)
@@ -124,6 +128,18 @@ void setup_environment(char *var, char *val)
 
 	if (opt_dry_run)
 		printf("%s='%s'\n", var, val);
+}
+
+/* Enable/disable allocation of hugepages from ZONE_MOVABLE */
+void setup_zone_movable(int able)
+{
+	DEBUG("Setting %s to %d\n", PROCHUGEPAGES_MOVABLE, able);
+
+	/* libhugetlbfs reports any error that occurs */
+	file_write_ulong(PROCHUGEPAGES_MOVABLE, (unsigned long)able);
+
+	if (opt_dry_run)
+		printf("echo %d > %s\n", able, PROCHUGEPAGES_MOVABLE);
 }
 
 void verbose_init(void)
@@ -177,6 +193,10 @@ void verbose_expose(void)
 #define LONG_POOL_LIST		(LONG_POOL|'l')
 #define LONG_POOL_MIN_ADJ	(LONG_POOL|'m')
 #define LONG_POOL_MAX_ADJ	(LONG_POOL|'M')
+
+#define LONG_MOVABLE		('z' << 8)
+#define LONG_MOVABLE_ENABLE	(LONG_MOVABLE|'e')
+#define LONG_MOVABLE_DISABLE	(LONG_MOVABLE|'d')
 
 #define LONG_HARD		('h' << 8)
 
@@ -765,6 +785,8 @@ int main(int argc, char** argv)
 		{"pool-list", no_argument, NULL, LONG_POOL_LIST},
 		{"pool-pages-min", required_argument, NULL, LONG_POOL_MIN_ADJ},
 		{"pool-pages-max", required_argument, NULL, LONG_POOL_MAX_ADJ},
+		{"enable-zone-movable", no_argument, NULL, LONG_MOVABLE_ENABLE},
+		{"disable-zone-movable", no_argument, NULL, LONG_MOVABLE_DISABLE},
 		{"hard", no_argument, NULL, LONG_HARD},
 		{"create-mounts", no_argument, NULL, LONG_CREATE_MOUNTS},
 		{"create-user-mounts", required_argument, NULL, LONG_CREATE_USER_MOUNTS},
@@ -842,6 +864,14 @@ int main(int argc, char** argv)
 			opt_max_adj[maxadj_count++] = optarg;
                         break;
 
+		case LONG_MOVABLE_ENABLE:
+			opt_movable = 1;
+			break;
+
+		case LONG_MOVABLE_DISABLE:
+			opt_movable = 0;
+			break;
+
 		case LONG_CREATE_MOUNTS:
 			opt_create_mounts = 1;
 			break;
@@ -886,6 +916,9 @@ int main(int argc, char** argv)
 
 	if (opt_pool_list)
 		pool_list();
+
+	if (opt_movable != -1)
+		setup_zone_movable(opt_movable);
 
 	while (--minadj_count >= 0) {
 		if (! kernel_has_overcommit())
