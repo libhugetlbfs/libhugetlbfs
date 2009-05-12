@@ -839,7 +839,7 @@ int main(int argc, char** argv)
 					"max cannot be adjusted\n");
 				exit(EXIT_FAILURE);
 			}
-			opt_min_adj[minadj_count++] = optarg;
+			opt_max_adj[maxadj_count++] = optarg;
                         break;
 
 		case LONG_CREATE_MOUNTS:
