@@ -479,9 +479,9 @@ def functional_tests():
     do_test("brk_near_huge")
     do_test("task-size-overrun")
     do_test("stack_grow_into_huge")
-    do_test("readahead_reserve")
-    do_test("madvise_reserve")
-    do_test("fadvise_reserve")
+    do_test("readahead_reserve.sh")
+    do_test("madvise_reserve.sh")
+    do_test("fadvise_reserve.sh")
 
     # Tests requiring an active mount and hugepage COW
     do_test("private")
