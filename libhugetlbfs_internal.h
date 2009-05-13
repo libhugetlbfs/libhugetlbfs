@@ -98,6 +98,8 @@ extern void hugetlbfs_setup_debug();
 extern void setup_mounts();
 #define setup_features __lh_setup_features
 extern void setup_features();
+#define hugetlbfs_check_priv_resv __lh_hugetlbfs_check_priv_resv
+extern void hugetlbfs_check_priv_resv();
 #define __hugetlbfs_hostname __lh___hugetlbfs_hostname
 extern char __hugetlbfs_hostname[];
 #define hugetlbfs_prefault __lh_hugetlbfs_prefault

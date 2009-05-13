@@ -25,6 +25,7 @@ static void __attribute__ ((constructor)) setup_libhugetlbfs(void)
 	hugetlbfs_setup_debug();
 	setup_mounts();
 	setup_features();
+	hugetlbfs_check_priv_resv();
 #ifndef NO_ELFLINK
 	hugetlbfs_setup_elflink();
 #endif

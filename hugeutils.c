@@ -302,6 +302,20 @@ void hugetlbfs_setup_env()
 		__hugetlb_opts.shm_enabled = 1;
 }
 
+void hugetlbfs_check_priv_resv()
+{
+	/*
+	 * If the kernel supports MAP_PRIVATE reservations, we can skip
+	 * prefaulting the huge pages we allocate since the kernel
+	 * guarantees them.  This can help NUMA performance quite a bit.
+	 */
+	if (hugetlbfs_test_feature(HUGETLB_FEATURE_PRIVATE_RESV)) {
+		INFO("Kernel has MAP_PRIVATE reservations.  Disabling "
+			"heap prefaulting.\n");
+		__hugetlbfs_prefault = 0;
+	}
+}
+
 /*
  * Pool counters are typically exposed in sysfs in modern kernels, the
  * counters for the default page size are exposed in procfs in all kernels
