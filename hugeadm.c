@@ -852,7 +852,13 @@ int main(int argc, char** argv)
 			break;
 
 		case LONG_POOL_MIN_ADJ:
-			opt_min_adj[minadj_count++] = optarg;
+			if (minadj_count == MAX_POOLS) {
+				WARNING("Attempting to adjust an invalid "
+					"pool or a pool multiple times, "
+					"ignoring request: '%s'\n", optarg);
+			} else {
+				opt_min_adj[minadj_count++] = optarg;
+			}
 			break;
 
 		case LONG_POOL_MAX_ADJ:
@@ -861,7 +867,14 @@ int main(int argc, char** argv)
 					"max cannot be adjusted\n");
 				exit(EXIT_FAILURE);
 			}
-			opt_max_adj[maxadj_count++] = optarg;
+
+			if (maxadj_count == MAX_POOLS) {
+				WARNING("Attempting to adjust an invalid "
+					"pool or a pool multiple times, "
+					"ignoring request: '%s'\n", optarg);
+			} else {
+				opt_max_adj[maxadj_count++] = optarg;
+			}
                         break;
 
 		case LONG_MOVABLE_ENABLE:
