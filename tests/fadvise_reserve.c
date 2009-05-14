@@ -36,6 +36,7 @@
  * reservation but not faulted in at the time of allocation. The
  * counters do not get updated and effectively "leak". This test
  * identifies whether the kernel is vunerable to the problem or not.
+ * It's fixed in kernel by commit f2deae9d4e70793568ef9e85d227abb7bef5b622.
  */
 int main(int argc, char *argv[])
 {
