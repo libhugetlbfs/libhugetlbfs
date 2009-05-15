@@ -5,7 +5,7 @@
 # madvise is known broken before 2.6.30
 compare_kvers `uname -r` "2.6.30"
 if [ $? -eq 1 ]; then
-	echo "FAIL	kernel bug"
+	echo "FAIL (assumed) kernel bug"
 	exit $RC_FAIL
 else
 	EXP_RC=$RC_PASS
