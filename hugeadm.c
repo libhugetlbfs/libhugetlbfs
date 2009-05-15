@@ -762,6 +762,8 @@ void explain()
 	printf("\nHuge page sizes with configured pools:\n");
 	page_sizes(0);
 	check_swap();
+	printf("\nNote: Permanent swap space should be preferred when dynamic "
+		"huge page pools are used.\n");
 }
 
 int main(int argc, char** argv)
