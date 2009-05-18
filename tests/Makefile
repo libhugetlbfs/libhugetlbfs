@@ -9,7 +9,8 @@ LIB_TESTS = gethugepagesize test_root find_path unlinked_fd misalign \
 	misaligned_offset brk_near_huge task-size-overrun stack_grow_into_huge \
 	counters quota heap-overflow get_huge_pages get_hugepage_region \
 	shmoverride_linked gethugepagesizes \
-	madvise_reserve fadvise_reserve readahead_reserve
+	madvise_reserve fadvise_reserve readahead_reserve \
+	shm-perms
 LIB_TESTS_64 = straddle_4GB huge_at_4GB_normal_below \
 	huge_below_4GB_normal_above
 NOLIB_TESTS = malloc malloc_manysmall dummy heapshrink shmoverride_unlinked

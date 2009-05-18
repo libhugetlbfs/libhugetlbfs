@@ -482,6 +482,9 @@ def functional_tests():
     do_test("readahead_reserve.sh")
     do_test("madvise_reserve.sh")
     do_test("fadvise_reserve.sh")
+    sysctls = setup_shm_sysctl(64*1048576)
+    do_test("shm-perms")
+    restore_shm_sysctl(sysctls)
 
     # Tests requiring an active mount and hugepage COW
     do_test("private")
