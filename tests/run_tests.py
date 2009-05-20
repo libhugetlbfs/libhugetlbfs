@@ -479,9 +479,14 @@ def functional_tests():
     do_test("brk_near_huge")
     do_test("task-size-overrun")
     do_test("stack_grow_into_huge")
-    do_test("readahead_reserve.sh")
-    do_test("madvise_reserve.sh")
-    do_test("fadvise_reserve.sh")
+    if dangerous == 1:
+        do_test("readahead_reserve")
+        do_test("madvise_reserve")
+        do_test("fadvise_reserve")
+    else:
+        do_test("readahead_reserve.sh")
+        do_test("madvise_reserve.sh")
+        do_test("fadvise_reserve.sh")
     sysctls = setup_shm_sysctl(64*1048576)
     do_test("shm-perms")
     restore_shm_sysctl(sysctls)
@@ -577,14 +582,15 @@ def stress_tests():
 
 
 def main():
-    global wordsizes, pagesizes
+    global wordsizes, pagesizes, dangerous
     testsets = set()
     env_override = {"QUIET_TEST": "1", "HUGETLBFS_MOUNTS": "",
                     "HUGETLB_ELFMAP": None, "HUGETLB_MORECORE": None}
     env_defaults = {"HUGETLB_VERBOSE": "0"}
+    dangerous = 0
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "vVdt:b:p:")
+        opts, args = getopt.getopt(sys.argv[1:], "vVfdt:b:p:")
     except getopt.GetoptError, err:
         print str(err)
         sys.exit(1)
@@ -594,6 +600,8 @@ def main():
            env_defaults["HUGETLB_VERBOSE"] = "2"
        elif opt == "-V":
            env_defaults["HUGETLB_VERBOSE"] = "99"
+       elif opt == "-f":
+           dangerous = 1
        elif opt == "-t":
            for t in arg.split(): testsets.add(t)
        elif opt == "-b":
