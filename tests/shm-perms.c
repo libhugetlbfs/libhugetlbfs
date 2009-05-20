@@ -34,7 +34,7 @@
 
 #define SEGMENT_SIZE	((size_t)0x4000000)
 #define SEGMENT_KEY	0x82ba15ff
-#define SEGMENT_ADDR	((void *)0x40000000)
+#define SEGMENT_ADDR	((void *)0x80000000)
 
 #define STRIDE		0x200000
 
