@@ -37,6 +37,7 @@
 #include <sys/types.h>
 #include <sys/mount.h>
 #include <sys/swap.h>
+#include <sys/wait.h>
 
 #define _GNU_SOURCE /* for getopt_long */
 #include <unistd.h>
@@ -602,16 +603,20 @@ void add_temp_swap()
 	FILE *f;
 	char *buf;
 	long swap_size;
+	long pid;
+	int ret;
+
 	if (geteuid() != 0) {
 		ERROR("Swap can only be manipulated by root\n");
 		exit(EXIT_FAILURE);
 	}
 
+	pid = getpid();
 	snprintf(path, PATH_MAX, "%s/swap/temp", MOUNT_DIR);
-	snprintf(file, PATH_MAX, "%s/swapfile", path);
+	snprintf(file, PATH_MAX, "%s/swapfile-%ld", path, pid);
 
 
-	if (ensure_dir(path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH, 0, 0))
+	if (ensure_dir(path, S_IRWXU | S_IRGRP | S_IXGRP, 0, 0))
 		exit(EXIT_FAILURE);
 
 	f = fopen(file, "w");
@@ -629,11 +634,21 @@ void add_temp_swap()
 	fclose(f);
 
 	snprintf(mkswap_cmd, PATH_MAX, "mkswap %s", file);
-	system(mkswap_cmd);
+	ret = system(mkswap_cmd);
+	if (WIFSIGNALED(ret)) {
+		WARNING("Call to mkswap failed\n");
+		return;
+	} else if (WIFEXITED(ret)) {
+		ret = WEXITSTATUS(ret);
+		if (ret) {
+			WARNING("Call to mkswap failed\n");
+			return;
+		}
+	}
 
 	INFO("swapon %s\n", file);
 	if (swapon(file, 0))
-		ERROR("swapon on %s failed: %s\n", file, strerror(errno));
+		WARNING("swapon on %s failed: %s\n", file, strerror(errno));
 }
 
 void rem_temp_swap() {
