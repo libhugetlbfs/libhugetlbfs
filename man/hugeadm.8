@@ -148,6 +148,13 @@ times on failure to allocate the desired count of pages. It initially tries
 to resize the pool up to 5 times and continues to try if progress is being
 made towards the resize.
 
+.TP
+.B --add-temp-swap
+
+This options is specified with --pool-pages-min to initialize a temporary
+swap file for the duration of the pool resize.  Swap is only created for a
+positive resize, and is then removed once the resize operation is completed.
+
 .PP
 The following options affect the verbosity of libhugetlbfs.
 

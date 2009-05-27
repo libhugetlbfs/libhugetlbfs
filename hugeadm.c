@@ -36,6 +36,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/mount.h>
+#include <sys/swap.h>
 
 #define _GNU_SOURCE /* for getopt_long */
 #include <unistd.h>
@@ -85,6 +86,8 @@ void print_usage()
 	CONT("Adjust pool 'size' lower bound");
 	OPTION("--pool-pages-max <size>:[+|-]<count>", "");
 	CONT("Adjust pool 'size' upper bound");
+	OPTION("--add-temp-swap", "Specified with --pool-pages-min to create");
+	CONT("temporary swap space for the duration of the pool resize");
 	OPTION("--enable-zone-movable", "Use ZONE_MOVABLE for huge pages");
 	OPTION("--disable-zone-movable", "Do not use ZONE_MOVABLE for huge pages");
 	OPTION("--create-mounts", "Creates a mount point for each available");
@@ -119,6 +122,7 @@ void print_usage()
 int opt_dry_run = 0;
 int opt_hard = 0;
 int opt_movable = -1;
+int opt_temp_swap = 0;
 int verbose_level = VERBOSITY_DEFAULT;
 
 void setup_environment(char *var, char *val)
@@ -199,6 +203,7 @@ void verbose_expose(void)
 #define LONG_MOVABLE_DISABLE	(LONG_MOVABLE|'d')
 
 #define LONG_HARD		('h' << 8)
+#define LONG_ADD_TEMP_SWAP	('s' << 8)
 
 #define LONG_PAGE	('P' << 8)
 #define LONG_PAGE_SIZES	(LONG_PAGE|'s')
@@ -576,14 +581,69 @@ void check_swap()
 	swap_total = read_meminfo(SWAP_TOTAL);
 	if (swap_total <= 0) {
 		WARNING("There is no swap space configured, resizing hugepage pool may fail\n");
+		WARNING("Use --add-temp-swap option to temporarily add swap during the resize\n");
 		return;
 	}
 
 	swap_sz = read_meminfo(SWAP_FREE);
 	/* meminfo keeps values in kb, but we use bytes for hpage sizes */
 	swap_sz *= 1024;
-	if (swap_sz <= gethugepagesize())
+	if (swap_sz <= gethugepagesize()) {
 		WARNING("There is very little swap space free, resizing hugepage pool may fail\n");
+		WARNING("Use --add-temp-swap option to temporarily add swap during the resize\n");
+	}
+}
+
+void add_temp_swap()
+{
+	char path[PATH_MAX];
+	char file[PATH_MAX];
+	char mkswap_cmd[PATH_MAX];
+	FILE *f;
+	char *buf;
+	long swap_size;
+	if (geteuid() != 0) {
+		ERROR("Swap can only be manipulated by root\n");
+		exit(EXIT_FAILURE);
+	}
+
+	snprintf(path, PATH_MAX, "%s/swap/temp", MOUNT_DIR);
+	snprintf(file, PATH_MAX, "%s/swapfile", path);
+
+
+	if (ensure_dir(path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH, 0, 0))
+		exit(EXIT_FAILURE);
+
+	f = fopen(file, "w");
+	if (!f) {
+		ERROR("Couldn't open %s: %s\n", file, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	/* swapsize is 5 hugepages (in KB) */
+	swap_size = gethugepagesize() * 5;
+	buf = malloc(swap_size);
+	memset(buf, 0, swap_size);
+	fwrite(buf, sizeof(char), swap_size, f);
+	free(buf);
+	fclose(f);
+
+	snprintf(mkswap_cmd, PATH_MAX, "mkswap %s", file);
+	system(mkswap_cmd);
+
+	INFO("swapon %s\n", file);
+	if (swapon(file, 0))
+		ERROR("swapon on %s failed: %s\n", file, strerror(errno));
+}
+
+void rem_temp_swap() {
+	char file[PATH_MAX];
+
+	snprintf(file, PATH_MAX, "%s/swap/temp/swapfile", MOUNT_DIR);
+	if (swapoff(file))
+		ERROR("swapoff on %s failed: %s\n", file, strerror(errno));
+	remove(file);
+	INFO("swapoff %s\n", file);
 }
 
 enum {
@@ -694,8 +754,11 @@ void pool_adjust(char *cmd, unsigned int counter)
 	else
 		cnt = -1;
 
-	if (min > min_orig)
+	if (min > min_orig) {
+		if (opt_temp_swap)
+			add_temp_swap();
 		check_swap();
+	}
 
 	INFO("setting HUGEPAGES_TOTAL to %ld\n", min);
 	set_huge_page_counter(page_size, HUGEPAGES_TOTAL, min);
@@ -717,6 +780,9 @@ void pool_adjust(char *cmd, unsigned int counter)
 		set_huge_page_counter(page_size, HUGEPAGES_TOTAL, min);
 		get_pool_size(page_size, &pools[pos]);
 	}
+
+	if ((min > min_orig) && opt_temp_swap)
+		rem_temp_swap();
 
 	/*
 	 * HUGEPAGES_TOTAL is not guarenteed to check to exactly the figure
@@ -790,6 +856,7 @@ int main(int argc, char** argv)
 		{"enable-zone-movable", no_argument, NULL, LONG_MOVABLE_ENABLE},
 		{"disable-zone-movable", no_argument, NULL, LONG_MOVABLE_DISABLE},
 		{"hard", no_argument, NULL, LONG_HARD},
+		{"add-temp-swap", no_argument, NULL, LONG_ADD_TEMP_SWAP},
 		{"create-mounts", no_argument, NULL, LONG_CREATE_MOUNTS},
 		{"create-user-mounts", required_argument, NULL, LONG_CREATE_USER_MOUNTS},
 		{"create-group-mounts", required_argument, NULL, LONG_CREATE_GROUP_MOUNTS},
@@ -844,6 +911,10 @@ int main(int argc, char** argv)
 		case LONG_HARD:
 			opt_hard = 1;
 			continue;
+
+		case LONG_ADD_TEMP_SWAP:
+			opt_temp_swap = 1;
+			break;
 
 		case LONG_LIST_ALL_MOUNTS:
 			opt_list_mounts = 1;
