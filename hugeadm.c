@@ -619,13 +619,14 @@ void add_temp_swap()
 	if (ensure_dir(path, S_IRWXU | S_IRGRP | S_IXGRP, 0, 0))
 		exit(EXIT_FAILURE);
 
-	f = fopen(file, "w");
+	f = fopen(file, "wx");
 	if (!f) {
-		ERROR("Couldn't open %s: %s\n", file, strerror(errno));
-		exit(EXIT_FAILURE);
+		WARNING("Couldn't open %s: %s\n", file, strerror(errno));
+		opt_temp_swap = 0;
+		return;
 	}
 
-	/* swapsize is 5 hugepages (in KB) */
+	/* swapsize is 5 hugepages */
 	swap_size = gethugepagesize() * 5;
 	buf = malloc(swap_size);
 	memset(buf, 0, swap_size);
@@ -637,18 +638,22 @@ void add_temp_swap()
 	ret = system(mkswap_cmd);
 	if (WIFSIGNALED(ret)) {
 		WARNING("Call to mkswap failed\n");
+		opt_temp_swap = 0;
 		return;
 	} else if (WIFEXITED(ret)) {
 		ret = WEXITSTATUS(ret);
 		if (ret) {
 			WARNING("Call to mkswap failed\n");
+			opt_temp_swap = 0;
 			return;
 		}
 	}
 
-	INFO("swapon %s\n", file);
-	if (swapon(file, 0))
+	DEBUG("swapon %s\n", file);
+	if (swapon(file, 0)) {
 		WARNING("swapon on %s failed: %s\n", file, strerror(errno));
+		opt_temp_swap = 0;
+	}
 }
 
 void rem_temp_swap() {
@@ -656,9 +661,9 @@ void rem_temp_swap() {
 
 	snprintf(file, PATH_MAX, "%s/swap/temp/swapfile", MOUNT_DIR);
 	if (swapoff(file))
-		ERROR("swapoff on %s failed: %s\n", file, strerror(errno));
+		WARNING("swapoff on %s failed: %s\n", file, strerror(errno));
 	remove(file);
-	INFO("swapoff %s\n", file);
+	DEBUG("swapoff %s\n", file);
 }
 
 enum {
