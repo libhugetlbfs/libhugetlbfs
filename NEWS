@@ -1,3 +1,24 @@
+libhugetlbfs 2.4 "Birdseye"
+======================================================================
+New Features
+* added --add-temp-swap option to hugeadm to add a swap file for a pool
+  resize
+* added --[enable|disable]-zone-moveable options to hugeadm to control
+  /proc/sys/vm/hugepages_treat_as_movable
+
+Bug Fixes
+* Fix pool-pages-max processing by using the proper array for its
+  requests
+* Move private reservation check out of morecore setup
+
+Test Suite
+* Added regression tests for leaking reserve count due to madvise and
+  fadvise and readahead
+* Add test for mixed permissions on shm segments
+* Wrap tests that can hang the machine to fail is kernel is too old
+* Add -f option to run_tests.py to force running of tests that can hang
+  the machine
+
 libhugetlbfs 2.3 "NuMex Sunglo"
 ======================================================================
 New Features
