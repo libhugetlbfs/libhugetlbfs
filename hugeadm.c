@@ -658,8 +658,10 @@ void add_temp_swap()
 
 void rem_temp_swap() {
 	char file[PATH_MAX];
+	long pid;
 
-	snprintf(file, PATH_MAX, "%s/swap/temp/swapfile", MOUNT_DIR);
+	pid = getpid();
+	snprintf(file, PATH_MAX, "%s/swap/temp/swapfile-%ld", MOUNT_DIR, pid);
 	if (swapoff(file))
 		WARNING("swapoff on %s failed: %s\n", file, strerror(errno));
 	remove(file);
