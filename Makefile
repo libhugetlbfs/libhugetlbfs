@@ -5,13 +5,16 @@ LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o alloc.o shm.o kernel-f
 LIBPUOBJS = init_privutils.o debug.o hugeutils.o kernel-features.o
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a libhugetlbfs_privutils.so
 BIN_OBJ_DIR=obj
+PM_OBJ_DIR=TLBC
 INSTALL_BIN = hugectl hugeedit hugeadm pagesize
+INSTALL_STAT = cpupcstat oprofile_map_events.pl oprofile_start.sh
+INSTALL_PERLMOD = DataCollect.pm OpCollect.pm Report.pm
 INSTALL_HEADERS = hugetlbfs.h
 INSTALL_MAN1 = pagesize.1
 INSTALL_MAN3 = get_huge_pages.3 get_hugepage_region.3 \
 		gethugepagesizes.3 getpagesizes.3
 INSTALL_MAN7 = libhugetlbfs.7
-INSTALL_MAN8 = hugectl.8 hugeedit.8 hugeadm.8
+INSTALL_MAN8 = hugectl.8 hugeedit.8 hugeadm.8 cpupcstat.8
 LDSCRIPT_TYPES = B BDT
 LDSCRIPT_DIST_ELF = elf32ppclinux elf64ppc elf_i386 elf_x86_64
 INSTALL_OBJSCRIPT = ld.hugetlbfs
@@ -138,6 +141,7 @@ LDSCRIPTDIR = $(PREFIX)/share/libhugetlbfs/ldscripts
 BINDIR = $(PREFIX)/share/libhugetlbfs
 EXEDIR = $(PREFIX)/bin
 DOCDIR = $(PREFIX)/share/doc/libhugetlbfs
+PMDIR = $(PREFIX)/lib/perl5/TLBC
 MANDIR1 = $(PREFIX)/share/man/man1
 MANDIR3 = $(PREFIX)/share/man/man3
 MANDIR7 = $(PREFIX)/share/man/man7
@@ -398,7 +402,19 @@ install-bin:
 	for x in $(INSTALL_BIN); do \
 		$(INSTALL) -m 755 $(BIN_OBJ_DIR)/$$x $(DESTDIR)$(EXEDIR); done
 
-install: install-libs install-bin install-man
+install-stat: install-perlmod
+	@$(VECHO) INSTALL_STAT $(DESTDIR)$(EXEDIR)
+	$(INSTALL) -d $(DESTDIR)$(EXEDIR)
+	for x in $(INSTALL_STAT); do \
+		$(INSTALL) -m 755 $$x $(DESTDIR)$(EXEDIR); done
+
+install-perlmod:
+	@$(VECHO) INSTALL_PERLMOD $(DESTDIR)$(PMDIR)
+	$(INSTALL) -d $(DESTDIR)$(PMDIR)
+	for x in $(INSTALL_PERLMOD); do \
+		$(INSTALL) -m 644 $(PM_OBJ_DIR)/$$x $(DESTDIR)$(PMDIR); done
+
+install: install-libs install-bin install-man install-stat
 
 install-docs:
 	$(INSTALL) -d $(DESTDIR)$(DOCDIR)

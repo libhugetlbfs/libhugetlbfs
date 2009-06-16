@@ -1,0 +1,184 @@
+#!/usr/bin/perl -w
+# This script starts a requested application after setting up oprofile to
+# collect TLB miss data.  It will use this data to calculate the TLB
+# apporximate TLB miss rate.
+# Licensed under LGPL 2.1 as packaged with libhugetlbfs
+# (c) Eric Munson 2009
+
+use Getopt::Long;
+use FindBin qw($Bin);
+use lib "$Bin";
+use POSIX ":sys_wait_h";
+use TLBC::OpCollect;
+use strict;
+
+my ($arch, $cputype);
+my $vmlinux;
+my $target;
+my $real_target;
+my $target_pid;
+my $misses;
+my $kern_misses;
+my $time_elapsed;
+my $wait_time = 10;
+my $time_limit;
+my $persist = 0;
+my $kernel;
+
+sub start_target()
+{
+	my $pid = fork();
+	if (not defined $pid) {
+		die "Failed to fork\n";
+	} elsif ($pid == 0) {
+		exec $target or die "Failed to exec '$target'\n";
+	} else {
+		return($pid);
+	}
+}
+
+sub run_profile()
+{
+	my $start_time;
+	my $end_time;
+	my @results;
+	my $binName;
+	my $pid;
+	my $ret;
+	my $prev = 0;
+	my $kern_prev = 0;
+	my $new;
+	my $collector = TLBC::OpCollect->new();
+
+	$start_time = time();
+
+	$collector->setup($vmlinux, "dtlb_miss");
+
+	if (defined $target_pid) {
+		$target = readlink("/proc/$target_pid/exe");
+		chomp($target);
+		$binName = $target;
+		$pid = $target_pid;
+	} elsif (defined $target) {
+		if (defined $real_target) {
+			$binName = $real_target;
+		} else {
+			@results = split(/ /, $target);
+			$binName = $results[0];
+		}
+		$pid = start_target();
+	}
+
+	$binName = `basename $binName`;
+	chomp($binName);
+
+	printf("%20s%20s%24s\n", "Target Name", "DTLB Miss Samples",
+		"Samples/second");
+
+	printf("%20s%20s%24s\n", "", "Sample every " . $collector->samples(), "");
+	sleep($wait_time);
+
+	# While our target is still running and we have not exceeded our
+	# runtime, collect oprofile data every $wait_time seconds to display
+	# the dtlb miss rate.
+	while (waitpid($pid, WNOHANG) <= 0 || $persist) {
+		$ret = $collector->get_current_eventcount($binName);
+		$new = $ret - $prev;
+		printf("%20s%20d%24f\n", $binName, $new, $new / $wait_time);
+		$prev = $ret;
+		if ($kernel) {
+			$ret = $collector->get_current_eventcount("vmlinux");
+			$new = $ret - $kern_prev;
+			printf("%20s%20d%24f\n", "vmlinux", $new,
+				$new / $wait_time);
+			$kern_prev = $ret;
+		}
+		$end_time = time();
+		$time_elapsed = $end_time - $start_time;
+		if (defined $time_limit && $time_elapsed > $time_limit) {
+			last;
+		}
+		sleep($wait_time);
+	}
+	$end_time = time();
+	$time_elapsed = $end_time - $start_time;
+	$misses = $collector->get_current_eventcount($binName);
+	if ($kernel) {
+		$kern_misses = $collector->get_current_eventcount("vmlinux");
+	}
+
+	$collector->shutdown();
+}
+
+sub get_target()
+{
+	$target .= $_[0] . " ";
+}
+
+sub print_usage()
+{
+	print "Usage: cpupcstat [options] target
+	Options:
+	--vmlinux /path/to/vmlinux Sets the vmlinux file to use
+	--delay N                  Waits N seconds before rereading the
+                                   miss rate
+	--target-pid P             Watch the miss rate of P instead of a target
+	--real-target T            Watch T instead of target in case target is
+                                   a launcher script
+	--time-limit L             Sets a time limit for watching the target
+	--kernel                   Output DTLB miss data for the kernel as well
+                                   as the specified target
+	--help                     prints this message
+
+	Note: If --target-pid is specified, target will be ignored.\n";
+	exit(0);
+}
+
+sub exit_cleanup()
+{
+	my $collector = TLBC::OpCollect->new();
+	$collector->shutdown();
+	exit(0);
+}
+use sigtrap 'handler' => \&exit_cleanup, 'INT';
+
+Getopt::Long::Configure ('bundling');
+GetOptions ('v|vmlinux=s' => \$vmlinux,
+	    'h|help' => \&print_usage,
+	    'd|delay=i' => \$wait_time,
+	    'p|target-pid=i' => \$target_pid,
+	    'r|real-target=s' => \$real_target,
+	    'l|time-limit=i' => \$time_limit,
+	    'k|kernel' => \$kernel,
+	    's|persist' => \$persist,
+	    '<>' => \&get_target);
+
+if (!$target && not defined $target_pid) {
+	print_usage();
+}
+
+if (!$vmlinux) {
+	$vmlinux = "/boot/vmlinux-" . `uname -r`;
+}
+
+chomp($vmlinux);
+if ($target) {
+	chomp($target);
+}
+
+$misses = 0;
+$kern_misses = 0;
+run_profile();
+
+if ($misses > 0) {
+	print("\n$target saw $misses total DTLB miss samples over ",
+		"$time_elapsed seconds\n");
+	print("at rate of ", $misses / $time_elapsed, " samples/second\n");
+}
+
+if ($kern_misses > 0) {
+	print("The kernel saw $kern_misses total DTLB miss samples over ",
+		"$time_elapsed seconds\n");
+	print("at rate of ", $kern_misses / $time_elapsed, " samples/second\n");
+}
+
