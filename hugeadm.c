@@ -87,8 +87,9 @@ void print_usage()
 	CONT("Adjust pool 'size' lower bound");
 	OPTION("--pool-pages-max <size>:[+|-]<count>", "");
 	CONT("Adjust pool 'size' upper bound");
-	OPTION("--add-temp-swap", "Specified with --pool-pages-min to create");
-	CONT("temporary swap space for the duration of the pool resize");
+	OPTION("--add-temp-swap[=count]", "Specified with --pool-pages-min to create");
+	CONT("temporary swap space for the duration of the pool resize. Default swap");
+	CONT("size is 5 huge pages. Optional arg sets size to 'count' huge pages");
 	OPTION("--enable-zone-movable", "Use ZONE_MOVABLE for huge pages");
 	OPTION("--disable-zone-movable", "Do not use ZONE_MOVABLE for huge pages");
 	OPTION("--create-mounts", "Creates a mount point for each available");
@@ -595,7 +596,7 @@ void check_swap()
 	}
 }
 
-void add_temp_swap()
+void add_temp_swap(long page_size)
 {
 	char path[PATH_MAX];
 	char file[PATH_MAX];
@@ -605,6 +606,7 @@ void add_temp_swap()
 	long swap_size;
 	long pid;
 	int ret;
+	int num_pages;
 
 	if (geteuid() != 0) {
 		ERROR("Swap can only be manipulated by root\n");
@@ -627,7 +629,12 @@ void add_temp_swap()
 	}
 
 	/* swapsize is 5 hugepages */
-	swap_size = gethugepagesize() * 5;
+	if (opt_temp_swap == -1)
+		num_pages = 5;
+	else
+		num_pages = opt_temp_swap;
+
+	swap_size = num_pages * page_size;
 	buf = malloc(swap_size);
 	memset(buf, 0, swap_size);
 	fwrite(buf, sizeof(char), swap_size, f);
@@ -778,7 +785,7 @@ void pool_adjust(char *cmd, unsigned int counter)
 
 	if (min > min_orig) {
 		if (opt_temp_swap)
-			add_temp_swap();
+			add_temp_swap(page_size);
 		check_swap();
 	}
 
@@ -878,7 +885,7 @@ int main(int argc, char** argv)
 		{"enable-zone-movable", no_argument, NULL, LONG_MOVABLE_ENABLE},
 		{"disable-zone-movable", no_argument, NULL, LONG_MOVABLE_DISABLE},
 		{"hard", no_argument, NULL, LONG_HARD},
-		{"add-temp-swap", no_argument, NULL, LONG_ADD_TEMP_SWAP},
+		{"add-temp-swap", optional_argument, NULL, LONG_ADD_TEMP_SWAP},
 		{"create-mounts", no_argument, NULL, LONG_CREATE_MOUNTS},
 		{"create-user-mounts", required_argument, NULL, LONG_CREATE_USER_MOUNTS},
 		{"create-group-mounts", required_argument, NULL, LONG_CREATE_GROUP_MOUNTS},
@@ -935,7 +942,10 @@ int main(int argc, char** argv)
 			continue;
 
 		case LONG_ADD_TEMP_SWAP:
-			opt_temp_swap = 1;
+			if (optarg)
+				opt_temp_swap = atoi(optarg);
+			else
+				opt_temp_swap = -1;
 			break;
 
 		case LONG_LIST_ALL_MOUNTS:

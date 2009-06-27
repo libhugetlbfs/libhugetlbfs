@@ -149,11 +149,15 @@ to resize the pool up to 5 times and continues to try if progress is being
 made towards the resize.
 
 .TP
-.B --add-temp-swap
+.B --add-temp-swap<=count>
 
 This options is specified with --pool-pages-min to initialize a temporary
-swap file for the duration of the pool resize.  Swap is only created for a
-positive resize, and is then removed once the resize operation is completed.
+swap file for the duration of the pool resize. When increasing the size of
+the pool, it can be necessary to reclaim pages so that contiguous memory is
+freed and this often requires swap to be successful. Swap is only created for
+a positive resize, and is then removed once the resize operation is completed.
+The default swap size is 5 huge pages, the optional argument <count> sets
+the swap size to <count> huge pages.
 
 .PP
 The following options affect the verbosity of libhugetlbfs.
