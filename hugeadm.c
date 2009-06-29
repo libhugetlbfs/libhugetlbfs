@@ -32,6 +32,7 @@
 #include <unistd.h>
 #include <grp.h>
 #include <pwd.h>
+#include <fcntl.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -90,6 +91,8 @@ void print_usage()
 	OPTION("--add-temp-swap[=count]", "Specified with --pool-pages-min to create");
 	CONT("temporary swap space for the duration of the pool resize. Default swap");
 	CONT("size is 5 huge pages. Optional arg sets size to 'count' huge pages");
+	OPTION("--add-ramdisk-swap", "Specified with --pool-pages-min to create");
+	CONT("swap space on ramdisks. By default, swap is removed after the resize.");
 	OPTION("--enable-zone-movable", "Use ZONE_MOVABLE for huge pages");
 	OPTION("--disable-zone-movable", "Do not use ZONE_MOVABLE for huge pages");
 	OPTION("--create-mounts", "Creates a mount point for each available");
@@ -125,6 +128,7 @@ int opt_dry_run = 0;
 int opt_hard = 0;
 int opt_movable = -1;
 int opt_temp_swap = 0;
+int opt_ramdisk_swap = 0;
 int verbose_level = VERBOSITY_DEFAULT;
 
 void setup_environment(char *var, char *val)
@@ -205,7 +209,9 @@ void verbose_expose(void)
 #define LONG_MOVABLE_DISABLE	(LONG_MOVABLE|'d')
 
 #define LONG_HARD		('h' << 8)
-#define LONG_ADD_TEMP_SWAP	('s' << 8)
+#define LONG_SWAP		('s' << 8)
+#define LONG_SWAP_DISK		(LONG_SWAP|'d')
+#define LONG_SWAP_RAMDISK	(LONG_SWAP|'r')
 
 #define LONG_PAGE	('P' << 8)
 #define LONG_PAGE_SIZES	(LONG_PAGE|'s')
@@ -675,6 +681,81 @@ void rem_temp_swap() {
 	DEBUG("swapoff %s\n", file);
 }
 
+char* add_ramdisk_swap(long page_size) {
+	char ramdisk[PATH_MAX];
+	char mkswap_cmd[PATH_MAX];
+	char disk_list[PATH_MAX] = "";
+	char *ret_list;
+	int disk_num=0;
+	int count = 0;
+	long ramdisk_size;
+	int ret;
+	int fd;
+
+	snprintf(ramdisk, PATH_MAX, "/dev/ram%i", disk_num);
+	ret_list = ramdisk;
+	fd = open(ramdisk, O_RDONLY);
+	ioctl(fd, BLKGETSIZE, &ramdisk_size);
+	close(fd);
+
+	ramdisk_size = ramdisk_size * 512;
+	count = (page_size/ramdisk_size) + 1;
+	opt_ramdisk_swap = count;
+
+	if (count > 1) {
+		INFO("Swap will be initialized on multiple ramdisks because\n\
+		ramdisk size is less than huge page size. To avoid\n\
+		this in the future, use kernel command line parameter\n\
+		ramdisk_size=N, to set ramdisk size to N blocks.\n");
+	}
+
+	while (count > 0) {
+		snprintf(ramdisk, PATH_MAX, "/dev/ram%i", disk_num);
+		if (access(ramdisk, F_OK) != 0){
+			break;
+		}
+		disk_num++;
+		snprintf(mkswap_cmd, PATH_MAX, "mkswap %s", ramdisk);
+	        ret = system(mkswap_cmd);
+	        if (WIFSIGNALED(ret)) {
+	                WARNING("Call to mkswap failed\n");
+			continue;
+	        } else if (WIFEXITED(ret)) {
+		        ret = WEXITSTATUS(ret);
+	                if (ret) {
+	                        WARNING("Call to mkswap failed\n");
+				continue;
+	                }
+		}
+		DEBUG("swapon %s\n", ramdisk);
+	        if (swapon(ramdisk, 0)) {
+	                WARNING("swapon on %s failed: %s\n", ramdisk, strerror(errno));
+		        opt_temp_swap = 0;
+			continue;
+	        }
+		count--;
+		strcat(disk_list, " ");
+		strcat(disk_list, ramdisk);
+	}
+	ret_list = disk_list;
+	return ret_list;
+}
+
+void rem_ramdisk_swap(char* ramdisk_list){
+	char *ramdisk;
+	char *iter = NULL;
+
+	ramdisk = strtok_r(ramdisk_list, " ", &iter);
+	while (ramdisk != NULL) {
+		DEBUG("swapoff %s\n", ramdisk);
+		if (swapoff(ramdisk)) {
+			WARNING("swapoff on %s failed: %s\n", ramdisk, strerror(errno));
+			continue;
+		}
+		ramdisk = strtok_r(NULL, " ", &iter);
+	}
+}
+
 enum {
 	POOL_MIN,
 	POOL_MAX,
@@ -718,6 +799,7 @@ void pool_adjust(char *cmd, unsigned int counter)
 	char *iter = NULL;
 	char *page_size_str = NULL;
 	char *adjust_str = NULL;
+	char *disk_list = NULL;
 	long page_size;
 
 	unsigned long min;
@@ -786,8 +868,11 @@ void pool_adjust(char *cmd, unsigned int counter)
 	if (min > min_orig) {
 		if (opt_temp_swap)
 			add_temp_swap(page_size);
+		if (opt_ramdisk_swap)
+			disk_list = add_ramdisk_swap(page_size);
 		check_swap();
 	}
+
 
 	INFO("setting HUGEPAGES_TOTAL to %ld\n", min);
 	set_huge_page_counter(page_size, HUGEPAGES_TOTAL, min);
@@ -810,8 +895,12 @@ void pool_adjust(char *cmd, unsigned int counter)
 		get_pool_size(page_size, &pools[pos]);
 	}
 
-	if ((min > min_orig) && opt_temp_swap)
-		rem_temp_swap();
+	if (min > min_orig) {
+		if (opt_temp_swap)
+			rem_temp_swap();
+		else if (opt_ramdisk_swap)
+			rem_ramdisk_swap(disk_list);
+	}
 
 	/*
 	 * HUGEPAGES_TOTAL is not guarenteed to check to exactly the figure
@@ -885,7 +974,8 @@ int main(int argc, char** argv)
 		{"enable-zone-movable", no_argument, NULL, LONG_MOVABLE_ENABLE},
 		{"disable-zone-movable", no_argument, NULL, LONG_MOVABLE_DISABLE},
 		{"hard", no_argument, NULL, LONG_HARD},
-		{"add-temp-swap", optional_argument, NULL, LONG_ADD_TEMP_SWAP},
+		{"add-temp-swap", optional_argument, NULL, LONG_SWAP_DISK},
+		{"add-ramdisk-swap", no_argument, NULL, LONG_SWAP_RAMDISK},
 		{"create-mounts", no_argument, NULL, LONG_CREATE_MOUNTS},
 		{"create-user-mounts", required_argument, NULL, LONG_CREATE_USER_MOUNTS},
 		{"create-group-mounts", required_argument, NULL, LONG_CREATE_GROUP_MOUNTS},
@@ -941,11 +1031,15 @@ int main(int argc, char** argv)
 			opt_hard = 1;
 			continue;
 
-		case LONG_ADD_TEMP_SWAP:
+		case LONG_SWAP_DISK:
 			if (optarg)
 				opt_temp_swap = atoi(optarg);
 			else
 				opt_temp_swap = -1;
+			break;
+
+		case LONG_SWAP_RAMDISK:
+			opt_ramdisk_swap = 1;
 			break;
 
 		case LONG_LIST_ALL_MOUNTS:

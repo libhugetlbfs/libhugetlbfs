@@ -159,6 +159,18 @@ a positive resize, and is then removed once the resize operation is completed.
 The default swap size is 5 huge pages, the optional argument <count> sets
 the swap size to <count> huge pages.
 
+.TP
+.B --add-ramdisk-swap
+
+This option is specified with --pool-pages-min to initialize swap in memory
+on ram disks.  When increasing the size of the pool, it can be necessary to
+reclaim pages so that contiguous memory is freed and this often requires swap
+to be successful.  If there isn't enough free disk space, swap can be
+initialized in RAM using this option.  If the size of one ramdisk is not
+greater than the huge page size, then swap is initialized on multiple ramdisks.
+Swap is only created for a positive resize, and by default is removed once
+the resize operation is completed.
+
 .PP
 The following options affect the verbosity of libhugetlbfs.
 
