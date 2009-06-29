@@ -93,6 +93,8 @@ void print_usage()
 	CONT("size is 5 huge pages. Optional arg sets size to 'count' huge pages");
 	OPTION("--add-ramdisk-swap", "Specified with --pool-pages-min to create");
 	CONT("swap space on ramdisks. By default, swap is removed after the resize.");
+	OPTION("--persist", "Specified with --add-temp-swap or --add-ramdisk-swap");
+	CONT("options to make swap space persist after the resize.");
 	OPTION("--enable-zone-movable", "Use ZONE_MOVABLE for huge pages");
 	OPTION("--disable-zone-movable", "Do not use ZONE_MOVABLE for huge pages");
 	OPTION("--create-mounts", "Creates a mount point for each available");
@@ -129,6 +131,7 @@ int opt_hard = 0;
 int opt_movable = -1;
 int opt_temp_swap = 0;
 int opt_ramdisk_swap = 0;
+int opt_swap_persist = 0;
 int verbose_level = VERBOSITY_DEFAULT;
 
 void setup_environment(char *var, char *val)
@@ -212,6 +215,7 @@ void verbose_expose(void)
 #define LONG_SWAP		('s' << 8)
 #define LONG_SWAP_DISK		(LONG_SWAP|'d')
 #define LONG_SWAP_RAMDISK	(LONG_SWAP|'r')
+#define LONG_SWAP_PERSIST	(LONG_SWAP|'p')
 
 #define LONG_PAGE	('P' << 8)
 #define LONG_PAGE_SIZES	(LONG_PAGE|'s')
@@ -895,7 +899,7 @@ void pool_adjust(char *cmd, unsigned int counter)
 		get_pool_size(page_size, &pools[pos]);
 	}
 
-	if (min > min_orig) {
+	if (min > min_orig && !opt_swap_persist) {
 		if (opt_temp_swap)
 			rem_temp_swap();
 		else if (opt_ramdisk_swap)
@@ -976,6 +980,7 @@ int main(int argc, char** argv)
 		{"hard", no_argument, NULL, LONG_HARD},
 		{"add-temp-swap", optional_argument, NULL, LONG_SWAP_DISK},
 		{"add-ramdisk-swap", no_argument, NULL, LONG_SWAP_RAMDISK},
+		{"persist", no_argument, NULL, LONG_SWAP_PERSIST},
 		{"create-mounts", no_argument, NULL, LONG_CREATE_MOUNTS},
 		{"create-user-mounts", required_argument, NULL, LONG_CREATE_USER_MOUNTS},
 		{"create-group-mounts", required_argument, NULL, LONG_CREATE_GROUP_MOUNTS},
@@ -1041,6 +1046,9 @@ int main(int argc, char** argv)
 		case LONG_SWAP_RAMDISK:
 			opt_ramdisk_swap = 1;
 			break;
+
+		case LONG_SWAP_PERSIST:
+			opt_swap_persist = 1;
 
 		case LONG_LIST_ALL_MOUNTS:
 			opt_list_mounts = 1;

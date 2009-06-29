@@ -171,6 +171,13 @@ greater than the huge page size, then swap is initialized on multiple ramdisks.
 Swap is only created for a positive resize, and by default is removed once
 the resize operation is completed.
 
+.TP
+.B --persist
+
+This option is specified with the --add-temp-swap or --add-ramdisk-swap to
+make the swap space persist after the resize operation is completed.  The swap
+spaces can later be removed manually using the swapoff command.
+
 .PP
 The following options affect the verbosity of libhugetlbfs.
 
