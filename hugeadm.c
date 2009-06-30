@@ -133,6 +133,7 @@ int opt_temp_swap = 0;
 int opt_ramdisk_swap = 0;
 int opt_swap_persist = 0;
 int verbose_level = VERBOSITY_DEFAULT;
+char ramdisk_list[PATH_MAX] = "";
 
 void setup_environment(char *var, char *val)
 {
@@ -685,11 +686,9 @@ void rem_temp_swap() {
 	DEBUG("swapoff %s\n", file);
 }
 
-char* add_ramdisk_swap(long page_size) {
+void add_ramdisk_swap(long page_size) {
 	char ramdisk[PATH_MAX];
 	char mkswap_cmd[PATH_MAX];
-	char disk_list[PATH_MAX] = "";
-	char *ret_list;
 	int disk_num=0;
 	int count = 0;
 	long ramdisk_size;
@@ -697,14 +696,12 @@ char* add_ramdisk_swap(long page_size) {
 	int fd;
 
 	snprintf(ramdisk, PATH_MAX, "/dev/ram%i", disk_num);
-	ret_list = ramdisk;
 	fd = open(ramdisk, O_RDONLY);
 	ioctl(fd, BLKGETSIZE, &ramdisk_size);
 	close(fd);
 
 	ramdisk_size = ramdisk_size * 512;
 	count = (page_size/ramdisk_size) + 1;
-	opt_ramdisk_swap = count;
 
 	if (count > 1) {
 		INFO("Swap will be initialized on multiple ramdisks because\n\
@@ -738,14 +735,12 @@ char* add_ramdisk_swap(long page_size) {
 			continue;
 	        }
 		count--;
-		strcat(disk_list, " ");
-		strcat(disk_list, ramdisk);
+		strcat(ramdisk_list, " ");
+		strcat(ramdisk_list, ramdisk);
 	}
-	ret_list = disk_list;
-	return ret_list;
 }
 
-void rem_ramdisk_swap(char* ramdisk_list){
+void rem_ramdisk_swap(){
 	char *ramdisk;
 	char *iter = NULL;
 
@@ -803,7 +798,6 @@ void pool_adjust(char *cmd, unsigned int counter)
 	char *iter = NULL;
 	char *page_size_str = NULL;
 	char *adjust_str = NULL;
-	char *disk_list = NULL;
 	long page_size;
 
 	unsigned long min;
@@ -873,11 +867,9 @@ void pool_adjust(char *cmd, unsigned int counter)
 		if (opt_temp_swap)
 			add_temp_swap(page_size);
 		if (opt_ramdisk_swap)
-			disk_list = add_ramdisk_swap(page_size);
+			add_ramdisk_swap(page_size);
 		check_swap();
 	}
-
-
 	INFO("setting HUGEPAGES_TOTAL to %ld\n", min);
 	set_huge_page_counter(page_size, HUGEPAGES_TOTAL, min);
 	get_pool_size(page_size, &pools[pos]);
@@ -903,7 +895,7 @@ void pool_adjust(char *cmd, unsigned int counter)
 		if (opt_temp_swap)
 			rem_temp_swap();
 		else if (opt_ramdisk_swap)
-			rem_ramdisk_swap(disk_list);
+			rem_ramdisk_swap();
 	}
 
 	/*
