@@ -1,3 +1,17 @@
+libhugetlbfs 2.5 "Self Titled"
+======================================================================
+New Features
+* added --add-ramdisk-swap option to hugeadm to use ramdisks as
+  temporary swap space for diskless systems
+* added --persist option to hugeadm to be used with either --add-*-swap
+  option.  Makes swap added stay until removed or the machine is rebooted
+* added cpupcstat script which uses oprofile to monitor tlb miss rate
+  of a target program
+
+Bug Fixes
+* --add-temp-swap option now takes an optional integer argument that is
+  the size in number of hugepages to make the swap space
+
 libhugetlbfs 2.4 "Birdseye"
 ======================================================================
 New Features
