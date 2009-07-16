@@ -10,6 +10,7 @@ use FindBin qw($Bin);
 use lib "$Bin";
 use POSIX ":sys_wait_h";
 use TLBC::OpCollect;
+use TLBC::PerfCollect;
 use strict;
 
 my ($arch, $cputype);
@@ -24,6 +25,7 @@ my $wait_time = 10;
 my $time_limit;
 my $persist = 0;
 my $kernel;
+my $force_oprofile;
 
 sub start_target()
 {
@@ -48,12 +50,23 @@ sub run_profile()
 	my $prev = 0;
 	my $kern_prev = 0;
 	my $new;
-	my $collector = TLBC::OpCollect->new();
+	my $collector;
+
+	if ($force_oprofile) {
+		$collector = TLBC::OpCollect->new();
+	} else {
+		$collector = TLBC::PerfCollect->new();
+	}
 
 	$start_time = time();
 
-	$collector->setup($vmlinux, "dtlb_miss") or
-		die("Unable to setup data collector");
+	if ($collector->setup($vmlinux, "dtlb_miss") == 0) {
+		$collector = TLBC::OpCollect->new();
+		if ($force_oprofile ||
+			$collector->setup($vmlinux, "dtlb_miss") == 0) {
+			die("Unable to setup data collector");
+		}
+	}
 
 	if (defined $target_pid) {
 		$target = readlink("/proc/$target_pid/exe");
@@ -129,6 +142,9 @@ sub print_usage()
 	--time-limit L             Sets a time limit for watching the target
 	--kernel                   Output DTLB miss data for the kernel as well
                                    as the specified target
+	--force-oprofile	   The perf tool is prefered for data
+				   collection with oprofile as the fall back,
+				   force oprofile usage instead
 	--help                     prints this message
 
 	Note: If --target-pid is specified, target will be ignored.\n";
@@ -151,6 +167,7 @@ GetOptions ('v|vmlinux=s' => \$vmlinux,
 	    'r|real-target=s' => \$real_target,
 	    'l|time-limit=i' => \$time_limit,
 	    'k|kernel' => \$kernel,
+	    'o|force-oprofile' => \$force_oprofile,
 	    's|persist' => \$persist,
 	    '<>' => \&get_target);
 

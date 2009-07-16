@@ -65,8 +65,16 @@ default continues monitoring while \fBtarget\fP or \fBpid\fP are still alive.
 This allows the user to request DTLB miss rate data be collected for the kernel
 as well as the \fBtarget\fP.
 
+.TP
+.B --force-oprofile
+
+\fBcpupcstat\fP prefers the perf tool for data collection, only using oprofile
+if perf is not present or supported.  This option will force \fBcpupcstat\fP to
+use oprofile for data collection.
+
 .SH SEE ALSO
 .I oprofile(1)
+.I perf(1)
 .br
 .SH AUTHORS
 Eric B Munson <ebmunson@us.ibm.com> is the primary author. See the documentation
