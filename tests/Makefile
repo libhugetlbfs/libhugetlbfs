@@ -26,7 +26,7 @@ BADTOOLCHAIN = bad-toolchain.sh
 
 CFLAGS = -O2 -Wall -g
 CPPFLAGS = -I..
-LDLIBS = -ldl -lpthread -lhugetlbfs_privutils
+LDLIBS = -Wl,--no-as-needed -ldl -lpthread -lhugetlbfs_privutils
 LDFLAGS32 = -L../obj32
 LDFLAGS64 = -L../obj64
 INSTALL = install
