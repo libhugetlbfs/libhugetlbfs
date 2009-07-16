@@ -40,7 +40,7 @@ sub _setup_oprofile()
 	my $event = shift;
 	my $cmd = "$Bin/oprofile_start.sh --vmlinux=$vmlinux " .
 		   "--event=$event  > /dev/null 2>&1";
-	system($cmd) == 0 or die "Failed to start oprofile\n";
+	system($cmd) == 0 or return 0;
 	return $self;
 }
 
@@ -80,8 +80,7 @@ sub setup()
 	my $event = shift;
 	$self->_get_event($event);
 	$self->_clear_oprofile();
-	$self->_setup_oprofile($vmlinux, $event);
-	return $self;
+	return $self->_setup_oprofile($vmlinux, $event);
 }
 
 sub samples()

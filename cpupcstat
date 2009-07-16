@@ -52,7 +52,8 @@ sub run_profile()
 
 	$start_time = time();
 
-	$collector->setup($vmlinux, "dtlb_miss");
+	$collector->setup($vmlinux, "dtlb_miss") or
+		die("Unable to setup data collector");
 
 	if (defined $target_pid) {
 		$target = readlink("/proc/$target_pid/exe");
