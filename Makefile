@@ -95,6 +95,12 @@ ifdef CC64
 OBJDIRS +=  obj64
 endif
 
+ifdef CC64
+CCBIN = $(CC64)
+else
+CCBIN = $(CC32)
+endif
+
 ifdef ELF32
 LIBOBJS32 = obj32/elflink.o obj32/sys-$(ELF32).o
 endif
@@ -302,29 +308,29 @@ obj64/%.s:	%.c
 $(BIN_OBJ_DIR)/%.o: %.c
 	@$(VECHO) CCHOST $@
 	@mkdir -p $(BIN_OBJ_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ -c $<
+	$(CCBIN) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ -c $<
 
 $(BIN_OBJ_DIR)/hugectl: $(BIN_OBJ_DIR)/hugectl.o
 	@$(VECHO) LDHOST $@
 	mkdir -p $(BIN_OBJ_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^
+	$(CCBIN) $(CPPFLAGS) $(CFLAGS) -o $@ $^
 
 $(BIN_OBJ_DIR)/hugeedit: $(BIN_OBJ_DIR)/hugeedit.o
 	@$(VECHO) LDHOST $@
 	mkdir -p $(BIN_OBJ_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
+	$(CCBIN) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
 
 HUGEADM_OBJ=hugeadm.o libhugetlbfs_privutils.a
 $(BIN_OBJ_DIR)/hugeadm: $(foreach file,$(HUGEADM_OBJ),$(BIN_OBJ_DIR)/$(file))
 	@$(VECHO) LDHOST $@
 	mkdir -p $(BIN_OBJ_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
+	$(CCBIN) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
 
 PAGESIZE_OBJ=pagesize.o libhugetlbfs_privutils.a
 $(BIN_OBJ_DIR)/pagesize: $(foreach file,$(PAGESIZE_OBJ),$(BIN_OBJ_DIR)/$(file))
 	@$(VECHO) LDHOST $@
 	mkdir -p $(BIN_OBJ_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
+	$(CCBIN) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ $^
 
 clean:
 	@$(VECHO) CLEAN
