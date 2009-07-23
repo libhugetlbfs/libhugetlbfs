@@ -6,12 +6,13 @@ usage() {
 	echo This script starts the oprofile daemon
 	echo
 	echo "Usage: oprofile_start.sh [options]"
-	echo "    --event         High-level oprofile event to track"
-	echo "    --vmlinux       Path to vmlinux"
-	echo "    --sample-factor Factor which to slow down sampling by"
-	echo "    --systemmap     Guess"
-	echo "    -v, --vmr       VMRegress install directory (default: $VMREGRESS_DIR)"
-	echo "    -h, --help     Print this help message"
+	echo "    --event               High-level oprofile event to track"
+	echo "    --vmlinux             Path to vmlinux"
+	echo "    --sample-cycle-factor Factor which to slow down CPU cycle sampling by"
+	echo "    --sample-event-factor Factor which to slow down event sampling by"
+	echo "    --systemmap           Guess"
+	echo "    -v, --vmr             VMRegress install directory (default: $VMREGRESS_DIR)"
+	echo "    -h, --help            Print this help message"
 	echo
 	exit
 }
@@ -23,17 +24,18 @@ VMLINUX=/boot/vmlinux-`uname -r`
 SYSTEMMAP=/boot/System.map-`uname -r`
 FACTOR=
 export PATH=$SCRIPTROOT:$PATH
-ARGS=`getopt -o hv: --long help,vmr:,event:,vmlinux:,systemmap:,sample-factor: -n oprofile_start.sh -- "$@"`
+ARGS=`getopt -o hv: --long help,vmr:,event:,vmlinux:,systemmap:,sample-event-factor:,sample-cycle-factor: -n oprofile_start.sh -- "$@"`
 
 # Cycle through arguements
 eval set -- "$ARGS"
 while true ; do
   case "$1" in
-	-v|--vmr)        VMREGRESS_DIR="$2"; shift 2;;
-	--event)         EVENTS="$EVENTS $2"; shift 2;;
-	--vmlinux)       VMLINUX=$2; shift 2;;
-	--sample-factor) FACTOR="--sample-factor $2"; shift 2;;
-	--systemmap)     SYSTEMMAP=$2; shift 2;;
+	-v|--vmr)              VMREGRESS_DIR="$2"; shift 2;;
+	--event)               EVENTS="$EVENTS $2"; shift 2;;
+	--vmlinux)             VMLINUX=$2; shift 2;;
+	--sample-cycle-factor) CYCLE_FACTOR="--sample-cycle-factor $2"; shift 2;;
+	--sample-event-factor) EVENT_FACTOR="--sample-event-factor $2"; shift 2;;
+	--systemmap)           SYSTEMMAP=$2; shift 2;;
         -h|--help) usage;;
         *) shift 1; break;;
   esac
@@ -41,7 +43,7 @@ done
 
 # Map the events
 for EVENT in $EVENTS; do
-	LOWLEVEL_EVENT="$LOWLEVEL_EVENT --event `oprofile_map_events.pl $FACTOR --event $EVENT`"
+	LOWLEVEL_EVENT="$LOWLEVEL_EVENT --event `oprofile_map_events.pl $EVENT_FACTOR $CYCLE_FACTOR --event $EVENT`"
 	if [ $? -ne 0 ]; then
 		echo Failed to map event $EVENT to low-level oprofile event. Verbose output follows
 		oprofile_map_events.pl --event $EVENT --verbose

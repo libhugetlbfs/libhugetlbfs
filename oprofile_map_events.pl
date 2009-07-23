@@ -14,7 +14,8 @@ use strict;
 my ($arch, $cputype);
 my $opt_verbose;
 my $opt_event;
-my $opt_factor=1;
+my $opt_cycle_factor=1;
+my $opt_event_factor=1;
 my $p = "oprofile_map_events.pl";
 
 my $oprofile_event;
@@ -50,9 +51,10 @@ $map_event_name{"ppc64##970MP##l1l2cache_miss"} = "PM_DATA_FROM_MEM_GRP50:1000";
 $map_event_name{"ppc64##power5##dtlb_miss"} = "PM_DTLB_MISS_GRP44:100000";
 
 GetOptions(
-	'verbose'		=>	\$opt_verbose,
-	'sample-factor|s=s'	=>	\$opt_factor,
-	'event|e=s'		=>	\$opt_event,
+	'verbose'			=>	\$opt_verbose,
+	'sample-cycle-factor|c=n'	=>	\$opt_cycle_factor,
+	'sample-event-factor|e=n'	=>	\$opt_event_factor,
+	'event|e=s'			=>	\$opt_event,
 	);
 setVerbose if $opt_verbose;
 
@@ -94,9 +96,14 @@ if ($oprofile_event eq "") {
 }
 
 # Apply the sampling factor if specified
-if ($opt_factor != 1) {
+if ($opt_cycle_factor != 1 || $opt_event_factor != 1) {
 	my ($event, $sample, $mask) = split(/:/, $oprofile_event);
-	$sample *= $opt_factor;
+
+	if ($opt_event eq "timer") {
+		$sample *= $opt_cycle_factor;
+	} else {
+		$sample *= $opt_event_factor;
+	}
 	if ($mask eq "") {
 		$oprofile_event = "$event:$sample";
 	} else {
