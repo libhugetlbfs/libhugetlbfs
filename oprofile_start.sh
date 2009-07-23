@@ -11,7 +11,6 @@ usage() {
 	echo "    --sample-cycle-factor Factor which to slow down CPU cycle sampling by"
 	echo "    --sample-event-factor Factor which to slow down event sampling by"
 	echo "    --systemmap           Guess"
-	echo "    -v, --vmr             VMRegress install directory (default: $VMREGRESS_DIR)"
 	echo "    -h, --help            Print this help message"
 	echo
 	exit
@@ -24,13 +23,12 @@ VMLINUX=/boot/vmlinux-`uname -r`
 SYSTEMMAP=/boot/System.map-`uname -r`
 FACTOR=
 export PATH=$SCRIPTROOT:$PATH
-ARGS=`getopt -o hv: --long help,vmr:,event:,vmlinux:,systemmap:,sample-event-factor:,sample-cycle-factor: -n oprofile_start.sh -- "$@"`
+ARGS=`getopt -o h --long help,event:,vmlinux:,systemmap:,sample-event-factor:,sample-cycle-factor: -n oprofile_start.sh -- "$@"`
 
 # Cycle through arguements
 eval set -- "$ARGS"
 while true ; do
   case "$1" in
-	-v|--vmr)              VMREGRESS_DIR="$2"; shift 2;;
 	--event)               EVENTS="$EVENTS $2"; shift 2;;
 	--vmlinux)             VMLINUX=$2; shift 2;;
 	--sample-cycle-factor) CYCLE_FACTOR="--sample-cycle-factor $2"; shift 2;;
