@@ -90,6 +90,9 @@ void print_usage()
 	CONT("Adjust pool 'size' lower bound");
 	OPTION("--pool-pages-max <size>:[+|-]<count>", "");
 	CONT("Adjust pool 'size' upper bound");
+	OPTION("--set-recommended-min_free_kbytes", "");
+	CONT("Sets min_free_kbytes to a recommended value to improve availability of");
+	CONT("huge pages at runtime");
 	OPTION("--add-temp-swap[=count]", "Specified with --pool-pages-min to create");
 	CONT("temporary swap space for the duration of the pool resize. Default swap");
 	CONT("size is 5 huge pages. Optional arg sets size to 'count' huge pages");
@@ -131,6 +134,7 @@ void print_usage()
 int opt_dry_run = 0;
 int opt_hard = 0;
 int opt_movable = -1;
+int opt_set_recommended_minfreekbytes = 0;
 int opt_temp_swap = 0;
 int opt_ramdisk_swap = 0;
 int opt_swap_persist = 0;
@@ -209,6 +213,8 @@ void verbose_expose(void)
 #define LONG_POOL_LIST		(LONG_POOL|'l')
 #define LONG_POOL_MIN_ADJ	(LONG_POOL|'m')
 #define LONG_POOL_MAX_ADJ	(LONG_POOL|'M')
+
+#define LONG_SET_RECOMMENDED_MINFREEKBYTES	('k' << 8)
 
 #define LONG_MOVABLE		('z' << 8)
 #define LONG_MOVABLE_ENABLE	(LONG_MOVABLE|'e')
@@ -634,6 +640,13 @@ long recommended_minfreekbytes(void)
 	return recommended_min;
 }
 
+void set_recommended_minfreekbytes(void)
+{
+	long recommended_min = recommended_minfreekbytes();
+	DEBUG("Setting min_free_kbytes to %ld\n", recommended_min);
+	file_write_ulong(PROCMINFREEKBYTES, (unsigned long)recommended_min);
+}
+
 /*
  * check_minfreekbytes does not alter the value of min_free_kbytes. It just
  * reports what the current value is and what it should be
@@ -1013,6 +1026,7 @@ int main(int argc, char** argv)
 		{"pool-list", no_argument, NULL, LONG_POOL_LIST},
 		{"pool-pages-min", required_argument, NULL, LONG_POOL_MIN_ADJ},
 		{"pool-pages-max", required_argument, NULL, LONG_POOL_MAX_ADJ},
+		{"set-recommended-min_free_kbytes", no_argument, NULL, LONG_SET_RECOMMENDED_MINFREEKBYTES},
 		{"enable-zone-movable", no_argument, NULL, LONG_MOVABLE_ENABLE},
 		{"disable-zone-movable", no_argument, NULL, LONG_MOVABLE_DISABLE},
 		{"hard", no_argument, NULL, LONG_HARD},
@@ -1126,6 +1140,10 @@ int main(int argc, char** argv)
 			opt_movable = 1;
 			break;
 
+		case LONG_SET_RECOMMENDED_MINFREEKBYTES:
+			opt_set_recommended_minfreekbytes = 1;
+			break;
+
 		case LONG_MOVABLE_DISABLE:
 			opt_movable = 0;
 			break;
@@ -1177,6 +1195,9 @@ int main(int argc, char** argv)
 
 	if (opt_movable != -1)
 		setup_zone_movable(opt_movable);
+
+	if (opt_set_recommended_minfreekbytes)
+		set_recommended_minfreekbytes();
 
 	while (--minadj_count >= 0) {
 		if (! kernel_has_overcommit())

@@ -77,6 +77,16 @@ by applications or stored on the kernels free list. The "Maximum" value is the
 largest number of hugepages that can be in use at any given time.
 
 .TP
+.B --set-recommended-min_free_kbytes
+
+Fragmentation avoidance in the kernel depends on avoiding pages of different
+mobility types being mixed with a pageblock arena - typically the size of
+the default huge page size. The more mixing that occurs, the less likely
+the huge page pool will be able to dynamically resize. The easiest means of
+avoiding mixing is to increase /proc/sys/vm/min_free_kbytes. This parameter
+sets min_free_kbytes to a recommended value to aid fragmentation avoidance.
+
+.TP
 .B --page-sizes
 
 This displays every page size supported by the system and has a pool
