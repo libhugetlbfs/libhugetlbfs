@@ -66,6 +66,8 @@ extern char *optarg;
 
 #define PROCMOUNTS "/proc/mounts"
 #define PROCHUGEPAGES_MOVABLE "/proc/sys/vm/hugepages_treat_as_movable"
+#define PROCMINFREEKBYTES "/proc/sys/vm/min_free_kbytes"
+#define PROCZONEINFO "/proc/zoneinfo"
 #define FS_NAME "hugetlbfs"
 #define MIN_COL 20
 #define MAX_SIZE_MNTENT (64 + PATH_MAX + 32 + 128 + 2 * sizeof(int))
@@ -607,6 +609,49 @@ void check_swap()
 	}
 }
 
+#define ZONEINFO_LINEBUF 1024
+long recommended_minfreekbytes(void)
+{
+	FILE *f;
+	char buf[ZONEINFO_LINEBUF];
+	int nr_zones = 0;
+	long recommended_min;
+	long pageblock_kbytes = kernel_default_hugepage_size() / 1024;
+
+	/* Detect the number of zones in the system */
+	f = fopen(PROCZONEINFO, "r");
+	if (f == NULL) {
+		WARNING("Unable to open " PROCZONEINFO);
+		return 0;
+	}
+	while (fgets(buf, ZONEINFO_LINEBUF, f) != NULL) {
+		if (strncmp(buf, "Node ", 5) == 0)
+			nr_zones++;
+	}
+	fclose(f);
+
+	recommended_min = pageblock_kbytes * nr_zones;
+	return recommended_min;
+}
+
+/*
+ * check_minfreekbytes does not alter the value of min_free_kbytes. It just
+ * reports what the current value is and what it should be
+ */
+void check_minfreekbytes(void)
+{
+	long min_free_kbytes = file_read_ulong(PROCMINFREEKBYTES, NULL);
+	long recommended_min = recommended_minfreekbytes();
+
+	/* There should be at least one pageblock free per zone in the system */
+	if (recommended_min > min_free_kbytes) {
+		printf("\n");
+		printf("The " PROCMINFREEKBYTES " of %ld is too small. To maximiuse efficiency\n", min_free_kbytes);
+		printf("of fragmentation avoidance, there should be at least one huge page free per zone\n");
+		printf("in the system which minimally requires a min_free_kbytes value of %ld\n", recommended_min);
+	}
+}
+
 void add_temp_swap(long page_size)
 {
 	char path[PATH_MAX];
@@ -941,6 +986,7 @@ void explain()
 	pool_list();
 	printf("\nHuge page sizes with configured pools:\n");
 	page_sizes(0);
+	check_minfreekbytes();
 	check_swap();
 	printf("\nNote: Permanent swap space should be preferred when dynamic "
 		"huge page pools are used.\n");
