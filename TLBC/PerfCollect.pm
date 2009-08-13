@@ -25,9 +25,9 @@ my $perf_bin;
 my $vmlinux;
 my (%map_event_name, %map_event_mask);
 
-$map_event_name{"i386###dtlb_miss"} = "-e dTLB-read-miss -e dTLB-write-miss";
-$map_event_name{"x86-64###dtlb_miss"} = "-e dTLB-read-miss -e dTLB-write-miss";
-$map_event_name{"ppc64###dtlb_miss"} = "-e dTLB-read-miss -e dTLB-write-miss";
+$map_event_name{"i386###dtlb_miss"} = "-e dTLB-miss";
+$map_event_name{"x86-64###dtlb_miss"} = "-e dTLB-miss";
+$map_event_name{"ppc64###dtlb_miss"} = "-e dTLB-miss";
 
 sub _get_event()
 {
