@@ -636,7 +636,16 @@ long recommended_minfreekbytes(void)
 	}
 	fclose(f);
 
-	recommended_min = pageblock_kbytes * nr_zones;
+	/* Make sure at least 2 pageblocks are free for MIGRATE_RESERVE */
+	recommended_min = pageblock_kbytes * nr_zones * 2;
+
+	/*
+	 * Make sure that on average at least two pageblocks are almost free
+	 * of another type, one for a migratetype to fall back to and a
+	 * second to avoid subsequent fallbacks of other types There are 3
+	 * MIGRATE_TYPES we care about.
+	 */
+	recommended_min += pageblock_kbytes * nr_zones * 3 * 3;
 	return recommended_min;
 }
 
