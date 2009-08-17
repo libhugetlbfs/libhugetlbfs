@@ -42,12 +42,16 @@ $map_event_name{"x86-64##family10##l2cache_miss"} = "L2_CACHE_MISS:500";
 $map_event_name{"x86-64##core_2##dtlb_miss"} = "DTLB_MISSES:500:0x01";
 $map_event_name{"ppc64##timer"} = "CYCLES:50000";
 $map_event_name{"ppc64##dtlb_miss"} = "PM_DTLB_MISS_GRP44:100000";
+$map_event_name{"ppc64##timer30"} = "PM_CYC_GRP30:10000";
+$map_event_name{"ppc64##tablewalk_cycles"} = "PM_DATA_TABLEWALK_CYC_GRP30:1000";
 $map_event_name{"ppc64##970MP##timer"} = "PM_CYC_GRP22:50000";
 $map_event_name{"ppc64##970MP##dtlb_miss"} = "PM_DTLB_MISS_GRP22:1000";
 $map_event_name{"ppc64##970MP##l1cache_ld_miss"} = "PM_LD_MISS_L1_GRP22:1000";
 $map_event_name{"ppc64##970MP##l1cache_st_miss"} = "PM_ST_MISS_L1_GRP22:1000";
 $map_event_name{"ppc64##970MP##timer50"} = "PM_CYC_GRP50:10000";
 $map_event_name{"ppc64##970MP##l1l2cache_miss"} = "PM_DATA_FROM_MEM_GRP50:1000";
+$map_event_name{"ppc64##970MP##timer30"} = "PM_CYC_GRP30:10000";
+$map_event_name{"ppc64##970MP##tablewalk_cycles"} = "PM_DATA_TABLEWALK_CYC_GRP30:1000";
 $map_event_name{"ppc64##power5##dtlb_miss"} = "PM_DTLB_MISS_GRP44:100000";
 
 GetOptions(
