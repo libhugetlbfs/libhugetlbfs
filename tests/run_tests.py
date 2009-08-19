@@ -393,7 +393,7 @@ def elflink_and_share_test(cmd, pre=""):
     clear_hpages()
     for link_str in ("xB.", "xBDT."):
         for i in range(2):
-            do_elflink_test(link_str + cmd, combine("HUGETLB_SHARE=1", pre))
+            do_elflink_test(link_str + cmd, combine("HUGETLB_SHARE=%d" % i, pre))
         clear_hpages()
 
 def elflink_rw_and_share_test(cmd, pre=""):
@@ -404,7 +404,7 @@ def elflink_rw_and_share_test(cmd, pre=""):
     for mode in ("R", "W", "RW"):
         for i in range(2):
             do_test(cmd, combine("HUGETLB_ELFMAP=" + mode + " " + \
-                                 "HUGETLB_SHARE=1", pre))
+                                 "HUGETLB_SHARE=%d" % i, pre))
         clear_hpages()
 
 def setup_shm_sysctl(limit):
