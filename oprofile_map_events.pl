@@ -103,7 +103,7 @@ if ($oprofile_event eq "") {
 if ($opt_cycle_factor != 1 || $opt_event_factor != 1) {
 	my ($event, $sample, $mask) = split(/:/, $oprofile_event);
 
-	if ($opt_event eq "timer") {
+	if ($opt_event =~ ^timer[0-9]*/) {
 		$sample *= $opt_cycle_factor;
 	} else {
 		$sample *= $opt_event_factor;
