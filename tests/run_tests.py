@@ -38,8 +38,7 @@ def bash(cmd, extra_env={}):
     Run 'cmd' in the shell and return the exit code and output.
     """
     local_env = os.environ.copy()
-    for key,value in extra_env.items():
-        local_env[key] = value
+    local_env.update(extra_env)
     p = subprocess.Popen(cmd, shell=True, env=local_env, \
                          stdout=subprocess.PIPE)
     try:
@@ -186,7 +185,7 @@ def clear_hpages():
         except OSError:
             pass
 
-def cmd_env(bits, pagesize=""):
+def cmd_env(bits, pagesize):
     """
     Construct test-specific environment settings.
 
@@ -194,11 +193,10 @@ def cmd_env(bits, pagesize=""):
     libhugetlbfs test or utility that is run from within the source tree can
     be found.  Additionally, tell libhugetlbfs to use the requested page size.
     """
-    str = "PATH=$PATH:./obj%s:../obj%s " \
-          "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:../obj%s:obj%s " % \
-          (`bits`, `bits`, `bits`, `bits`)
-    if len(`pagesize`) > 0: str += "HUGETLB_DEFAULT_PAGE_SIZE=%s " % pagesize
-    return str
+    return "PATH=./obj%d:../obj%d:$PATH " \
+        "LD_LIBRARY_PATH=../obj%d:obj%d:$LD_LIBRARY_PATH " \
+        "HUGETLB_DEFAULT_PAGE_SIZE=%d " \
+        % (bits, bits, bits, bits, pagesize)
 
 def get_pagesizes():
     """
@@ -209,7 +207,7 @@ def get_pagesizes():
     """
     sizes = set()
     out = ""
-    (rc, out) = bash(cmd_env('') + "hugeadm --page-sizes")
+    (rc, out) = bash("../obj/hugeadm --page-sizes")
     if rc != 0 or out == "": return sizes
 
     for size in out.split("\n"): sizes.add(int(size))
