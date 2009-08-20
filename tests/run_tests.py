@@ -4,6 +4,7 @@ import subprocess
 import os
 import sys
 import getopt
+import resource
 
 # The superset of wordsizes that should be tested (default 32, 64)
 wordsizes = set()
@@ -311,6 +312,15 @@ def do_test(cmd, pre="", bits=None, desc=""):
         for b in (set(bits) & wordsizes_by_pagesize[p]):
             run_test(p, b, cmd, pre, desc)
 
+def do_test_with_rlimit(rtype, limit, cmd, pre="", bits=None, desc=""):
+    """
+    Run a test case with a temporarily altered resource limit.
+    """
+    oldlimit = resource.getrlimit(rtype)
+    resource.setrlimit(rtype, (limit, limit))
+    do_test(cmd, pre, bits, desc)
+    resource.setrlimit(rtype, oldlimit)
+
 def do_elflink_test(cmd, pre="", desc=""):
     """
     Run an elflink test case, skipping known-bad configurations.
@@ -461,7 +471,7 @@ def functional_tests():
     do_test("truncate")
     do_test("shared")
     do_test("mprotect")
-    do_test("mlock")
+    do_test_with_rlimit(resource.RLIMIT_MEMLOCK, -1, "mlock")
     do_test("misalign")
 
     # Specific kernel bug tests
@@ -476,7 +486,7 @@ def functional_tests():
     do_test("truncate_above_4GB")
     do_test("brk_near_huge")
     do_test("task-size-overrun")
-    do_test("stack_grow_into_huge")
+    do_test_with_rlimit(resource.RLIMIT_STACK, -1, "stack_grow_into_huge")
     if dangerous == 1:
         do_test("readahead_reserve")
         do_test("madvise_reserve")
