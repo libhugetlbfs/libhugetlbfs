@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 import subprocess
+import types
 import os
 import sys
 import getopt
@@ -34,19 +35,34 @@ R = {}
 result_types = ("total", "pass", "config", "fail", "xfail", "xpass",
                 "signal", "strange", "skip")
 
-def bash(cmd, extra_env={}):
+def bash(cmd):
     """
     Run 'cmd' in the shell and return the exit code and output.
     """
-    local_env = os.environ.copy()
-    local_env.update(extra_env)
-    p = subprocess.Popen(cmd, shell=True, env=local_env, \
-                         stdout=subprocess.PIPE)
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     try:
         rc = p.wait()
     except KeyboardInterrupt:
         # Abort and mark this a strange test result
         return (127, "")
+    out = p.stdout.read().strip()
+    return (rc, out)
+
+def run_test_prog(bits, pagesize, cmd, **env):
+    local_env = os.environ.copy()
+    local_env.update(env)
+    local_env["PATH"] = "./obj%d:../obj%d:%s" \
+        % (bits, bits, local_env.get("PATH", ""))
+    local_env["LD_LIBRARY_PATH"] = "../obj%d:obj%d:%s" \
+        % (bits, bits, local_env.get("LD_LIBRARY_PATH", ""))
+    local_env["HUGETLB_DEFAULT_PAGE_SIZE"] = repr(pagesize)
+
+    p = subprocess.Popen(cmd, env=local_env, stdout=subprocess.PIPE)
+    try:
+        rc = p.wait()
+    except KeyboardInterrupt:
+        # Abort and mark this a strange test result
+        return (None, "")
     out = p.stdout.read().strip()
     return (rc, out)
 
@@ -186,19 +202,6 @@ def clear_hpages():
         except OSError:
             pass
 
-def cmd_env(bits, pagesize):
-    """
-    Construct test-specific environment settings.
-
-    Set PATH and LD_LIBRARY_PATH so that the executable and libraries for a
-    libhugetlbfs test or utility that is run from within the source tree can
-    be found.  Additionally, tell libhugetlbfs to use the requested page size.
-    """
-    return "PATH=./obj%d:../obj%d:$PATH " \
-        "LD_LIBRARY_PATH=../obj%d:obj%d:$LD_LIBRARY_PATH " \
-        "HUGETLB_DEFAULT_PAGE_SIZE=%d " \
-        % (bits, bits, bits, bits, pagesize)
-
 def get_pagesizes():
     """
     Get a list of configured huge page sizes.
@@ -227,8 +230,7 @@ def check_hugetlbfs_path():
     for p in pagesizes:
         okbits = []
         for b in wordsizes:
-            cmd = cmd_env(b, p) + "get_hugetlbfs_path"
-            (rc, out) = bash(cmd)
+            (rc, out) = run_test_prog(b, p, "get_hugetlbfs_path")
             if rc == 0:
                 okbits.append(b)
                 mounts.append(out)
@@ -259,7 +261,15 @@ def check_linkhuge_tests():
         if rc != 0: okbits.append(bits)
     return set(okbits)
 
-def run_test(pagesize, bits, cmd, pre, desc):
+def print_cmd(pagesize, bits, cmd, env):
+    if env:
+        print ' '.join(['%s=%s' % (k, v) for k, v in env.items()]),
+    if type(cmd) != types.StringType:
+        cmd = ' '.join(cmd)
+    print "%s (%s: %i):\t" % (cmd, pretty_page_size(pagesize), bits),
+    sys.stdout.flush()
+
+def run_test(pagesize, bits, cmd, **env):
     """
     Execute a test, print the output and log the result
 
@@ -274,13 +284,8 @@ def run_test(pagesize, bits, cmd, pre, desc):
     if not os.path.isdir(objdir):
         return
 
-    cmd_str = "%s %s %s" % (cmd_env(bits, pagesize), pre, cmd)
-    if desc != "": print desc,
-    if pre != "": print pre,
-    print "%s (%s: %i):\t" % (cmd, pretty_page_size(pagesize), bits),
-    sys.stdout.flush()
-
-    (rc, out) = bash(cmd_str)
+    print_cmd(pagesize, bits, cmd, env)
+    (rc, out) = run_test_prog(bits, pagesize, cmd, **env)
     print out
 
     R["total"][pagesize][bits] += 1
@@ -289,94 +294,84 @@ def run_test(pagesize, bits, cmd, pre, desc):
     elif rc == 2:  R["fail"][pagesize][bits] += 1
     elif rc == 3:  R["xfail"][pagesize][bits] += 1
     elif rc == 4:  R["xpass"][pagesize][bits] += 1
-    elif rc > 127: R["signal"][pagesize][bits] += 1
+    elif rc < 0: R["signal"][pagesize][bits] += 1
     else:          R["strange"][pagesize][bits] += 1
 
-def skip_test(pagesize, bits, cmd, pre, desc):
+def skip_test(pagesize, bits, cmd, **env):
     """
     Skip a test, print test information, and log that it was skipped.
     """
     global tot_tests, tot_skip
     R["total"][pagesize][bits] += 1
     R["skip"][pagesize][bits] += 1
-    if desc != "": print desc,
-    if pre != "": print pre,
-    print "%s (%s: %i):\tSKIPPED" % (cmd, pretty_page_size(pagesize), bits)
+    print_cmd(pagesize, bits, cmd, env)
+    print "SKIPPED"
 
-def do_test(cmd, pre="", bits=None, desc=""):
+def do_test(cmd, bits=None, **env):
     """
     Run a test case, testing each page size and each indicated word size.
     """
     if bits == None: bits = wordsizes
     for p in pagesizes:
         for b in (set(bits) & wordsizes_by_pagesize[p]):
-            run_test(p, b, cmd, pre, desc)
+            run_test(p, b, cmd, **env)
 
-def do_test_with_rlimit(rtype, limit, cmd, pre="", bits=None, desc=""):
+def do_test_with_rlimit(rtype, limit, cmd, bits=None, **env):
     """
     Run a test case with a temporarily altered resource limit.
     """
     oldlimit = resource.getrlimit(rtype)
     resource.setrlimit(rtype, (limit, limit))
-    do_test(cmd, pre, bits, desc)
+    do_test(cmd, bits, **env)
     resource.setrlimit(rtype, oldlimit)
 
-def do_elflink_test(cmd, pre="", desc=""):
+def do_elflink_test(cmd, **env):
     """
     Run an elflink test case, skipping known-bad configurations.
     """
     for p in pagesizes:
         for b in wordsizes_by_pagesize[p]:
-            if b in linkhuge_wordsizes: run_test(p, b, cmd, pre, desc)
-            else: skip_test(p, b, cmd, pre, desc)
+            if b in linkhuge_wordsizes: run_test(p, b, cmd, **env)
+            else: skip_test(p, b, cmd, **env)
 
-def combine(a, b):
-    """
-    Concatenate strings a and b with a space between only if needed.
-    """
-    if len(b) != 0:
-        return a + " " + b
-    else:
-        return a
-
-def elflink_test(cmd, pre=""):
+def elflink_test(cmd, **env):
     """
     Run an elflink test case with different configuration combinations.
 
     Test various combinations of: preloading libhugetlbfs, B vs. BDT link
     modes, minimal copying on or off, and disabling segment remapping.
     """
-    do_test(cmd, pre)
+    do_test(cmd, **env)
     # Test we don't blow up if not linked for hugepage
-    do_test(cmd, combine("LD_PRELOAD=libhugetlbfs.so", pre))
-    do_elflink_test("xB." + cmd)
-    do_elflink_test("xBDT." + cmd)
+    do_test(cmd, LD_PRELOAD="libhugetlbfs.so", **env)
+    do_elflink_test("xB." + cmd, **env)
+    do_elflink_test("xBDT." + cmd, **env)
     # Test we don't blow up if HUGETLB_MINIMAL_COPY is diabled
-    do_elflink_test("xB." + cmd, combine("HUGETLB_MINIMAL_COPY=no", pre))
-    do_elflink_test("xBDT." + cmd, combine("HUGETLB_MINIMAL_COPY=no", pre))
+    do_elflink_test("xB." + cmd, HUGETLB_MINIMAL_COPY="no", **env)
+    do_elflink_test("xBDT." + cmd, HUGETLB_MINIMAL_COPY="no", **env)
     # Test that HUGETLB_ELFMAP=no inhibits remapping as intended
-    do_elflink_test("xB." + cmd, combine("HUGETLB_ELFMAP=no", pre))
-    do_elflink_test("xBDT." + cmd, combine("HUGETLB_ELFMAP=no", pre))
+    do_elflink_test("xB." + cmd, HUGETLB_ELFMAP="no", **env)
+    do_elflink_test("xBDT." + cmd, HUGETLB_ELFMAP="no", **env)
 
-def elflink_rw_test(cmd, pre=""):
+def elflink_rw_test(cmd, **env):
     """
     Run the elflink_rw test with different configuration combinations.
 
     Test various combinations of: remapping modes and minimal copy on or off.
     """
     # Basic tests: None, Read-only, Write-only, Read-Write, exlicit disable
-    do_test(cmd, pre)
-    do_test(cmd, combine("HUGETLB_ELFMAP=R", pre))
-    do_test(cmd, combine("HUGETLB_ELFMAP=W", pre))
-    do_test(cmd, combine("HUGETLB_ELFMAP=RW", pre))
-    do_test(cmd, combine("HUGETLB_ELFMAP=no", pre))
+    do_test(cmd, **env)
+    do_test(cmd, HUGETLB_ELFMAP="R", **env)
+    do_test(cmd, HUGETLB_ELFMAP="W", **env)
+    do_test(cmd, HUGETLB_ELFMAP="RW", **env)
+    do_test(cmd, HUGETLB_ELFMAP="no", **env)
 
     # Test we don't blow up if HUGETLB_MINIMAL_COPY is disabled
-    do_test(cmd, combine("HUGETLB_MINIMAL_COPY=no HUGETLB_ELFMAP=R", pre))
-    do_test(cmd, combine("HUGETLB_MINIMAL_COPY=no HUGETLB_ELFMAP=W", pre))
-    do_test(cmd, combine("HUGETLB_MINIMAL_COPY=no HUGETLB_ELFMAP=RW", pre))
+    do_test(cmd, HUGETLB_MINIMAL_COPY="no", HUGETLB_ELFMAP=R"", **env)
+    do_test(cmd, HUGETLB_MINIMAL_COPY="no", HUGETLB_ELFMAP="W", **env)
+    do_test(cmd, HUGETLB_MINIMAL_COPY="no", HUGETLB_ELFMAP="RW", **env)
 
-def elfshare_test(cmd, pre=""):
+def elfshare_test(cmd, **env):
     """
     Test segment sharing with multiple configuration variations.
     """
@@ -384,15 +379,15 @@ def elfshare_test(cmd, pre=""):
     # sharefiles before and after in the first set of runs, but leave
     # them there in the second:
     clear_hpages()
-    do_elflink_test("xB." + cmd, combine("HUGETLB_SHARE=1", pre))
+    do_elflink_test("xB." + cmd, HUGETLB_SHARE="1", **env)
     clear_hpages()
-    do_elflink_test("xBDT." + cmd, combine("HUGETLB_SHARE=1", pre))
+    do_elflink_test("xBDT." + cmd, HUGETLB_SHARE="1", **env)
     clear_hpages()
-    do_elflink_test("xB." + cmd, combine("HUGETLB_SHARE=1", pre))
-    do_elflink_test("xBDT." + cmd, combine("HUGETLB_SHARE=1", pre))
+    do_elflink_test("xB." + cmd, HUGETLB_SHARE="1", **env)
+    do_elflink_test("xBDT." + cmd, HUGETLB_SHARE="1", **env)
     clear_hpages()
 
-def elflink_and_share_test(cmd, pre=""):
+def elflink_and_share_test(cmd, **env):
     """
     Run the ordinary linkhuge tests with sharing enabled
     """
@@ -401,18 +396,17 @@ def elflink_and_share_test(cmd, pre=""):
     clear_hpages()
     for link_str in ("xB.", "xBDT."):
         for i in range(2):
-            do_elflink_test(link_str + cmd, combine("HUGETLB_SHARE=%d" % i, pre))
+            do_elflink_test(link_str + cmd, HUGETLB_SHARE=repr(i), **env)
         clear_hpages()
 
-def elflink_rw_and_share_test(cmd, pre=""):
+def elflink_rw_and_share_test(cmd, **env):
     """
     Run the ordinary linkhuge_rw tests with sharing enabled
     """
     clear_hpages()
     for mode in ("R", "W", "RW"):
         for i in range(2):
-            do_test(cmd, combine("HUGETLB_ELFMAP=" + mode + " " + \
-                                 "HUGETLB_SHARE=%d" % i, pre))
+            do_test(cmd, HUGETLB_ELFMAP=mode, HUGETLB_SHARE=repr(i), **env)
         clear_hpages()
 
 def setup_shm_sysctl(limit):
@@ -461,8 +455,8 @@ def functional_tests():
     # Library tests requiring kernel hugepage support
     do_test("gethugepagesize")
     do_test("gethugepagesizes")
-    do_test("empty_mounts", "HUGETLB_VERBOSE=1")
-    do_test("large_mounts", "HUGETLB_VERBOSE=1")
+    do_test("empty_mounts", HUGETLB_VERBOSE="1")
+    do_test("large_mounts", HUGETLB_VERBOSE="1")
 
     # Tests requiring an active and usable hugepage mount
     do_test("find_path")
@@ -504,25 +498,25 @@ def functional_tests():
     do_test("fork-cow")
     do_test("direct")
     do_test("malloc")
-    do_test("malloc", "LD_PRELOAD=libhugetlbfs.so HUGETLB_MORECORE=yes")
+    do_test("malloc", LD_PRELOAD="libhugetlbfs.so", HUGETLB_MORECORE="yes")
     do_test("malloc_manysmall")
-    do_test("malloc_manysmall", \
-            "LD_PRELOAD=libhugetlbfs.so HUGETLB_MORECORE=yes")
+    do_test("malloc_manysmall", LD_PRELOAD="libhugetlbfs.so",
+            HUGETLB_MORECORE="yes")
     do_test("heapshrink")
-    do_test("heapshrink", "LD_PRELOAD=libheapshrink.so")
-    do_test("heapshrink", "LD_PRELOAD=libhugetlbfs.so HUGETLB_MORECORE=yes")
-    do_test("heapshrink", "LD_PRELOAD=\"libhugetlbfs.so libheapshrink.so\" " + \
-                          "HUGETLB_MORECORE=yes")
-    do_test("heapshrink", "LD_PRELOAD=libheapshrink.so HUGETLB_MORECORE=yes " +\
-                          "HUGETLB_MORECORE_SHRINK=yes")
-    do_test("heapshrink", "LD_PRELOAD=\"libhugetlbfs.so libheapshrink.so\" " + \
-                          "HUGETLB_MORECORE=yes HUGETLB_MORECORE_SHRINK=yes")
-    do_test("heap-overflow", "HUGETLB_VERBOSE=1 HUGETLB_MORECORE=yes")
+    do_test("heapshrink", LD_PRELOAD="libheapshrink.so")
+    do_test("heapshrink", LD_PRELOAD="libhugetlbfs.so", HUGETLB_MORECORE="yes")
+    do_test("heapshrink", LD_PRELOAD="libhugetlbfs.so libheapshrink.so",
+            HUGETLB_MORECORE="yes")
+    do_test("heapshrink", LD_PRELOAD="libheapshrink.so", HUGETLB_MORECORE="yes",
+            HUGETLB_MORECORE_SHRINK="es")
+    do_test("heapshrink", LD_PRELOAD="libhugetlbfs.so libheapshrink.so",
+            HUGETLB_MORECORE="yes", HUGETLB_MORECORE_SHRINK="yes")
+    do_test("heap-overflow", HUGETLB_VERBOSE="1", HUGETLB_MORECORE="yes")
 
     # Run the remapping tests' up-front checks
     linkhuge_wordsizes = check_linkhuge_tests()
     # Original elflink tests
-    elflink_test("linkhuge_nofd", "HUGETLB_VERBOSE=0")
+    elflink_test("linkhuge_nofd", HUGETLB_VERBOSE="0")
     elflink_test("linkhuge")
 
     # Original elflink sharing tests
@@ -538,8 +532,8 @@ def functional_tests():
     # reset free hpages because sharing will have held some
     # alternatively, use
     do_test("chunk-overcommit")
-    do_test("alloc-instantiate-race shared")
-    do_test("alloc-instantiate-race private")
+    do_test(("alloc-instantiate-race", "shared"))
+    do_test(("alloc-instantiate-race", "private"))
     do_test("truncate_reserve_wraparound")
     do_test("truncate_sigbus_versus_oom")
 
@@ -548,7 +542,7 @@ def functional_tests():
 
     # Test overriding of shmget()
     do_test("shmoverride_linked")
-    do_test("shmoverride_unlinked", "LD_PRELOAD=libhugetlbfs.so")
+    do_test("shmoverride_unlinked", LD_PRELOAD="libhugetlbfs.so")
 
     # Test hugetlbfs filesystem quota accounting
     do_test("quota.sh")
@@ -568,10 +562,10 @@ def stress_tests():
     # after a stress test terminates
     (rc, nr_pages) = free_hpages()
 
-    do_test("mmap-gettest %i %i" % (iterations, nr_pages))
+    do_test(("mmap-gettest", repr(iterations), repr(nr_pages)))
 
     # mmap-cow needs a hugepages for each thread plus one extra
-    do_test("mmap-cow %i %i" % (nr_pages - 1, nr_pages))
+    do_test(("mmap-cow", repr(nr_pages-1), repr(nr_pages)))
 
     (rc, tot_pages) = total_hpages()
     (rc, size) = hpage_size()
@@ -581,10 +575,10 @@ def stress_tests():
     # This is to catch off-by-ones or races in the kernel allocated that
     # can make allocating all hugepages a problem
     if nr_pages > 1:
-        do_test("shm-fork.sh %i %i" % (threads, nr_pages / 2))
-    do_test("shm-fork.sh %i %i" % (threads, nr_pages))
+        do_test(("shm-fork.sh", repr(threads), repr(nr_pages / 2)))
+    do_test(("shm-fork.sh", repr(threads), repr(nr_pages)))
 
-    do_test("shm-getraw.sh %i %s" % (nr_pages, "/dev/full"))
+    do_test(("shm-getraw.sh", repr(nr_pages), "/dev/full"))
     restore_shm_sysctl(sysctls)
 
 
