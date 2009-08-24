@@ -253,13 +253,13 @@ def check_linkhuge_tests():
     which word sizes can be tested with linkhuge.  The others will be skipped.
     NOTE: The linhuge_rw tests are always safe to run and will not be skipped.
     """
-    okbits = []
+    okbits = set()
 
     for bits in wordsizes:
-        cmd = "gcc -m%i -Wl,--verbose 2> /dev/null | grep -q SPECIAL" % bits
-        (rc, out) = bash(cmd)
-        if rc != 0: okbits.append(bits)
-    return set(okbits)
+        script = open('obj%d/dummy.ldscript' % bits, 'r').read()
+        if script.count('SPECIAL') == 0:
+            okbits.add(bits)
+    return okbits
 
 def print_cmd(pagesize, bits, cmd, env):
     if env:

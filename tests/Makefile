@@ -31,7 +31,7 @@ LDFLAGS32 = -L../obj32
 LDFLAGS64 = -L../obj64
 INSTALL = install
 
-TESTS = $(LIB_TESTS) $(NOLIB_TESTS) $(STRESS_TESTS)
+TESTS = $(LIB_TESTS) $(NOLIB_TESTS) $(STRESS_TESTS) dummy.ldscript
 ifdef ELF32
 TESTS += $(LDSCRIPT_TESTS) $(HUGELINK_TESTS) $(HUGELINK_TESTS:%=xB.%) \
 	$(HUGELINK_TESTS:%=xBDT.%) $(HUGELINK_RW_TESTS)
@@ -126,6 +126,14 @@ $(NOLIB_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 $(NOLIB_TESTS:%=obj64/%): %: %.o obj64/testutils.o
 	@$(VECHO) LD64 "(nolib test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS)
+
+obj32/%.ldscript: obj32/%.o obj32/testutils.o
+	@$(VECHO) SCRIPT32 $@
+	$(CC32) $(LDFLAGS) $(LDFLAGS32) -Wl,--verbose -o/dev/null $^ $(LDLIBS) > $@
+
+obj64/%.ldscript: obj64/%.o obj64/testutils.o
+	@$(VECHO) SCRIPT64 $@
+	$(CC64) $(LDFLAGS) $(LDFLAGS64) -Wl,--verbose -o/dev/null $^ $(LDLIBS) > $@
 
 $(LDSCRIPT_TESTS:%=obj32/%): obj32/%: %.ld obj32/%.o obj32/testutils.o
 	@$(VECHO) LD32 "(preload test)" $@
