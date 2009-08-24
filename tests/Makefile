@@ -175,25 +175,25 @@ obj32/xB.%: $(SCRIPTS32).xB $(HUGETLBFS_LD) obj32/%.o obj32/testutils.o
 	@$(VECHO) LD32 "(xB test)" $@
 	@mkdir -p obj32
 	@ln -sf ../$(HUGETLBFS_LD) obj32/ld
-	$(CC32) -B./obj32  $(LDFLAGS) $(LDFLAGS32) -o $@ $(LDLIBS) -Wl,--hugetlbfs-link=B $(filter %.o,$^)
+	HUGETLB_DEPRECATED_LINK=1 $(CC32) -B./obj32  $(LDFLAGS) $(LDFLAGS32) -o $@ $(LDLIBS) -Wl,--hugetlbfs-link=B $(filter %.o,$^)
 
 obj64/xB.%: $(SCRIPTS64).xB $(HUGETLBFS_LD) obj64/%.o obj64/testutils.o
 	@$(VECHO) LD64 "(xB test)" $@
 	@mkdir -p obj64
 	@ln -sf ../$(HUGETLBFS_LD) obj64/ld
-	$(CC64) -B./obj64 $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,--hugetlbfs-link=B $(filter %.o,$^)
+	HUGETLB_DEPRECATED_LINK=1 $(CC64) -B./obj64 $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,--hugetlbfs-link=B $(filter %.o,$^)
 
 obj32/xBDT.%: $(SCRIPTS32).xBDT $(HUGETLBFS_LD) obj32/%.o obj32/testutils.o
 	@$(VECHO) LD32 "(xBDT test)" $@
 	@mkdir -p obj32
 	@ln -sf ../$(HUGETLBFS_LD) obj32/ld
-	$(CC32) -B./obj32 $(LDFLAGS) $(LDFLAGS32) -o $@ $(LDLIBS) -Wl,--hugetlbfs-link=BDT $(filter %.o,$^)
+	HUGETLB_DEPRECATED_LINK=1 $(CC32) -B./obj32 $(LDFLAGS) $(LDFLAGS32) -o $@ $(LDLIBS) -Wl,--hugetlbfs-link=BDT $(filter %.o,$^)
 
 obj64/xBDT.%: $(SCRIPTS64).xBDT $(HUGETLBFS_LD) obj64/%.o obj64/testutils.o
 	@$(VECHO) LD64 "(xBDT test)" $@
 	@mkdir -p obj64
 	@ln -sf ../$(HUGETLBFS_LD) obj64/ld
-	$(CC64) -B./obj64 $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,--hugetlbfs-link=BDT $(filter %.o,$^)
+	HUGETLB_DEPRECATED_LINK=1 $(CC64) -B./obj64 $(LDFLAGS) $(LDFLAGS64) -o $@ $(LDLIBS) -Wl,--hugetlbfs-link=BDT $(filter %.o,$^)
 
 $(HELPERS:%=obj32/%): %: %.o
 	@$(VECHO) LD32 "(helper)" $@

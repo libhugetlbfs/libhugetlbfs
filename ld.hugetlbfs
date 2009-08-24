@@ -40,8 +40,10 @@ while [ -n "$1" ]; do
 	    fi
 	    ;;
 	--hugetlbfs-link=*)
-            echo -n "ld.hugetlbfs: --hugetlbfs-link is deprecated. " 1>&2
-            echo "Migrate to --hugetlbfs-align." 1>&2
+	    if [ -z "$HUGETLB_DEPRECATED_LINK" ]; then
+		echo -n "ld.hugetlbfs: --hugetlbfs-link is deprecated. " 1>&2
+		echo "Migrate to --hugetlbfs-align." 1>&2
+	    fi
 	    HTLB_LINK="${arg#--hugetlbfs-link=}"
 	    ;;
 	--hugetlbfs-script-path=*)
