@@ -1,3 +1,23 @@
+libhugetlbfs 2.6 "Adovada"
+======================================================================
+New Features
+* cpupcstat now supports data collection using the perf tool as well as
+  oprofile
+* --explain reports if min_free_kbytes is too small
+* add --set-min_free_kbytes to hugeadm
+
+Bug Fixes
+* Admin utils (hugeadm, hugectl, etc) are now built as 64 bit binaries
+  if possible to support adminstration of larger huge page sizes
+
+Test Suite
+* Suppress ld.hugetlbfs warnings during test suite build
+* Make SPECIAL keyword test cross-compile safe
+* Test script sets proper rlimits for mlock and stack_grow_into_huge
+  tests
+* Ensure that all elflink tests are run with both HUGETLB_SHARE=0 and
+  HUGETLB_SHARE=1
+
 libhugetlbfs 2.5 "Self Titled"
 ======================================================================
 New Features
