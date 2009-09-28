@@ -695,9 +695,22 @@ void add_temp_swap(long page_size)
 	snprintf(path, PATH_MAX, "%s/swap/temp", MOUNT_DIR);
 	snprintf(file, PATH_MAX, "%s/swapfile-%ld", path, pid);
 
+	/* swapsize is 5 hugepages */
+	if (opt_temp_swap == -1)
+		num_pages = 5;
+	else
+		num_pages = opt_temp_swap;
+	swap_size = num_pages * page_size;
 
 	if (ensure_dir(path, S_IRWXU | S_IRGRP | S_IXGRP, 0, 0))
 		exit(EXIT_FAILURE);
+
+	if (opt_dry_run) {
+		printf("dd bs=1024 count=%ld if=/dev/zero of=%s\n",
+			swap_size / 1024, file);
+		printf("mkswap %s\nswapon %s\n", file, file);
+		return;
+	}
 
 	f = fopen(file, "wx");
 	if (!f) {
@@ -706,13 +719,6 @@ void add_temp_swap(long page_size)
 		return;
 	}
 
-	/* swapsize is 5 hugepages */
-	if (opt_temp_swap == -1)
-		num_pages = 5;
-	else
-		num_pages = opt_temp_swap;
-
-	swap_size = num_pages * page_size;
 	buf = malloc(swap_size);
 	memset(buf, 0, swap_size);
 	fwrite(buf, sizeof(char), swap_size, f);
@@ -747,6 +753,12 @@ void rem_temp_swap() {
 
 	pid = getpid();
 	snprintf(file, PATH_MAX, "%s/swap/temp/swapfile-%ld", MOUNT_DIR, pid);
+
+	if (opt_dry_run) {
+		printf("swapoff %s\nrm -f %s\n", file, file);
+		return;
+	}
+
 	if (swapoff(file))
 		WARNING("swapoff on %s failed: %s\n", file, strerror(errno));
 	remove(file);
