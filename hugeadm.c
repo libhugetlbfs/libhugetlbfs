@@ -143,23 +143,27 @@ char ramdisk_list[PATH_MAX] = "";
 
 void setup_environment(char *var, char *val)
 {
+	if (opt_dry_run) {
+		printf("%s='%s'\n", var, val);
+		return;
+	}
+
 	setenv(var, val, 1);
 	DEBUG("%s='%s'\n", var, val);
-
-	if (opt_dry_run)
-		printf("%s='%s'\n", var, val);
 }
 
 /* Enable/disable allocation of hugepages from ZONE_MOVABLE */
 void setup_zone_movable(int able)
 {
+	if (opt_dry_run) {
+		printf("echo %d > %s\n", able, PROCHUGEPAGES_MOVABLE);
+		return;
+	}
+
 	DEBUG("Setting %s to %d\n", PROCHUGEPAGES_MOVABLE, able);
 
 	/* libhugetlbfs reports any error that occurs */
 	file_write_ulong(PROCHUGEPAGES_MOVABLE, (unsigned long)able);
-
-	if (opt_dry_run)
-		printf("echo %d > %s\n", able, PROCHUGEPAGES_MOVABLE);
 }
 
 void verbose_init(void)
@@ -652,6 +656,13 @@ long recommended_minfreekbytes(void)
 void set_recommended_minfreekbytes(void)
 {
 	long recommended_min = recommended_minfreekbytes();
+
+	if (opt_dry_run) {
+		printf("echo \"%ld\" > %s\n", recommended_min,
+			PROCMINFREEKBYTES);
+		return;
+	}
+
 	DEBUG("Setting min_free_kbytes to %ld\n", recommended_min);
 	file_write_ulong(PROCMINFREEKBYTES, (unsigned long)recommended_min);
 }
@@ -795,24 +806,29 @@ void add_ramdisk_swap(long page_size) {
 			break;
 		}
 		disk_num++;
-		snprintf(mkswap_cmd, PATH_MAX, "mkswap %s", ramdisk);
-	        ret = system(mkswap_cmd);
-	        if (WIFSIGNALED(ret)) {
-	                WARNING("Call to mkswap failed\n");
-			continue;
-	        } else if (WIFEXITED(ret)) {
-		        ret = WEXITSTATUS(ret);
-	                if (ret) {
-	                        WARNING("Call to mkswap failed\n");
+
+		if (opt_dry_run) {
+			printf("mkswap %s\nswapon %s\n", ramdisk, ramdisk);
+		} else {
+			snprintf(mkswap_cmd, PATH_MAX, "mkswap %s", ramdisk);
+			ret = system(mkswap_cmd);
+			if (WIFSIGNALED(ret)) {
+				WARNING("Call to mkswap failed\n");
 				continue;
-	                }
+			} else if (WIFEXITED(ret)) {
+				ret = WEXITSTATUS(ret);
+				if (ret) {
+					WARNING("Call to mkswap failed\n");
+					continue;
+				}
+			}
+			DEBUG("swapon %s\n", ramdisk);
+			if (swapon(ramdisk, 0)) {
+				WARNING("swapon on %s failed: %s\n", ramdisk, strerror(errno));
+				opt_temp_swap = 0;
+				continue;
+			}
 		}
-		DEBUG("swapon %s\n", ramdisk);
-	        if (swapon(ramdisk, 0)) {
-	                WARNING("swapon on %s failed: %s\n", ramdisk, strerror(errno));
-		        opt_temp_swap = 0;
-			continue;
-	        }
 		count--;
 		strcat(ramdisk_list, " ");
 		strcat(ramdisk_list, ramdisk);
@@ -825,10 +841,14 @@ void rem_ramdisk_swap(){
 
 	ramdisk = strtok_r(ramdisk_list, " ", &iter);
 	while (ramdisk != NULL) {
-		DEBUG("swapoff %s\n", ramdisk);
-		if (swapoff(ramdisk)) {
-			WARNING("swapoff on %s failed: %s\n", ramdisk, strerror(errno));
-			continue;
+		if (opt_dry_run) {
+			printf("swapoff %s\n", ramdisk);
+		} else {
+			DEBUG("swapoff %s\n", ramdisk);
+			if (swapoff(ramdisk)) {
+				WARNING("swapoff on %s failed: %s\n", ramdisk, strerror(errno));
+				continue;
+			}
 		}
 		ramdisk = strtok_r(NULL, " ", &iter);
 	}
