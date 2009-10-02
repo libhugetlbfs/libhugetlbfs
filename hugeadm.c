@@ -67,6 +67,7 @@ extern char *optarg;
 #define PROCMOUNTS "/proc/mounts"
 #define PROCHUGEPAGES_MOVABLE "/proc/sys/vm/hugepages_treat_as_movable"
 #define PROCMINFREEKBYTES "/proc/sys/vm/min_free_kbytes"
+#define PROCHUGETLBGROUP "/proc/sys/vm/hugetlb_shm_group"
 #define PROCZONEINFO "/proc/zoneinfo"
 #define FS_NAME "hugetlbfs"
 #define MIN_COL 20
@@ -699,6 +700,43 @@ void check_minfreekbytes(void)
 	}
 }
 
+/* heisted from shadow-utils/libmisc/list.c::is_on_list() */
+static int user_in_group(char *const *list, const char *member)
+{
+	while (*list != NULL) {
+		if (strcmp(*list, member) == 0) {
+			return 1;
+		}
+		list++;
+	}
+
+	return 0;
+}
+
+void check_user(void)
+{
+	uid_t uid;
+	gid_t gid;
+	struct passwd *pwd;
+	struct group *grp;
+
+	gid = (gid_t)file_read_ulong(PROCHUGETLBGROUP, NULL);
+	grp = getgrgid(gid);
+	if (!grp) {
+		printf("\n");
+		WARNING("Group ID %d in hugetlb_shm_group doesn't appear to be a valid group!\n", gid);
+		return;
+	}
+
+	uid = getuid();
+	pwd = getpwuid(uid);
+
+	if (gid != pwd->pw_gid && !user_in_group(grp->gr_mem, pwd->pw_name) && uid != 0) {
+		printf("\n");
+		WARNING("User %s (uid: %d) is not a member of the hugetlb_shm_group %s (gid: %d)!\n", pwd->pw_name, uid, grp->gr_name, gid);
+	}
+}
+
 void add_temp_swap(long page_size)
 {
 	char path[PATH_MAX];
@@ -1057,6 +1095,7 @@ void explain()
 	page_sizes(0);
 	check_minfreekbytes();
 	check_swap();
+	check_user();
 	printf("\nNote: Permanent swap space should be preferred when dynamic "
 		"huge page pools are used.\n");
 }
