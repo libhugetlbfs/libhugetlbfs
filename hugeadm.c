@@ -88,9 +88,9 @@ void print_usage()
 	OPTION("--hard", "specified with --pool-pages-min to make");
 	CONT("multiple attempts at adjusting the pool size to the");
 	CONT("specified count on failure");
-	OPTION("--pool-pages-min <size>:[+|-]<count>", "");
+	OPTION("--pool-pages-min <size|DEFAULT>:[+|-]<pagecount|memsize<G|M|K>>", "");
 	CONT("Adjust pool 'size' lower bound");
-	OPTION("--pool-pages-max <size>:[+|-]<count>", "");
+	OPTION("--pool-pages-max <size|DEFAULT>:[+|-]<pagecount|memsize<G|M|K>>", "");
 	CONT("Adjust pool 'size' upper bound");
 	OPTION("--set-recommended-min_free_kbytes", "");
 	CONT("Sets min_free_kbytes to a recommended value to improve availability of");
@@ -912,16 +912,35 @@ enum {
 	POOL_BOTH,
 };
 
-static long value_adjust(char *adjust_str, long base)
+static long value_adjust(char *adjust_str, long base, long page_size)
 {
 	long adjust;
 	char *iter;
 
 	/* Convert and validate the adjust. */
+	errno = 0;
 	adjust = strtol(adjust_str, &iter, 0);
-	if (*iter) {
+	/* Catch strtol errors and sizes that overflow the native word size */
+	if (errno || adjust_str == iter) {
+		if (errno == ERANGE)
+			errno = EOVERFLOW;
+		else
+			errno = EINVAL;
 		ERROR("%s: invalid adjustment\n", adjust_str);
 		exit(EXIT_FAILURE);
+	}
+
+	switch (*iter) {
+	case 'G':
+	case 'g':
+		adjust = size_to_smaller_unit(adjust);
+	case 'M':
+	case 'm':
+		adjust = size_to_smaller_unit(adjust);
+	case 'K':
+	case 'k':
+		adjust = size_to_smaller_unit(adjust);
+		adjust = adjust / page_size;
 	}
 
 	if (adjust_str[0] != '+' && adjust_str[0] != '-')
@@ -935,6 +954,8 @@ static long value_adjust(char *adjust_str, long base)
 		adjust = LONG_MAX - base;
 	}
 	base += adjust;
+
+	DEBUG("Returning page count of %ld\n", base);
 
 	return base;
 }
@@ -969,7 +990,12 @@ void pool_adjust(char *cmd, unsigned int counter)
 					page_size_str, adjust_str, counter);
 
 	/* Convert and validate the page_size. */
-	page_size = parse_page_size(page_size_str);
+	if (strcmp(page_size_str, "DEFAULT") == 0)
+		page_size = kernel_default_hugepage_size();
+	else
+		page_size = parse_page_size(page_size_str);
+
+	DEBUG("Working with page_size of %ld\n", page_size);
 
 	cnt = hpool_sizes(pools, MAX_POOLS);
 	if (cnt < 0) {
@@ -989,14 +1015,14 @@ void pool_adjust(char *cmd, unsigned int counter)
 	max = pools[pos].maximum;
 
 	if (counter == POOL_BOTH) {
-		min = value_adjust(adjust_str, min);
+		min = value_adjust(adjust_str, min, page_size);
 		max = min;
 	} else if (counter == POOL_MIN) {
-		min = value_adjust(adjust_str, min);
+		min = value_adjust(adjust_str, min, page_size);
 		if (min > max)
 			max = min;
 	} else {
-		max = value_adjust(adjust_str, max);
+		max = value_adjust(adjust_str, max, page_size);
 		if (max < min)
 			min = max;
 	}

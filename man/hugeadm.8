@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH HUGEADM 8 "October 10, 2008"
+.TH HUGEADM 8 "October 1, 2009"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -107,25 +107,30 @@ This displays all active mount points for hugetlbfs.
 The following options configure the pool.
 
 .TP
-.B --pool-pages-min=<size>:[+|-]<count>
+.B --pool-pages-min=<size|DEFAULT>:[+|-]<pagecount|memsize<G|M|K>>
 
 This option sets or adjusts the Minimum number of hugepages in the pool for
 pagesize \fBsize\fP. \fBsize\fP may be specified in bytes or in kilobytes,
-megabytes, or gigabytes by appending K, M, or G respectively. The pool is set
-to \fBcount\fP pages if + or - are not specified. If + or - are specified,
-then the size of the pool will adjust by that amount. Note that there is
-no guarantee that the system can allocate the hugepages requested for the
-Minimum pool. The size of the pools should be checked after executing this
-command to ensure they were successful.
+megabytes, or gigabytes by appending K, M, or G respectively, or as DEFAULT,
+which uses the system's default huge page size for \fBsize\fP. The pool size
+adjustment can be specified by \fBpagecount\fP pages or by \fBmemsize\fP, if
+postfixed with G, M, or K, for gigabytes, megabytes, or kilobytes,
+respectively. If the adjustment is specified via \fBmemsize\fP, then the
+\fBpagecount\fP will be calculated for you, based on page size \fBsize\fP.
+The pool is set to \fBpagecount\fP pages if + or - are not specified. If
++ or - are specified, then the size of the pool will adjust by that amount.
+Note that there is no guarantee that the system can allocate the hugepages
+requested for the Minimum pool. The size of the pools should be checked after
+executing this command to ensure they were successful.
 
 .TP
-.B --pool-pages-max=<size>:[+|-]<count>
+.B --pool-pages-max=<size|DEFAULT>:[+|-]<pagecount|memsize<G|M|K>>
 
 This option sets or adjusts the Maximum number of hugepages. Note that while
 the Minimum number of pages are guaranteed to be available to applications,
 there is not guarantee that the system can allocate the pages on demand when
 the number of huge pages requested by applications is between the Minimum and
-Maximum pool sizes.
+Maximum pool sizes. See --pool-pages-min for usage syntax.
 
 .TP
 .B --enable-zone-movable
