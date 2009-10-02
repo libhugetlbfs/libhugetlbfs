@@ -32,6 +32,7 @@ $map_event_name{"i386##p4-ht##l2cache_miss"} = "BSQ_CACHE_REFERENCE:6000:0x300";
 $map_event_name{"i386##core##timer"} = "CPU_CLK_UNHALTED:6000";
 $map_event_name{"i386##core##dtlb_miss"} = "DTLB_MISS:500";
 $map_event_name{"i386##core_2##dtlb_miss"} = "DTLB_MISSES:500:0x01";
+$map_event_name{"i386##core_2##timer"} = "CPU_CLK_UNHALTED:6000";
 $map_event_name{"x86-64##timer"} = "CPU_CLK_UNHALTED:100000";
 $map_event_name{"x86-64##hammer##dtlb_miss"} = "L1_AND_L2_DTLB_MISSES:100000";
 $map_event_name{"x86-64##hammer##l1cache_miss"} = "DATA_CACHE_MISSES:500";
@@ -40,6 +41,7 @@ $map_event_name{"x86-64##family10##dtlb_miss"} = "L1_DTLB_AND_L2_DTLB_MISS:500";
 $map_event_name{"x86-64##family10##l1cache_miss"} = "DATA_CACHE_MISSES:500";
 $map_event_name{"x86-64##family10##l2cache_miss"} = "L2_CACHE_MISS:500";
 $map_event_name{"x86-64##core_2##dtlb_miss"} = "DTLB_MISSES:500:0x01";
+$map_event_name{"x86-64##core_2##timer"} = "CPU_CLK_UNHALTED:6000";
 $map_event_name{"ppc64##timer"} = "CYCLES:10000";
 $map_event_name{"ppc64##dtlb_miss"} = "PM_DTLB_MISS_GRP44:100000";
 $map_event_name{"ppc64##timer30"} = "PM_CYC_GRP30:10000";
@@ -103,7 +105,7 @@ if ($oprofile_event eq "") {
 if ($opt_cycle_factor != 1 || $opt_event_factor != 1) {
 	my ($event, $sample, $mask) = split(/:/, $oprofile_event);
 
-	if ($opt_event =~ ^timer[0-9]*/) {
+	if ($opt_event =~ /^timer[0-9]*/) {
 		$sample *= $opt_cycle_factor;
 	} else {
 		$sample *= $opt_event_factor;
