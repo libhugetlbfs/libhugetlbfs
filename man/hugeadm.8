@@ -87,6 +87,15 @@ avoiding mixing is to increase /proc/sys/vm/min_free_kbytes. This parameter
 sets min_free_kbytes to a recommended value to aid fragmentation avoidance.
 
 .TP
+.B --set-recommended-shmmax
+
+The maximum shared memory segment size should be set to at least the size
+of the largest shared memory segment size you want available for applications
+using huge pages, via /proc/sys/kernel/shmmax. Optionally, it can be set
+automatically to match the maximum possible size of all huge page allocations
+and thus the maximum possible shared memory segment size, using this switch.
+
+.TP
 .B --set-shm-group=<gid|groupname>
 
 Users in the group specified in /proc/sys/vm/hugetlb_shm_group are granted

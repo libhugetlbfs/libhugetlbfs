@@ -67,6 +67,7 @@ extern char *optarg;
 #define PROCMOUNTS "/proc/mounts"
 #define PROCHUGEPAGES_MOVABLE "/proc/sys/vm/hugepages_treat_as_movable"
 #define PROCMINFREEKBYTES "/proc/sys/vm/min_free_kbytes"
+#define PROCSHMMAX "/proc/sys/kernel/shmmax"
 #define PROCHUGETLBGROUP "/proc/sys/vm/hugetlb_shm_group"
 #define PROCZONEINFO "/proc/zoneinfo"
 #define FS_NAME "hugetlbfs"
@@ -95,6 +96,8 @@ void print_usage()
 	OPTION("--set-recommended-min_free_kbytes", "");
 	CONT("Sets min_free_kbytes to a recommended value to improve availability of");
 	CONT("huge pages at runtime");
+	OPTION("--set-recommended-shmmax", "Sets shmmax to a recommended value to");
+	CONT("maximise the size possible for shared memory pools");
 	OPTION("--set-shm-group <gid|groupname>", "Sets hugetlb_shm_group to the");
 	CONT("specified group, which has permission to use hugetlb shared memory pools");
 	OPTION("--add-temp-swap[=count]", "Specified with --pool-pages-min to create");
@@ -139,6 +142,7 @@ int opt_dry_run = 0;
 int opt_hard = 0;
 int opt_movable = -1;
 int opt_set_recommended_minfreekbytes = 0;
+int opt_set_recommended_shmmax = 0;
 int opt_set_hugetlb_shm_group = 0;
 int opt_temp_swap = 0;
 int opt_ramdisk_swap = 0;
@@ -224,6 +228,7 @@ void verbose_expose(void)
 #define LONG_POOL_MAX_ADJ	(LONG_POOL|'M')
 
 #define LONG_SET_RECOMMENDED_MINFREEKBYTES	('k' << 8)
+#define LONG_SET_RECOMMENDED_SHMMAX		('x' << 8)
 #define LONG_SET_HUGETLB_SHM_GROUP		('R' << 8)
 
 #define LONG_MOVABLE		('z' << 8)
@@ -704,6 +709,70 @@ void check_minfreekbytes(void)
 	}
 }
 
+long recommended_shmmax(void)
+{
+	struct hpage_pool pools[MAX_POOLS];
+	long recommended_shmmax = 0;
+	int pos, cnt;
+
+	cnt = hpool_sizes(pools, MAX_POOLS);
+	if (cnt < 0) {
+		ERROR("unable to obtain pools list");
+		exit(EXIT_FAILURE);
+	}
+
+	for (pos = 0; cnt--; pos++)
+		recommended_shmmax += (pools[pos].maximum * pools[pos].pagesize);
+
+	return recommended_shmmax;
+}
+
+void set_recommended_shmmax(void)
+{
+	int ret;
+	long recommended = recommended_shmmax();
+
+	if (recommended == 0) {
+		printf("\n");
+		WARNING("We can only set a recommended shmmax when huge pages are configured!\n");
+		return;
+	}
+
+	DEBUG("Setting shmmax to %ld\n", recommended);
+	ret = file_write_ulong(PROCSHMMAX, (unsigned long)recommended);
+
+	if (!ret) {
+		INFO("To make shmmax settings persistent, add the following line to /etc/sysctl.conf:\n");
+		INFO("  kernel.shmmax = %ld\n", recommended);
+	}
+}
+
+void check_shmmax(void)
+{
+	long current_shmmax = file_read_ulong(PROCSHMMAX, NULL);
+	long recommended = recommended_shmmax();
+
+	if (current_shmmax != recommended) {
+		printf("\n");
+		printf("A " PROCSHMMAX " value of %ld bytes may be sub-optimal. To maximise\n", current_shmmax);
+		printf("shared memory usage, this should be set to the size of the largest shared memory\n");
+		printf("segment size you want to be able to use. Alternatively, set it to a size matching\n");
+		printf("the maximum possible allocation size of all huge pages. This can be done\n");
+		printf("automatically, using the --set-recommended-shmmax option.\n");
+	}
+
+	if (recommended == 0) {
+		printf("\n");
+		WARNING("We can't make a shmmax recommendation until huge pages are configured!\n");
+		return;
+	}
+
+	printf("\n");
+	printf("The recommended shmmax for your currently allocated huge pages is %ld bytes.\n", recommended);
+	printf("To make shmmax settings persistent, add the following line to /etc/sysctl.conf:\n");
+	printf("  kernel.shmmax = %ld\n", recommended);
+}
+
 void set_hugetlb_shm_group(gid_t gid, char *group)
 {
 	int ret;
@@ -1141,6 +1210,7 @@ void explain()
 	printf("\nHuge page sizes with configured pools:\n");
 	page_sizes(0);
 	check_minfreekbytes();
+	check_shmmax();
 	check_swap();
 	check_user();
 	printf("\nNote: Permanent swap space should be preferred when dynamic "
@@ -1172,6 +1242,7 @@ int main(int argc, char** argv)
 		{"pool-pages-min", required_argument, NULL, LONG_POOL_MIN_ADJ},
 		{"pool-pages-max", required_argument, NULL, LONG_POOL_MAX_ADJ},
 		{"set-recommended-min_free_kbytes", no_argument, NULL, LONG_SET_RECOMMENDED_MINFREEKBYTES},
+		{"set-recommended-shmmax", no_argument, NULL, LONG_SET_RECOMMENDED_SHMMAX},
 		{"set-shm-group", required_argument, NULL, LONG_SET_HUGETLB_SHM_GROUP},
 		{"enable-zone-movable", no_argument, NULL, LONG_MOVABLE_ENABLE},
 		{"disable-zone-movable", no_argument, NULL, LONG_MOVABLE_DISABLE},
@@ -1290,6 +1361,10 @@ int main(int argc, char** argv)
 			opt_set_recommended_minfreekbytes = 1;
 			break;
 
+		case LONG_SET_RECOMMENDED_SHMMAX:
+			opt_set_recommended_shmmax = 1;
+			break;
+
 		case LONG_SET_HUGETLB_SHM_GROUP:
 			opt_grp = getgrnam(optarg);
 			if (!opt_grp) {
@@ -1363,6 +1438,9 @@ int main(int argc, char** argv)
 
 	if (opt_set_recommended_minfreekbytes)
 		set_recommended_minfreekbytes();
+
+	if (opt_set_recommended_shmmax)
+		set_recommended_shmmax();
 
 	if (opt_set_hugetlb_shm_group)
 		set_hugetlb_shm_group(opt_gid, opt_grp->gr_name);
