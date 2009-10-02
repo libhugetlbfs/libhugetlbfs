@@ -95,6 +95,8 @@ void print_usage()
 	OPTION("--set-recommended-min_free_kbytes", "");
 	CONT("Sets min_free_kbytes to a recommended value to improve availability of");
 	CONT("huge pages at runtime");
+	OPTION("--set-shm-group <gid|groupname>", "Sets hugetlb_shm_group to the");
+	CONT("specified group, which has permission to use hugetlb shared memory pools");
 	OPTION("--add-temp-swap[=count]", "Specified with --pool-pages-min to create");
 	CONT("temporary swap space for the duration of the pool resize. Default swap");
 	CONT("size is 5 huge pages. Optional arg sets size to 'count' huge pages");
@@ -137,6 +139,7 @@ int opt_dry_run = 0;
 int opt_hard = 0;
 int opt_movable = -1;
 int opt_set_recommended_minfreekbytes = 0;
+int opt_set_hugetlb_shm_group = 0;
 int opt_temp_swap = 0;
 int opt_ramdisk_swap = 0;
 int opt_swap_persist = 0;
@@ -221,6 +224,7 @@ void verbose_expose(void)
 #define LONG_POOL_MAX_ADJ	(LONG_POOL|'M')
 
 #define LONG_SET_RECOMMENDED_MINFREEKBYTES	('k' << 8)
+#define LONG_SET_HUGETLB_SHM_GROUP		('R' << 8)
 
 #define LONG_MOVABLE		('z' << 8)
 #define LONG_MOVABLE_ENABLE	(LONG_MOVABLE|'e')
@@ -700,6 +704,19 @@ void check_minfreekbytes(void)
 	}
 }
 
+void set_hugetlb_shm_group(gid_t gid, char *group)
+{
+	int ret;
+
+	DEBUG("Setting hugetlb_shm_group to %d (%s)\n", gid, group);
+	ret = file_write_ulong(PROCHUGETLBGROUP, (unsigned long)gid);
+
+	if (!ret) {
+		INFO("To make hugetlb_shm_group settings persistent, add the following line to /etc/sysctl.conf:\n");
+		INFO("  vm.hugetlb_shm_group = %d\n", gid);
+	}
+}
+
 /* heisted from shadow-utils/libmisc/list.c::is_on_list() */
 static int user_in_group(char *const *list, const char *member)
 {
@@ -734,6 +751,10 @@ void check_user(void)
 	if (gid != pwd->pw_gid && !user_in_group(grp->gr_mem, pwd->pw_name) && uid != 0) {
 		printf("\n");
 		WARNING("User %s (uid: %d) is not a member of the hugetlb_shm_group %s (gid: %d)!\n", pwd->pw_name, uid, grp->gr_name, gid);
+	} else {
+		printf("\n");
+		printf("To make your hugetlb_shm_group settings persistent, add the following line to /etc/sysctl.conf:\n");
+		printf("  vm.hugetlb_shm_group = %d\n", gid);
 	}
 }
 
@@ -1139,6 +1160,9 @@ int main(int argc, char** argv)
 	int opt_global_mounts = 0, opt_pgsizes = 0, opt_pgsizes_all = 0;
 	int opt_explain = 0, minadj_count = 0, maxadj_count = 0;
 	int ret = 0, index = 0;
+	gid_t opt_gid = 0;
+	struct group *opt_grp = NULL;
+	int group_invalid = 0;
 	struct option long_opts[] = {
 		{"help",       no_argument, NULL, 'h'},
 		{"verbose",    required_argument, NULL, 'v' },
@@ -1148,6 +1172,7 @@ int main(int argc, char** argv)
 		{"pool-pages-min", required_argument, NULL, LONG_POOL_MIN_ADJ},
 		{"pool-pages-max", required_argument, NULL, LONG_POOL_MAX_ADJ},
 		{"set-recommended-min_free_kbytes", no_argument, NULL, LONG_SET_RECOMMENDED_MINFREEKBYTES},
+		{"set-shm-group", required_argument, NULL, LONG_SET_HUGETLB_SHM_GROUP},
 		{"enable-zone-movable", no_argument, NULL, LONG_MOVABLE_ENABLE},
 		{"disable-zone-movable", no_argument, NULL, LONG_MOVABLE_DISABLE},
 		{"hard", no_argument, NULL, LONG_HARD},
@@ -1265,6 +1290,25 @@ int main(int argc, char** argv)
 			opt_set_recommended_minfreekbytes = 1;
 			break;
 
+		case LONG_SET_HUGETLB_SHM_GROUP:
+			opt_grp = getgrnam(optarg);
+			if (!opt_grp) {
+				opt_gid = atoi(optarg);
+				if (opt_gid == 0 && strcmp(optarg, "0"))
+					group_invalid = 1;
+				opt_grp = getgrgid(opt_gid);
+				if (!opt_grp)
+					group_invalid = 1;
+			} else {
+				opt_gid = opt_grp->gr_gid;
+			}
+			if (group_invalid) {
+				ERROR("Invalid group specification (%s)\n", optarg);
+				exit(EXIT_FAILURE);
+			}
+			opt_set_hugetlb_shm_group = 1;
+			break;
+
 		case LONG_MOVABLE_DISABLE:
 			opt_movable = 0;
 			break;
@@ -1319,6 +1363,9 @@ int main(int argc, char** argv)
 
 	if (opt_set_recommended_minfreekbytes)
 		set_recommended_minfreekbytes();
+
+	if (opt_set_hugetlb_shm_group)
+		set_hugetlb_shm_group(opt_gid, opt_grp->gr_name);
 
 	while (--minadj_count >= 0) {
 		if (! kernel_has_overcommit())
