@@ -73,6 +73,7 @@ extern char *optarg;
 #define MAX_SIZE_MNTENT (64 + PATH_MAX + 32 + 128 + 2 * sizeof(int))
 #define FORMAT_LEN 20
 
+#define MEM_TOTAL "MemTotal:"
 #define SWAP_FREE "SwapFree:"
 #define SWAP_TOTAL "SwapTotal:"
 
@@ -593,6 +594,19 @@ void create_mounts(char *user, char *group, char *base, mode_t mode)
 }
 
 /**
+ * show_mem shouldn't change the behavior of any of its
+ * callers, it only prints a message to the user showing the
+ * total amount of memory in the system (in megabytes).
+ */
+void show_mem()
+{
+	long mem_total;
+
+	mem_total = read_meminfo(MEM_TOTAL);
+	printf("Total System Memory: %ld MB\n\n", mem_total / 1024);
+}
+
+/**
  * check_swap shouldn't change the behavior of any of its
  * callers, it only prints a message to the user if something
  * is being done that might fail without swap available.  i.e.
@@ -1035,6 +1049,7 @@ void page_sizes(int all)
 
 void explain()
 {
+	show_mem();
 	mounts_list_all();
 	printf("\nHuge page pools:\n");
 	pool_list();
