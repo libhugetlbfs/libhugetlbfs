@@ -26,7 +26,7 @@
 #include "hugetests.h"
 
 /* Override the working version from libhugetlbfs */
-int hugetlbfs_unlinked_fd(void)
+int hugetlbfs_unlinked_fd_for_size(long page_size)
 {
 	return -1;
 }
