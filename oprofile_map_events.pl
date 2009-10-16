@@ -55,6 +55,7 @@ $map_event_name{"ppc64##970MP##l1l2cache_miss"} = "PM_DATA_FROM_MEM_GRP50:1000";
 $map_event_name{"ppc64##970MP##timer30"} = "PM_CYC_GRP30:10000";
 $map_event_name{"ppc64##970MP##tablewalk_cycles"} = "PM_DATA_TABLEWALK_CYC_GRP30:1000";
 $map_event_name{"ppc64##power5##dtlb_miss"} = "PM_DTLB_MISS_GRP44:100000";
+$map_event_name{"ppc64##power5##tablewalk_cycles"} = "PM_DATA_TABLEWALK_CYC_GRP44:1000";
 
 GetOptions(
 	'verbose'			=>	\$opt_verbose,
