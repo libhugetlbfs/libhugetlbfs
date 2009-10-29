@@ -163,7 +163,7 @@ struct hpage_pool {
 };
 
 #define size_to_smaller_unit __lh_size_to_smaller_unit
-extern long size_to_smaller_unit(long size);
+extern unsigned long long size_to_smaller_unit(unsigned long long size);
 
 #define file_read_ulong __lh_file_read_ulong
 extern long file_read_ulong(char *file, const char *tag);

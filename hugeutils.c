@@ -84,12 +84,12 @@ void kernel_default_hugepage_size_reset(void)
 /*
  * Convert a quantity in a given unit to the next smallest unit by
  * multiplying the quantity by 1024 (eg. convert 1MB to 1024kB).
- * If the conversion would overflow the variable, return LONG_MAX to signify
- * the error.
+ * If the conversion would overflow the variable, return ULONGLONG_MAX to
+ * signify the error.
  */
-long size_to_smaller_unit(long size)
+unsigned long long size_to_smaller_unit(unsigned long long size)
 {
-	if (size < 0 || size * 1024 < size)
+	if (size * 1024 < size)
 		return -1;
 	else
 		return size * 1024;
