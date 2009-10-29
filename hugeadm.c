@@ -709,10 +709,10 @@ void check_minfreekbytes(void)
 	}
 }
 
-long recommended_shmmax(void)
+unsigned long long recommended_shmmax(void)
 {
 	struct hpage_pool pools[MAX_POOLS];
-	long recommended_shmmax = 0;
+	unsigned long long recommended_shmmax = 0;
 	int pos, cnt;
 
 	cnt = hpool_sizes(pools, MAX_POOLS);
@@ -722,7 +722,8 @@ long recommended_shmmax(void)
 	}
 
 	for (pos = 0; cnt--; pos++)
-		recommended_shmmax += (pools[pos].maximum * pools[pos].pagesize);
+		recommended_shmmax += ((unsigned long long)pools[pos].maximum *
+							pools[pos].pagesize);
 
 	return recommended_shmmax;
 }
@@ -730,7 +731,8 @@ long recommended_shmmax(void)
 void set_recommended_shmmax(void)
 {
 	int ret;
-	long recommended = recommended_shmmax();
+	unsigned long max_recommended = -1UL;
+	unsigned long long recommended = recommended_shmmax();
 
 	if (recommended == 0) {
 		printf("\n");
@@ -738,12 +740,15 @@ void set_recommended_shmmax(void)
 		return;
 	}
 
-	DEBUG("Setting shmmax to %ld\n", recommended);
+	if (recommended > max_recommended)
+		recommended = max_recommended;
+
+	DEBUG("Setting shmmax to %llu\n", recommended);
 	ret = file_write_ulong(PROCSHMMAX, (unsigned long)recommended);
 
 	if (!ret) {
 		INFO("To make shmmax settings persistent, add the following line to /etc/sysctl.conf:\n");
-		INFO("  kernel.shmmax = %ld\n", recommended);
+		INFO("  kernel.shmmax = %llu\n", recommended);
 	}
 }
 
