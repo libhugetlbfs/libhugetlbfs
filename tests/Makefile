@@ -18,7 +18,7 @@ LDSCRIPT_TESTS = zero_filesize_segment
 HUGELINK_TESTS = linkhuge linkhuge_nofd linkshare
 HUGELINK_RW_TESTS = linkhuge_rw
 STRESS_TESTS = mmap-gettest mmap-cow shm-gettest shm-getraw shm-fork
-WRAPPERS = quota shm-fork shm-getraw counters madvise_reserve fadvise_reserve \
+WRAPPERS = quota counters madvise_reserve fadvise_reserve \
 	readahead_reserve
 HELPERS = get_hugetlbfs_path compare_kvers
 HELPER_LIBS = libheapshrink.so

@@ -460,6 +460,20 @@ def restore_shm_sysctl(sysctls):
         fh.write(val)
         fh.close()
 
+def do_shm_test(cmd, limit=None, bits=None, **env):
+    """
+    Run a test case with temporarily expanded SysV shm limits, testing
+    each indicated word size.
+    """
+    if bits == None:
+        bits = wordsizes
+    if limit != None:
+        tmp = setup_shm_sysctl(limit)
+    for b in bits:
+        run_test(system_default_hpage_size, b, cmd, **env)
+    if limit != None:
+        restore_shm_sysctl(tmp)
+
 def functional_tests():
     """
     Run the set of functional tests.
@@ -510,9 +524,7 @@ def functional_tests():
         do_test("readahead_reserve.sh")
         do_test("madvise_reserve.sh")
         do_test("fadvise_reserve.sh")
-    sysctls = setup_shm_sysctl(64*1048576)
-    do_test("shm-perms")
-    restore_shm_sysctl(sysctls)
+    do_shm_test("shm-perms", 64*1024*1024)
 
     # Tests requiring an active mount and hugepage COW
     do_test("private")
@@ -562,8 +574,8 @@ def functional_tests():
     do_test("get_huge_pages")
 
     # Test overriding of shmget()
-    do_test("shmoverride_linked")
-    do_test("shmoverride_unlinked", LD_PRELOAD="libhugetlbfs.so")
+    do_shm_test("shmoverride_linked")
+    do_shm_test("shmoverride_unlinked", LD_PRELOAD="libhugetlbfs.so")
 
     # Test hugetlbfs filesystem quota accounting
     do_test("quota.sh")
@@ -589,23 +601,20 @@ def stress_tests():
     do_test(("mmap-cow", repr(nr_pages-1), repr(nr_pages)))
 
     (rc, tot_pages) = total_hpages()
-    (rc, size) = hpage_size()
-    sysctls = setup_shm_sysctl(tot_pages * size)
+    limit = system_default_hpage_size * tot_pages
     threads = 10	# Number of threads for shm-fork
+
     # Run shm-fork once using half available hugepages, then once using all
     # This is to catch off-by-ones or races in the kernel allocated that
     # can make allocating all hugepages a problem
     if nr_pages > 1:
-        do_test(("shm-fork.sh", repr(threads), repr(nr_pages / 2)))
-    do_test(("shm-fork.sh", repr(threads), repr(nr_pages)))
+        do_shm_test(("shm-fork", repr(threads), repr(nr_pages / 2)), limit)
+    do_shm_test(("shm-fork", repr(threads), repr(nr_pages)), limit)
 
-    do_test(("shm-getraw.sh", repr(nr_pages), "/dev/full"))
-    restore_shm_sysctl(sysctls)
-
-
+    do_shm_test(("shm-getraw", repr(nr_pages), "/dev/full"), limit)
 
 def main():
-    global wordsizes, pagesizes, dangerous, paranoid_pool_check
+    global wordsizes, pagesizes, dangerous, paranoid_pool_check, system_default_hpage_size
     testsets = set()
     env_override = {"QUIET_TEST": "1", "HUGETLBFS_MOUNTS": "",
                     "HUGETLB_ELFMAP": None, "HUGETLB_MORECORE": None}
@@ -647,6 +656,13 @@ def main():
 
     setup_env(env_override, env_defaults)
     init_results()
+
+    (rc, system_default_hpage_size) = hpage_size()
+    if rc != 0:
+        print "Unable to find system default hugepage size."
+        print "Is hugepage supported included in this kernel?"
+        return 1
+
     check_hugetlbfs_path()
 
     if "func" in testsets: functional_tests()
