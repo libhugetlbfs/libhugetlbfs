@@ -48,7 +48,19 @@ def bash(cmd):
     out = p.stdout.read().strip()
     return (rc, out)
 
+def snapshot_pool_state():
+    l = []
+    for d in os.listdir("/sys/kernel/mm/hugepages"):
+        substate = [(f, int(open("/sys/kernel/mm/hugepages/%s/%s" % (d, f)).read()))
+                    for f in os.listdir("/sys/kernel/mm/hugepages/%s" % d)]
+        l.append((d, tuple(substate)))
+    return tuple(l)
+
 def run_test_prog(bits, pagesize, cmd, **env):
+    if paranoid_pool_check:
+        beforepool = snapshot_pool_state()
+        print "Pool state: %s" % str(beforepool)
+
     local_env = os.environ.copy()
     local_env.update(env)
     local_env["PATH"] = "./obj%d:../obj%d:%s" \
@@ -64,6 +76,15 @@ def run_test_prog(bits, pagesize, cmd, **env):
         # Abort and mark this a strange test result
         return (None, "")
     out = p.stdout.read().strip()
+
+    if paranoid_pool_check:
+        afterpool = snapshot_pool_state()
+        if afterpool != beforepool:
+            print >>sys.stderr, "Hugepage pool state not preserved!"
+            print >>sys.stderr, "BEFORE: %s" % str(beforepool)
+            print >>sys.stderr, "AFTER: %s" % str(afterpool)
+            sys.exit(98)
+
     return (rc, out)
 
 def setup_env(override, defaults):
@@ -584,15 +605,16 @@ def stress_tests():
 
 
 def main():
-    global wordsizes, pagesizes, dangerous
+    global wordsizes, pagesizes, dangerous, paranoid_pool_check
     testsets = set()
     env_override = {"QUIET_TEST": "1", "HUGETLBFS_MOUNTS": "",
                     "HUGETLB_ELFMAP": None, "HUGETLB_MORECORE": None}
     env_defaults = {"HUGETLB_VERBOSE": "0"}
     dangerous = 0
+    paranoid_pool_check = False
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "vVfdt:b:p:")
+        opts, args = getopt.getopt(sys.argv[1:], "vVfdt:b:p:c")
     except getopt.GetoptError, err:
         print str(err)
         sys.exit(1)
@@ -610,6 +632,8 @@ def main():
            for b in arg.split(): wordsizes.add(int(b))
        elif opt == "-p":
            for p in arg.split(): pagesizes.add(int(p))
+       elif opt == '-c':
+           paranoid_pool_check = True
        else:
            assert False, "unhandled option"
     if len(testsets) == 0: testsets = set(["func", "stress"])
