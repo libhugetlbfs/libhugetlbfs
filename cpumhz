@@ -1,0 +1,48 @@
+#!/bin/bash
+# Simple script to print out the max MHz
+# Licensed under LGPL 2.1 as packaged with libhugetlbfs
+# (c) Mel Gorman 2009
+
+MAX_MHZ=0
+SYSFS_SCALING=/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies
+
+# Use sysfs if available
+if [ -e $SYSFS_SCALING ]; then
+	for CURR_MHZ in `cat $SYSFS_SCALING`; do
+		CURR_MHZ=$(($CURR_MHZ/1000))
+		if [ $CURR_MHZ -gt $MAX_MHZ ]; then
+			MAX_MHZ=$CURR_MHZ
+		fi
+	done
+	echo $MAX_MHZ
+	exit 0
+fi
+
+# Otherwise, use /proc/cpuinfo. Guess what field name is needed. In most cases,
+# it's cpu MHz but there will be exceptions
+FNAME="cpu MHz"
+FINDEX=4
+case "`uname -m`" in
+	ppc64)
+		FNAME="clock"
+		FINDEX=3
+		;;
+esac
+
+# Take a hundred samples in case of CPU frequency scaling artifically returning
+# a low value. The multiple samples should wake up the CPU
+for SAMPLE in `seq 1 100`; do
+	for CURR_MHZ in `grep "$FNAME" /proc/cpuinfo | awk "{print \\\$$FINDEX}"`; do
+		CURR_MHZ=${CURR_MHZ/.*}
+		if [ "$CURR_MHZ" = "" ]; then
+			echo ERROR: Unable to extract CPU speed from /proc
+			exit -1
+		fi
+
+		if [ $CURR_MHZ -gt $MAX_MHZ ]; then
+			MAX_MHZ=$CURR_MHZ
+		fi
+	done
+done
+echo $MAX_MHZ
+exit 0
