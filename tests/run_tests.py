@@ -504,6 +504,9 @@ def functional_tests():
     do_test("misalign")
 
     # Specific kernel bug tests
+    do_test("mremap-expand-slice-collision")
+    do_test("mremap-fixed-huge-near-normal")
+    do_test("mremap-fixed-normal-near-huge")
     do_test("ptrace-write-hugepage")
     do_test("icache-hygiene")
     do_test("slbpacaflush")
@@ -516,6 +519,7 @@ def functional_tests():
     do_test("brk_near_huge")
     do_test("task-size-overrun")
     do_test_with_rlimit(resource.RLIMIT_STACK, -1, "stack_grow_into_huge")
+
     if dangerous == 1:
         do_test("readahead_reserve")
         do_test("madvise_reserve")

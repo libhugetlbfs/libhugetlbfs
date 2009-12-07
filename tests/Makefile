@@ -7,6 +7,8 @@ LIB_TESTS = gethugepagesize test_root find_path unlinked_fd misalign \
 	truncate_reserve_wraparound truncate_sigbus_versus_oom \
 	map_high_truncate_2 truncate_above_4GB direct \
 	misaligned_offset brk_near_huge task-size-overrun stack_grow_into_huge \
+	mremap-expand-slice-collision \
+	mremap-fixed-normal-near-huge mremap-fixed-huge-near-normal \
 	counters quota heap-overflow get_huge_pages get_hugepage_region \
 	shmoverride_linked gethugepagesizes \
 	madvise_reserve fadvise_reserve readahead_reserve \
