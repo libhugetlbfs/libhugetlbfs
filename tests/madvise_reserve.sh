@@ -9,6 +9,6 @@ if [ $? -eq 1 ]; then
 	exit $RC_FAIL
 else
 	EXP_RC=$RC_PASS
-	exec_and_check $EXP_RC quota "$@"
+	exec_and_check $EXP_RC madvise_reserve "$@"
 fi
 
