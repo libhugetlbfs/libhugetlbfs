@@ -524,10 +524,16 @@ def functional_tests():
         do_test("readahead_reserve")
         do_test("madvise_reserve")
         do_test("fadvise_reserve")
+        do_test("mremap-expand-slice-collision")
+        do_test("mremap-fixed-normal-near-huge")
+        do_test("mremap-fixed-huge-near-normal")
     else:
         do_test("readahead_reserve.sh")
         do_test("madvise_reserve.sh")
         do_test("fadvise_reserve.sh")
+        do_test("mremap-expand-slice-collision.sh")
+        do_test("mremap-fixed-normal-near-huge.sh")
+        do_test("mremap-fixed-huge-near-normal.sh")
     do_shm_test("shm-perms", 64*1024*1024)
 
     # Tests requiring an active mount and hugepage COW
