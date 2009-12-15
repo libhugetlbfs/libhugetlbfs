@@ -89,19 +89,19 @@ sub run_profile()
 	printf("%20s%20s%24s\n", "Target Name", "DTLB Miss Samples",
 		"Samples/second");
 
-	printf("%20s%20s%24s\n", "", "Sample every " . $collector->samples(), "");
+	printf("%20s%20s%24s\n", "", "Sample every " . $collector->samples("dtlb_miss"), "");
 	sleep($wait_time);
 
 	# While our target is still running and we have not exceeded our
 	# runtime, collect oprofile data every $wait_time seconds to display
 	# the dtlb miss rate.
 	while (waitpid($pid, WNOHANG) <= 0 || $persist) {
-		$ret = $collector->get_current_eventcount($binName);
+		$ret = $collector->get_current_eventcount($binName, "dtlb_miss");
 		$new = $ret - $prev;
 		printf("%20s%20d%24f\n", $binName, $new, $new / $wait_time);
 		$prev = $ret;
 		if ($kernel) {
-			$ret = $collector->get_current_eventcount("vmlinux");
+			$ret = $collector->get_current_eventcount("vmlinux", "dtlb_miss");
 			$new = $ret - $kern_prev;
 			printf("%20s%20d%24f\n", "vmlinux", $new,
 				$new / $wait_time);
@@ -116,9 +116,9 @@ sub run_profile()
 	}
 	$end_time = time();
 	$time_elapsed = $end_time - $start_time;
-	$misses = $collector->get_current_eventcount($binName);
+	$misses = $collector->get_current_eventcount($binName, "dtlb_miss");
 	if ($kernel) {
-		$kern_misses = $collector->get_current_eventcount("vmlinux");
+		$kern_misses = $collector->get_current_eventcount("vmlinux", "dtlb_miss");
 	}
 
 	$collector->shutdown();
