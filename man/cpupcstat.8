@@ -66,6 +66,16 @@ This allows the user to request DTLB miss rate data be collected for the kernel
 as well as the \fBtarget\fP.
 
 .TP
+.B --misses-per-instruction
+
+This option requests that the ratio of instructions retired per TLB miss.
+
+.TP
+.B --misses-per-cycle
+
+This option requests that the ratio of CPU cycles per TLB miss.
+
+.TP
 .B --force-oprofile
 
 \fBcpupcstat\fP prefers the perf tool for data collection, only using oprofile
