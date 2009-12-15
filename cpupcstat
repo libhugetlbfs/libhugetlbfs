@@ -19,13 +19,18 @@ my $target;
 my $real_target;
 my $target_pid;
 my $misses;
+my $instructions;
+my $cycles;
 my $kern_misses;
 my $time_elapsed;
 my $wait_time = 10;
 my $time_limit;
 my $persist = 0;
+my $instruct_ratio;
+my $cycle_ratio;
 my $kernel;
 my $force_oprofile;
+my $collector;
 
 sub start_target()
 {
@@ -50,7 +55,7 @@ sub run_profile()
 	my $prev = 0;
 	my $kern_prev = 0;
 	my $new;
-	my $collector;
+	my @events;
 
 	if ($force_oprofile) {
 		$collector = TLBC::OpCollect->new();
@@ -58,12 +63,20 @@ sub run_profile()
 		$collector = TLBC::PerfCollect->new();
 	}
 
+	push(@events, "dtlb_miss");
+	if ($instruct_ratio) {
+		push(@events, "instructions");
+	}
+	if ($cycle_ratio) {
+		push(@events, "timer");
+	}
+
 	$start_time = time();
 
-	if ($collector->setup($vmlinux, "dtlb_miss") == 0) {
+	if ($collector->setup($vmlinux, \@events) == 0) {
 		$collector = TLBC::OpCollect->new();
 		if ($force_oprofile ||
-			$collector->setup($vmlinux, "dtlb_miss") == 0) {
+			$collector->setup($vmlinux, \@events) == 0) {
 			die("Unable to setup data collector");
 		}
 	}
@@ -117,6 +130,13 @@ sub run_profile()
 	$end_time = time();
 	$time_elapsed = $end_time - $start_time;
 	$misses = $collector->get_current_eventcount($binName, "dtlb_miss");
+	if ($instruct_ratio) {
+		$instructions = $collector->get_current_eventcount($binName, "instructions");
+	}
+	if ($cycle_ratio) {
+		$cycles = $collector->get_current_eventcount($binName, "timer");
+	}
+
 	if ($kernel) {
 		$kern_misses = $collector->get_current_eventcount("vmlinux", "dtlb_miss");
 	}
@@ -142,6 +162,9 @@ sub print_usage()
 	--time-limit L             Sets a time limit for watching the target
 	--kernel                   Output DTLB miss data for the kernel as well
                                    as the specified target
+	--misses-per-instruction   Prints the ratio of TLB misses per
+                                   instruction retired
+	--misses-per-cycle         Prints the ratio of TLB misses per CPU cycle
 	--force-oprofile	   The perf tool is prefered for data
 				   collection with oprofile as the fall back,
 				   force oprofile usage instead
@@ -167,6 +190,8 @@ GetOptions ('v|vmlinux=s' => \$vmlinux,
 	    'r|real-target=s' => \$real_target,
 	    'l|time-limit=i' => \$time_limit,
 	    'k|kernel' => \$kernel,
+	    'i|misses-per-instruction' => \$instruct_ratio,
+	    'c|misses-per-cycle' => \$cycle_ratio,
 	    'o|force-oprofile' => \$force_oprofile,
 	    's|persist' => \$persist,
 	    '<>' => \&get_target);
@@ -192,6 +217,17 @@ if ($misses > 0) {
 	print("\n$target saw $misses total DTLB miss samples over ",
 		"$time_elapsed seconds\n");
 	print("at rate of ", $misses / $time_elapsed, " samples/second\n");
+	$misses *= $collector->samples("dtlb_miss");
+	if ($instruct_ratio && $instructions > 0) {
+		$instructions *= $collector->samples("instructions");
+		print("The ratio of instructions retired per TLB miss was ",
+			$instructions / $misses, "\n");
+	}
+	if ($cycle_ratio && $cycles > 0) {
+		$cycles *= $collector->samples("timer");
+		print("The ratio of cycles per TLB miss was ",
+			$cycles / $misses, "\n");
+	}
 }
 
 if ($kern_misses > 0) {
