@@ -1078,7 +1078,7 @@ void pool_adjust(char *cmd, unsigned int counter)
 		adjust_str = strtok_r(NULL, ":", &iter);
 
 	if (!page_size_str || !adjust_str) {
-		ERROR("%s: invalid resize specificiation\n", cmd);
+		ERROR("%s: invalid resize specification\n", cmd);
 		exit(EXIT_FAILURE);
 	}
 	INFO("page_size<%s> adjust<%s> counter<%d>\n",
