@@ -76,6 +76,25 @@ This option requests that the ratio of instructions retired per TLB miss.
 This option requests that the ratio of CPU cycles per TLB miss.
 
 .TP
+.B --time-servicing
+
+This option requests that the percentage of CPU cycles spent servicing TLB
+misses is displayed when \fBcpupcstat\fB exits.  To use this option the cost
+in CPU cycles for a single TLB miss must be specified using either the
+\fB--cost-config\fB option or the \fBtlbmiss_cost.sh\fB script.
+
+.TP
+.B --cost-config </path/to/config>
+
+This option tells \fBcpupcstat\fB that the cost in CPU cycles of a TLB miss
+can be found in the specified file, it should be specified as:
+
+TLB_MISS_COST=XX
+
+Where XX is the cost in cycles.  This option is only used with the
+\fB--time-servicing\fB option.
+
+.TP
 .B --force-oprofile
 
 \fBcpupcstat\fP prefers the perf tool for data collection, only using oprofile
@@ -85,6 +104,7 @@ use oprofile for data collection.
 .SH SEE ALSO
 .I oprofile(1)
 .I perf(1)
+.I tlbmiss_cost.sh(8)
 .br
 .SH AUTHORS
 Eric B Munson <ebmunson@us.ibm.com> is the primary author. See the documentation
