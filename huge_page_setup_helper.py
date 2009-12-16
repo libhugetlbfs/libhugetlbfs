@@ -159,7 +159,7 @@ if userGIDReq > -1:
     print "Group %s (gid %d) already exists, we'll use it" % (userGroupReq, userGIDReq)
 else:
     if debug == False:
-	os.popen("/usr/sbin/groupadd %s" % userGroupReq)
+    	os.popen("/usr/sbin/groupadd %s" % userGroupReq)
     else:
         print "/usr/sbin/groupadd %s" % userGroupReq
     groupNames = os.popen("/usr/bin/getent group %s" % userGroupReq).readlines()
