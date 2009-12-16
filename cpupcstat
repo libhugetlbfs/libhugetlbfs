@@ -19,8 +19,8 @@ my $target;
 my $real_target;
 my $target_pid;
 my $misses;
-my $instructions;
-my $cycles;
+my $instructions = 0;
+my $cycles = 0;
 my $kern_misses;
 my $time_elapsed;
 my $wait_time = 10;
@@ -28,6 +28,9 @@ my $time_limit;
 my $persist = 0;
 my $instruct_ratio;
 my $cycle_ratio;
+my $service;
+my $config;
+my $cost_in_cycles = 0;
 my $kernel;
 my $force_oprofile;
 my $collector;
@@ -67,7 +70,7 @@ sub run_profile()
 	if ($instruct_ratio) {
 		push(@events, "instructions");
 	}
-	if ($cycle_ratio) {
+	if ($cycle_ratio || $service) {
 		push(@events, "timer");
 	}
 
@@ -133,7 +136,7 @@ sub run_profile()
 	if ($instruct_ratio) {
 		$instructions = $collector->get_current_eventcount($binName, "instructions");
 	}
-	if ($cycle_ratio) {
+	if ($cycle_ratio || $service) {
 		$cycles = $collector->get_current_eventcount($binName, "timer");
 	}
 
@@ -192,6 +195,8 @@ GetOptions ('v|vmlinux=s' => \$vmlinux,
 	    'k|kernel' => \$kernel,
 	    'i|misses-per-instruction' => \$instruct_ratio,
 	    'c|misses-per-cycle' => \$cycle_ratio,
+	    't|time-servicing' => \$service,
+	    'C|cost-config=s' => \$config,
 	    'o|force-oprofile' => \$force_oprofile,
 	    's|persist' => \$persist,
 	    '<>' => \&get_target);
@@ -213,20 +218,45 @@ $misses = 0;
 $kern_misses = 0;
 run_profile();
 
+if ($config) {
+	open(DAT, $config) || die "Failed to open $config\n";
+	my $data = <DAT>;
+	close(DAT);
+	($data,$cost_in_cycles) = split(/\=/, $data);
+	chomp($cost_in_cycles);
+}
+
 if ($misses > 0) {
 	print("\n$target saw $misses total DTLB miss samples over ",
 		"$time_elapsed seconds\n");
 	print("at rate of ", $misses / $time_elapsed, " samples/second\n");
 	$misses *= $collector->samples("dtlb_miss");
+	$cycles *= $collector->samples("timer");
+	$instructions *= $collector->samples("instructions");
+
 	if ($instruct_ratio && $instructions > 0) {
-		$instructions *= $collector->samples("instructions");
 		print("The ratio of instructions retired per TLB miss was ",
 			$instructions / $misses, "\n");
 	}
 	if ($cycle_ratio && $cycles > 0) {
-		$cycles *= $collector->samples("timer");
 		print("The ratio of cycles per TLB miss was ",
 			$cycles / $misses, "\n");
+	}
+
+	if ($service && $cycles > 0) {
+		if ($cost_in_cycles <= 0) {
+			my $cost_script = `which tlbmiss_cost.sh`;
+			if ($cost_script eq "") {
+				$cost_script = "$Bin/contrib/tlbmiss_cost.sh";
+			}
+			my $data = `$cost_script`;
+			($data,$cost_in_cycles) = split(/\=/, $data);
+			chomp($cost_in_cycles);
+		}
+		my $total_cost = $cost_in_cycles * $misses;
+		print("$target spent ",
+			$total_cost / $cycles * 100,
+			"% of its CPU cycles servicing\nTLB misses\n");
 	}
 }
 
