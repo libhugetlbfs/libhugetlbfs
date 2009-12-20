@@ -6,8 +6,9 @@ LIBPUOBJS = init_privutils.o debug.o hugeutils.o kernel-features.o
 INSTALL_OBJ_LIBS = libhugetlbfs.so libhugetlbfs.a libhugetlbfs_privutils.so
 BIN_OBJ_DIR=obj
 PM_OBJ_DIR=TLBC
-INSTALL_BIN = hugectl hugeedit hugeadm pagesize huge_page_setup_helper.py
-INSTALL_STAT = cpupcstat oprofile_map_events.pl oprofile_start.sh
+INSTALL_BIN = hugectl hugeedit hugeadm pagesize
+INSTALL_SCRIPT = cpupcstat oprofile_map_events.pl oprofile_start.sh
+INSTALL_HELPER = huge_page_setup_helper.py
 INSTALL_PERLMOD = DataCollect.pm OpCollect.pm PerfCollect.pm Report.pm
 INSTALL_HEADERS = hugetlbfs.h
 INSTALL_MAN1 = pagesize.1
@@ -409,9 +410,9 @@ install-bin:
 		$(INSTALL) -m 755 $(BIN_OBJ_DIR)/$$x $(DESTDIR)$(EXEDIR); done
 
 install-stat: install-perlmod
-	@$(VECHO) INSTALL_STAT $(DESTDIR)$(EXEDIR)
+	@$(VECHO) INSTALL_SCRIPT $(DESTDIR)$(EXEDIR)
 	$(INSTALL) -d $(DESTDIR)$(EXEDIR)
-	for x in $(INSTALL_STAT); do \
+	for x in $(INSTALL_SCRIPT); do \
 		$(INSTALL) -m 755 $$x $(DESTDIR)$(EXEDIR); done
 
 install-perlmod:
@@ -421,6 +422,12 @@ install-perlmod:
 		$(INSTALL) -m 644 $(PM_OBJ_DIR)/$$x $(DESTDIR)$(PMDIR); done
 
 install: install-libs install-bin install-man install-stat
+
+install-helper:
+	@$(VECHO) INSTALL_HELPER $(DESTDIR)$(EXEDIR)
+	$(INSTALL) -d $(DESTDIR)$(EXEDIR)
+	for x in $(INSTALL_HELPER); do \
+		$(INSTALL) -m 755 $$x $(DESTDIR)$(EXEDIR); done
 
 install-docs:
 	$(INSTALL) -d $(DESTDIR)$(DOCDIR)
