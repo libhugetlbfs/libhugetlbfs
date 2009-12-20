@@ -1,3 +1,28 @@
+libhugetlbfs 2.7 "Adobo"
+======================================================================
+New Features
+* When specifying huge page pool sizes with hugeadm, memory sizes can
+  be used as well as the number of huge pages
+* DEFAULT is now a valid huge page pool for resizing, it will adjust
+  the pool for the default huge page size
+* tlbmiss_cost.sh in the contrib/ sub directory will estimate the cost
+  in CPU cycles of a TLB miss on the arch where it is run
+* Add python script which automates huge page pool setup with minimal
+  input required from user
+
+Bug Fixes
+* The --dry-run switch in hugeadm is now obeyed
+* hugeadm now uses unsigned long long for page resizes to avoid
+  overflow errors
+* --set-recommended-shmmax no longer overflows if the number of
+  available huge pages is bigger than the address space
+
+Test Suite
+* Updated linkhuge_nofd to override proper functions when testing
+* run_tests.py can now monitor the pool sizes between tests to help
+  identify accounting errors
+* Add test for mremap bug on architectures with holes in address space
+
 libhugetlbfs 2.6 "Adovada"
 ======================================================================
 New Features
