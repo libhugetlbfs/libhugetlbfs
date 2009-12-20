@@ -34,6 +34,9 @@ my $cost_in_cycles = 0;
 my $kernel;
 my $force_oprofile;
 my $collector;
+my $miss_scale = 0;
+my $ins_scale = 0;
+my $cyc_scale = 0;
 
 sub start_target()
 {
@@ -57,6 +60,10 @@ sub run_profile()
 	my $ret;
 	my $prev = 0;
 	my $kern_prev = 0;
+	my $ins_new = 0;
+	my $ins_prev = 0;
+	my $cyc_new = 0;
+	my $cyc_prev = 0;
 	my $new;
 	my @events;
 
@@ -102,10 +109,21 @@ sub run_profile()
 	$binName = `basename $binName`;
 	chomp($binName);
 
-	printf("%20s%20s%24s\n", "Target Name", "DTLB Miss Samples",
+	printf("%15s%18s%19s", "Target Name", "DTLB Miss Samples",
 		"Samples/second");
 
-	printf("%20s%20s%24s\n", "", "Sample every " . $collector->samples("dtlb_miss"), "");
+	$miss_scale = $collector->samples("dtlb_miss");
+	if ($instruct_ratio) {
+		printf("%24s\n", "Instructions/TLB Miss\n");
+		$ins_scale = $collector->samples("instructions");
+	} elsif ($cycle_ratio) {
+		printf("%24s\n", "Cycles/TLB Miss\n");
+		$cyc_scale = $collector->samples("timer");
+	} else {
+		print("\n");
+	}
+
+	printf("%15s%18s%19s\n", "", "Sample every " . $collector->samples("dtlb_miss"), "");
 	sleep($wait_time);
 
 	# While our target is still running and we have not exceeded our
@@ -114,12 +132,30 @@ sub run_profile()
 	while (waitpid($pid, WNOHANG) <= 0 || $persist) {
 		$ret = $collector->get_current_eventcount($binName, "dtlb_miss");
 		$new = $ret - $prev;
-		printf("%20s%20d%24f\n", $binName, $new, $new / $wait_time);
+		printf("%15s%18d%19f", $binName, $new, $new / $wait_time);
 		$prev = $ret;
+
+		if ($instruct_ratio) {
+			$ret = $collector->get_current_eventcount($binName,
+				"instructions");
+			$ins_new = $ret - $ins_prev;
+			printf("%24f\n",
+				($ins_new * $ins_scale) / ($new * $miss_scale));
+			$ins_prev = $ret;
+		} elsif ($cycle_ratio) {
+			$ret = $collector->get_current_eventcount($binName,
+				"timer");
+			$cyc_new = $ret - $cyc_prev;
+			printf("%24f\n",
+				($cyc_new * $cyc_scale) / ($new * $miss_scale));
+			$cyc_prev = $ret;
+		} else {
+			print("\n");
+		}
 		if ($kernel) {
 			$ret = $collector->get_current_eventcount("vmlinux", "dtlb_miss");
 			$new = $ret - $kern_prev;
-			printf("%20s%20d%24f\n", "vmlinux", $new,
+			printf("%15s%18d%19f\n", "vmlinux", $new,
 				$new / $wait_time);
 			$kern_prev = $ret;
 		}
@@ -230,9 +266,9 @@ if ($misses > 0) {
 	print("\n$target saw $misses total DTLB miss samples over ",
 		"$time_elapsed seconds\n");
 	print("at rate of ", $misses / $time_elapsed, " samples/second\n");
-	$misses *= $collector->samples("dtlb_miss");
-	$cycles *= $collector->samples("timer");
-	$instructions *= $collector->samples("instructions");
+	$misses *= $miss_scale;
+	$cycles *= $cyc_scale;
+	$instructions *= $ins_scale;
 
 	if ($instruct_ratio && $instructions > 0) {
 		print("The ratio of instructions retired per TLB miss was ",
