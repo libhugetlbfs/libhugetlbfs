@@ -124,6 +124,16 @@ void verbose(char *which)
 	verbose_level = new_level;
 }
 
+void quiet(void)
+{
+	int new_level = verbose_level - 1;
+	if (new_level < 0) {
+		WARNING("verbosity must be at least 0\n");
+		new_level = 0;
+	}
+	verbose_level = new_level;
+}
+
 void setup_environment(char *var, char *val)
 {
 	setenv(var, val, 1);
@@ -330,7 +340,7 @@ int main(int argc, char** argv)
 	int opt_share = 0;
 	char *opt_library = NULL;
 
-	char opts[] = "+hv";
+	char opts[] = "+hvq";
 	int ret = 0, index = 0;
 	struct option long_opts[] = {
 		{"help",       no_argument, NULL, 'h'},
@@ -378,6 +388,10 @@ int main(int argc, char** argv)
 
 		case 'v':
 			verbose(optarg);
+			break;
+
+		case 'q':
+			quiet();
 			break;
 
 		case LONG_NO_PRELOAD:
