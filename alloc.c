@@ -78,6 +78,7 @@ void *get_huge_pages(size_t len, ghp_t flags)
 {
 	void *buf;
 	int buf_fd;
+	int saved_error;
 
 	/* Catch an altogether-too easy typo */
 	if (flags & GHR_MASK)
@@ -104,11 +105,12 @@ void *get_huge_pages(size_t len, ghp_t flags)
 
 	/* Fault the region to ensure accesses succeed */
 	if (hugetlbfs_prefault(buf_fd, buf, len) != 0) {
+		saved_error = errno;
 		munmap(buf, len);
 		close(buf_fd);
 
 		WARNING("get_huge_pages: Prefaulting failed (flags: 0x%lX): %s\n",
-			flags, strerror(errno));
+			flags, strerror(saved_error));
 		return NULL;
 	}
 
