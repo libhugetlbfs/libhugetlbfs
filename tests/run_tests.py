@@ -69,11 +69,13 @@ def run_test_prog(bits, pagesize, cmd, **env):
         % (bits, bits, local_env.get("LD_LIBRARY_PATH", ""))
     local_env["HUGETLB_DEFAULT_PAGE_SIZE"] = repr(pagesize)
 
-    p = subprocess.Popen(cmd, env=local_env, stdout=subprocess.PIPE)
     try:
+        p = subprocess.Popen(cmd, env=local_env, stdout=subprocess.PIPE)
         rc = p.wait()
     except KeyboardInterrupt:
         # Abort and mark this a strange test result
+        return (None, "")
+    except OSError:
         return (None, "")
     out = p.stdout.read().strip()
 
