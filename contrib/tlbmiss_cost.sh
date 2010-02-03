@@ -64,6 +64,99 @@ calibrator_fetch()
 
 	wget http://homepages.cwi.nl/~manegold/Calibrator/v0.9e/calibrator.c -O $TMPFILE || die Failed to download calibrator.c
 
+	# Calibrator defines a function round() which sometimes collides with
+	# a system-defined version. This patch removes the naming collision
+	PATCHFILE=`basename $TMPFILE`
+	echo "--- $PATCHFILE.orig	2010-02-02 14:34:38.000000000 +0000
++++ $PATCHFILE	2010-02-02 14:35:27.000000000 +0000
+@@ -128,7 +128,7 @@
+	exit(1);
+ }
+
+-lng round(dbl x)
++lng calibrator_round(dbl x)
+ {
+	return (lng)(x + 0.5);
+ }
+@@ -890,16 +890,16 @@
+	fprintf(fp, \")\n\");
+	fprintf(fp, \"set y2tics\");
+	for (l = 0, s = \" (\"; l <= cache->levels; l++, s = \", \") {
+-		if (!delay)	fprintf(fp, \"%s'(%ld)' %f\", s, round(CYperIt(cache->latency1[l] - delay)), NSperIt(cache->latency1[l] - delay));
+-			else	fprintf(fp, \"%s'(%ld)' %f\", s, round(CYperIt(cache->latency2[l] - delay)), NSperIt(cache->latency2[l] - delay));
++		if (!delay)	fprintf(fp, \"%s'(%ld)' %f\", s, calibrator_round(CYperIt(cache->latency1[l] - delay)), NSperIt(cache->latency1[l] - delay));
++			else	fprintf(fp, \"%s'(%ld)' %f\", s, calibrator_round(CYperIt(cache->latency2[l] - delay)), NSperIt(cache->latency2[l] - delay));
+	}
+	for (y = 1; y <= yh; y *= 10) {
+		fprintf(fp, \"%s'%1.3g' %ld\", s, (dbl)(y * MHz) / 1000.0, y);
+	}
+	fprintf(fp, \")\n\");
+	for (l = 0; l <= cache->levels; l++) {
+-		if (!delay)	z = (dbl)round(CYperIt(cache->latency1[l] - delay)) * 1000.0 / (dbl)MHz;
+-			else	z = (dbl)round(CYperIt(cache->latency2[l] - delay)) * 1000.0 / (dbl)MHz;
++		if (!delay)	z = (dbl)calibrator_round(CYperIt(cache->latency1[l] - delay)) * 1000.0 / (dbl)MHz;
++			else	z = (dbl)calibrator_round(CYperIt(cache->latency2[l] - delay)) * 1000.0 / (dbl)MHz;
+		fprintf(fp, \"set label %ld '(%1.3g)  ' at %f,%f right\n\", l + 1, z, xl, z);
+		fprintf(fp, \"set arrow %ld from %f,%f to %f,%f nohead lt 0\n\", l + 1, xl, z, xh, z);
+	}
+@@ -986,16 +986,16 @@
+	fprintf(fp, \"%s'<L1>' %ld)\n\", s, TLB->mincachelines);
+	fprintf(fp, \"set y2tics\");
+	for (l = 0, s = \" (\"; l <= TLB->levels; l++, s = \", \") {
+-		if (!delay)	fprintf(fp, \"%s'(%ld)' %f\", s, round(CYperIt(TLB->latency1[l] - delay)), NSperIt(TLB->latency1[l] - delay));
+-			else	fprintf(fp, \"%s'(%ld)' %f\", s, round(CYperIt(TLB->latency2[l] - delay)), NSperIt(TLB->latency2[l] - delay));
++		if (!delay)	fprintf(fp, \"%s'(%ld)' %f\", s, calibrator_round(CYperIt(TLB->latency1[l] - delay)), NSperIt(TLB->latency1[l] - delay));
++			else	fprintf(fp, \"%s'(%ld)' %f\", s, calibrator_round(CYperIt(TLB->latency2[l] - delay)), NSperIt(TLB->latency2[l] - delay));
+	}
+	for (y = 1; y <= yh; y *= 10) {
+		fprintf(fp, \"%s'%1.3g' %ld\", s, (dbl)(y * MHz) / 1000.0, y);
+	}
+	fprintf(fp, \")\n\");
+	for (l = 0; l <= TLB->levels; l++) {
+-		if (!delay)	z = (dbl)round(CYperIt(TLB->latency1[l] - delay)) * 1000.0 / (dbl)MHz;
+-			else	z = (dbl)round(CYperIt(TLB->latency2[l] - delay)) * 1000.0 / (dbl)MHz;
++		if (!delay)	z = (dbl)calibrator_round(CYperIt(TLB->latency1[l] - delay)) * 1000.0 / (dbl)MHz;
++			else	z = (dbl)calibrator_round(CYperIt(TLB->latency2[l] - delay)) * 1000.0 / (dbl)MHz;
+		fprintf(fp, \"set label %ld '(%1.3g)  ' at %f,%f right\n\", l + 1, z, xl, z);
+		fprintf(fp, \"set arrow %ld from %f,%f to %f,%f nohead lt 0\n\", l + 1, xl, z, xh, z);
+	}
+@@ -1023,9 +1023,9 @@
+	FILE	*fp = stdout;
+
+	fprintf(fp, \"CPU loop + L1 access:    \");
+-	fprintf(fp, \" %6.2f ns = %3ld cy\n\", NSperIt(cache->latency1[0]), round(CYperIt(cache->latency1[0])));
++	fprintf(fp, \" %6.2f ns = %3ld cy\n\", NSperIt(cache->latency1[0]), calibrator_round(CYperIt(cache->latency1[0])));
+	fprintf(fp, \"             ( delay:    \");
+-	fprintf(fp, \" %6.2f ns = %3ld cy )\n\", NSperIt(delay),            round(CYperIt(delay)));
++	fprintf(fp, \" %6.2f ns = %3ld cy )\n\", NSperIt(delay),            calibrator_round(CYperIt(delay)));
+	fprintf(fp, \"\n\");
+	fflush(fp);
+ }
+@@ -1047,8 +1047,8 @@
+			fprintf(fp, \" %3ld KB \", cache->size[l] / 1024);
+		}
+		fprintf(fp, \" %3ld bytes \", cache->linesize[l + 1]);
+-		fprintf(fp, \" %6.2f ns = %3ld cy \" , NSperIt(cache->latency2[l + 1] - cache->latency2[l]), round(CYperIt(cache->latency2[l + 1] - cache->latency2[l])));
+-		fprintf(fp, \" %6.2f ns = %3ld cy\n\", NSperIt(cache->latency1[l + 1] - cache->latency1[l]), round(CYperIt(cache->latency1[l + 1] - cache->latency1[l])));
++		fprintf(fp, \" %6.2f ns = %3ld cy \" , NSperIt(cache->latency2[l + 1] - cache->latency2[l]), calibrator_round(CYperIt(cache->latency2[l + 1] - cache->latency2[l])));
++		fprintf(fp, \" %6.2f ns = %3ld cy\n\", NSperIt(cache->latency1[l + 1] - cache->latency1[l]), calibrator_round(CYperIt(cache->latency1[l + 1] - cache->latency1[l])));
+	}
+	fprintf(fp, \"\n\");
+	fflush(fp);
+@@ -1075,9 +1075,9 @@
+		} else {
+			fprintf(fp, \"  %3ld KB  \", TLB->pagesize[l + 1] / 1024);
+		}
+-		fprintf(fp, \" %6.2f ns = %3ld cy \", NSperIt(TLB->latency2[l + 1] - TLB->latency2[l]), round(CYperIt(TLB->latency2[l + 1] - TLB->latency2[l])));
++		fprintf(fp, \" %6.2f ns = %3ld cy \", NSperIt(TLB->latency2[l + 1] - TLB->latency2[l]), calibrator_round(CYperIt(TLB->latency2[l + 1] - TLB->latency2[l])));
+ /*
+-		fprintf(fp, \" %6.2f ns = %3ld cy\" , NSperIt(TLB->latency1[l + 1] - TLB->latency1[l]), round(CYperIt(TLB->latency1[l + 1] - TLB->latency1[l])));
++		fprintf(fp, \" %6.2f ns = %3ld cy\" , NSperIt(TLB->latency1[l + 1] - TLB->latency1[l]), calibrator_round(CYperIt(TLB->latency1[l + 1] - TLB->latency1[l])));
+ */
+		fprintf(fp, \"\n\");
+	}
+" | patch -d /tmp
+
 	LICENSE_END=`grep -n "^ \*/" $TMPFILE | head -1 | cut -f1 -d:`
 	echo Displaying calibrator license
 	head -$LICENSE_END $TMPFILE
