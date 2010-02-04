@@ -240,6 +240,16 @@ def get_pagesizes():
     for size in out.split("\n"): sizes.add(int(size))
     return sizes
 
+def get_wordsizes():
+    """
+    Checks for obj32 and obj64 subdirs to determine valid word sizes.
+    """
+    sizes = set()
+    if os.path.isdir("./obj32"): sizes.add(32)
+    if os.path.isdir("./obj64"): sizes.add(64)
+
+    return sizes
+
 def check_hugetlbfs_path():
     """
     Check each combination of page size and word size for validity.
@@ -658,7 +668,7 @@ def main():
        else:
            assert False, "unhandled option"
     if len(testsets) == 0: testsets = set(["func", "stress"])
-    if len(wordsizes) == 0: wordsizes = set([32, 64])
+    if len(wordsizes) == 0: wordsizes = get_wordsizes()
     if len(pagesizes) == 0: pagesizes = get_pagesizes()
 
     if len(pagesizes) == 0:
