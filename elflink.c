@@ -33,6 +33,7 @@
 #include <linux/unistd.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <limits.h>
 #include <elf.h>
