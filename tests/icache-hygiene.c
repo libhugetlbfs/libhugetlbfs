@@ -84,7 +84,8 @@ static void *sig_expected;
 
 static void sig_handler(int signum, siginfo_t *si, void *uc)
 {
-#if defined(__powerpc__) || defined(__powerpc64__) || defined(__ia64__) || defined(__s390__) || defined(__s390x__)
+#if defined(__powerpc__) || defined(__powerpc64__) || defined(__ia64__) || \
+    defined(__s390__) || defined(__s390x__) || defined(__sparc__)
 	/* On powerpc and ia64 and s390, 0 bytes are an illegal
 	 * instruction, so, if the icache is cleared properly, we SIGILL
 	 * as soon as we jump into the cleared page */
