@@ -358,7 +358,7 @@ seperate_dtlb_pagewalk_groups()
 	fi
 	INDEX=`opreport | head -$SAMPLES_START | grep "^Counted .* events" | grep -n $TIMER_DTLB_EVENT | cut -d: -f1`
 	TIMER_DTLB_FIELD=$((1+2*($INDEX - 1)))
-	if [ $TIMER_DTLB_FIELD -ne 1 ]; then
+	if [ $TIMER_DTLB_FIELD -eq 1 ]; then
 		DTLB_TIMER_INDEX=1
 	else
 		DTLB_TIMER_INDEX=2
