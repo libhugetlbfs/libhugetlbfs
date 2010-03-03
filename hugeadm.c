@@ -124,6 +124,9 @@ void print_usage()
 	CONT("page size under /var/lib/hugetlbfs/global");
 	CONT("usable by anyone");
 
+	OPTION("--max-size <size<G|M|K>>", "Limit the filesystem size of a new mount point");
+	OPTION("--max-inodes <number>", "Limit the number of inodes on a new mount point");
+
 	OPTION("--page-sizes", "Display page sizes that a configured pool");
 	OPTION("--page-sizes-all",
 			"Display page sizes support by the hardware");
@@ -147,6 +150,8 @@ int opt_set_hugetlb_shm_group = 0;
 int opt_temp_swap = 0;
 int opt_ramdisk_swap = 0;
 int opt_swap_persist = 0;
+unsigned long opt_limit_mount_size = 0;
+int opt_limit_mount_inodes = 0;
 int verbose_level = VERBOSITY_DEFAULT;
 char ramdisk_list[PATH_MAX] = "";
 
@@ -251,6 +256,10 @@ void verbose_expose(void)
 #define LONG_CREATE_GROUP_MOUNTS	(LONG_MOUNTS|'g')
 #define LONG_CREATE_GLOBAL_MOUNTS	(LONG_MOUNTS|'G')
 #define LONG_LIST_ALL_MOUNTS		(LONG_MOUNTS|'A')
+
+#define LONG_LIMITS			('l' << 8)
+#define LONG_LIMIT_SIZE			(LONG_LIMITS|'S')
+#define LONG_LIMIT_INODES		(LONG_LIMITS|'I')
 
 #define LONG_EXPLAIN	('e' << 8)
 
@@ -546,6 +555,7 @@ void create_mounts(char *user, char *group, char *base, mode_t mode)
 	struct hpage_pool pools[MAX_POOLS];
 	char path[PATH_MAX];
 	char options[OPT_MAX];
+	char limits[OPT_MAX];
 	int cnt, pos;
 	struct passwd *pwd;
 	struct group *grp;
@@ -593,8 +603,32 @@ void create_mounts(char *user, char *group, char *base, mode_t mode)
 		else
 			snprintf(path, PATH_MAX, "%s/pagesize-%ld",
 				base, pools[pos].pagesize);
+
 		snprintf(options, OPT_MAX, "pagesize=%ld",
 				pools[pos].pagesize);
+
+		/* Yes, this could be cleverer */
+		if (opt_limit_mount_size && opt_limit_mount_inodes)
+			snprintf(limits, OPT_MAX, ",size=%lu,nr_inodes=%d",
+				opt_limit_mount_size, opt_limit_mount_inodes);
+		else {
+			if (opt_limit_mount_size)
+				snprintf(limits, OPT_MAX, ",size=%lu",
+					opt_limit_mount_size);
+			if (opt_limit_mount_inodes)
+				snprintf(limits, OPT_MAX, ",nr_inodes=%d",
+					opt_limit_mount_inodes);
+		}
+
+		/* Append limits if specified */
+		if (limits[0] != 0) {
+			size_t maxlen = OPT_MAX - strlen(options);
+			if (maxlen > strlen(limits))
+				strcat(options, limits);
+			else
+				WARNING("String limitations met, cannot append limitations onto mount options string. Increase OPT_MAX");
+		}
+
 		if (ensure_dir(path, mode, uid, gid))
 			exit(EXIT_FAILURE);
 
@@ -1260,6 +1294,9 @@ int main(int argc, char** argv)
 		{"create-group-mounts", required_argument, NULL, LONG_CREATE_GROUP_MOUNTS},
 		{"create-global-mounts", no_argument, NULL, LONG_CREATE_GLOBAL_MOUNTS},
 
+		{"max-size", required_argument, NULL, LONG_LIMIT_SIZE},
+		{"max-inodes", required_argument, NULL, LONG_LIMIT_INODES},
+
 		{"page-sizes", no_argument, NULL, LONG_PAGE_SIZES},
 		{"page-sizes-all", no_argument, NULL, LONG_PAGE_AVAIL},
 		{"dry-run", no_argument, NULL, 'd'},
@@ -1407,6 +1444,17 @@ int main(int argc, char** argv)
 
 		case LONG_CREATE_GLOBAL_MOUNTS:
 			opt_global_mounts = 1;
+			break;
+
+		case LONG_LIMIT_SIZE:
+			/* Not a pagesize, but the conversions the same */
+			opt_limit_mount_size = parse_page_size(optarg);
+			if (!opt_limit_mount_size)
+				WARNING("Mount max size specification 0, invalid or overflowed\n");
+			break;
+
+		case LONG_LIMIT_INODES:
+			opt_limit_mount_inodes = atoi(optarg);
 			break;
 
 		case LONG_PAGE_SIZES:

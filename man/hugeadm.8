@@ -63,6 +63,26 @@ This creates mount points for each supported huge page size under
 --create-mounts.  After creation they are mounted and are owned by
 root:root with permissions set to 1777.
 
+The following options affect how mount points are created.
+
+.TP
+.B --max-size
+
+This option is used in conjunction with --create-*-mounts. It limits the
+maximum amount of memory used by files within the mount point rounded up
+to the nearest huge page size. This can be used for example to grant
+different huge page quotas to individual users or groups.
+
+.TP
+.B --max-inodes
+
+This option is used in conjunction with --create-*-mounts. It limits the
+number of inodes (e.g. files) that can be created on the new mount points.
+This limits the number of mappings that can be created on a mount point. It
+could be used for example to limit the number of application instances that
+used a mount point as long as it was known how many inodes each application
+instance required.
+
 The following options display information about the pools.
 
 .TP
