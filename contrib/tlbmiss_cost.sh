@@ -251,7 +251,7 @@ calibrator_calc()
 	fi
 
 	if [[ ! -x $CALIBRATOR ]]; then
-		die "Unable to locate calibrator."
+		die "Unable to locate calibrator. Consider using --fetch-calibrator."
 	fi
 
 	cpumhz
@@ -585,7 +585,7 @@ oprofile_calc()
 	fi
 
 	if [[ ! -x $STREAM ]]; then
-		die "Unable to locate STREAM."
+		die "Unable to locate STREAM. Consider using --fetch-stream."
 	fi
 
 	OPST=`which oprofile_start.sh`
