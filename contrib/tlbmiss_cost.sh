@@ -22,6 +22,19 @@
 # error == 1
 VERBOSE=2
 
+# Print help message
+usage() {
+	echo "tlbmiss_cost.sh [options]
+options:
+ --fetch-calibrator         Download and build calibrator if not in path
+ --fetch-stream             Download and build STREAM if not in path
+ -c, --calibrator           Path to calibrator helper if not in path
+ -s, --stream               Path to STREAM helper if not in path
+ -q, --quiet                Be less verbose in output
+ -v, --verbose              Be more verbose in output
+ -h, --help                 Print this help message"
+	exit 1
+}
 # Print verbose message to stderr if --verbose is specified
 print_trace()
 {
@@ -572,7 +585,7 @@ oprofile_calc()
 	LAST_LATENCY_CYCLES=$(($WALK/$DTLB))
 }
 
-ARGS=`getopt -o c:s:vq --long calibrator:,stream:,verbose,quiet,fetch-calibrator,fetch-stream -n 'tlbmiss_cost.sh' -- "$@"`
+ARGS=`getopt -o c:s:vqh --long calibrator:,stream:,verbose,quiet,fetch-calibrator,fetch-stream,help -n 'tlbmiss_cost.sh' -- "$@"`
 
 eval set -- "$ARGS"
 
@@ -584,6 +597,7 @@ while true ; do
 		-q|--quiet) VERBOSE=$(($VERBOSE-1)); shift;;
 		--fetch-calibrator) calibrator_fetch; shift;;
 		--fetch-stream) stream_fetch; shift;;
+		-h|--help) usage; shift;;
 		"") shift ; break ;;
 		"--") shift ; break ;;
 		*) die "Unrecognized option $1" ;;
