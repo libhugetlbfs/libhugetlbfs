@@ -1516,12 +1516,12 @@ int main(int argc, char** argv)
 
 	if (opt_user_mounts != NULL) {
 		snprintf(base, PATH_MAX, "%s/user", MOUNT_DIR);
-		create_mounts(optarg, NULL, base, S_IRWXU);
+		create_mounts(opt_user_mounts, NULL, base, S_IRWXU);
 	}
 
 	if (opt_group_mounts) {
 		snprintf(base, PATH_MAX, "%s/group", MOUNT_DIR);
-		create_mounts(NULL, optarg, base, S_IRWXG);
+		create_mounts(NULL, opt_group_mounts, base, S_IRWXG);
 	}
 
 	if (opt_global_mounts) {
