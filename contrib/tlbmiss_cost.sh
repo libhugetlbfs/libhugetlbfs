@@ -21,6 +21,54 @@
 # info  == 2 (default, should remain quiet in practicet)
 # error == 1
 VERBOSE=2
+MHZ=0
+
+cpumhz() {
+	MAX_MHZ=0
+	SYSFS_SCALING=/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies
+
+	# Use sysfs if available
+	if [ -e $SYSFS_SCALING ]; then
+		for CURR_MHZ in `cat $SYSFS_SCALING`; do
+			CURR_MHZ=$(($CURR_MHZ/1000))
+			if [ $CURR_MHZ -gt $MAX_MHZ ]; then
+				MAX_MHZ=$CURR_MHZ
+			fi
+		done
+		MHZ=$MAX_MHZ
+		return
+	fi
+
+	# Otherwise, use /proc/cpuinfo. Guess what field name is needed.
+	# In most cases, it's cpu MHz but there will be exceptions
+	FNAME="cpu MHz"
+	FINDEX=4
+	case "`uname -m`" in
+		ppc64)
+			FNAME="clock"
+			FINDEX=3
+			;;
+	esac
+
+	# Take a hundred samples in case of CPU frequency scaling artifically
+	# returning a low value. The multiple samples should wake up the CPU
+	for SAMPLE in `seq 1 100`; do
+		for CURR_MHZ in `grep "$FNAME" /proc/cpuinfo | awk "{print \\\$$FINDEX}"`; do
+			CURR_MHZ=${CURR_MHZ/.*}
+			if [ "$CURR_MHZ" = "" ]; then
+				echo ERROR: Unable to extract CPU speed from /proc
+				exit -1
+			fi
+
+			if [ $CURR_MHZ -gt $MAX_MHZ ]; then
+				MAX_MHZ=$CURR_MHZ
+			fi
+		done
+	done
+
+	MHZ=$MAX_MHZ
+	return
+}
 
 # Print help message
 usage() {
@@ -206,16 +254,7 @@ calibrator_calc()
 		die "Unable to locate calibrator."
 	fi
 
-	CPUMHZ=`which cpumhz 2>/dev/null`
-	if [ "$CPUMHZ" = "" ]; then
-		CPUMHZ="../cpumhz"
-	fi
-
-	if [[ ! -x $CPUMHZ ]]; then
-		die "Unable to locate cpumhz."
-	fi
-
-	MHZ=`$CPUMHZ`
+	cpumhz
 	SIZE=$((13*1048576))
 	STRIDE=3932160
 	PREFIX=tlbmiss-cost-results
