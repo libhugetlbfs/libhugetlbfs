@@ -26,9 +26,9 @@ where the script is being run.  On POWERPC, oprofile is used with the STREAM
 benchmark (available here: http://www.cs.virginia.edu/stream/FTP/Code/stream.c).
 On X86 and X86-64, calibrator is used (source available here:
 http://homepages.cwi.nl/~manegold/Calibrator/v0.9e/calibrator.c)
-These programs will need to be in place and available to \fBtlbmiss_cost.sh\fB
-in order for \fBcpupcstat\fB to calculate the percentage of time spent servicing
-TLB misses automatically.  \fBtlbmiss_cost.sh\fB can fetch and build these
+These programs will need to be in place and available to \fBtlbmiss_cost.sh\fP
+in order for \fBcpupcstat\fP to calculate the percentage of time spent servicing
+TLB misses automatically.  \fBtlbmiss_cost.sh\fP can fetch and build these
 programs for you with the appropriate options.
 
 The following options can be used to configure how \fBtlbmiss_cost.sh\fP works:
@@ -36,17 +36,17 @@ The following options can be used to configure how \fBtlbmiss_cost.sh\fP works:
 .TP
 .B --calibrator </path/to/calibrator>
 
-This option allows the user to specify the location of the \fBcalibrator\fB
+This option allows the user to specify the location of the \fBcalibrator\fP
 tool.  If this is not specified the script will check the path and the current
-working directory for \fBcalibrator\fB
+working directory for \fBcalibrator\fP
 
 .TP
 .B --stream </path/to/STREAM>
 
-This option allows the user to specify the location of the \fBSTREAM\fB
-benchmarking tool (note that is this is not \fBstream(1)\fB).  If this is not
+This option allows the user to specify the location of the \fBSTREAM\fP
+benchmarking tool (note that is this is not \fBstream(1)\fP).  If this is not
 specified the script will check the path and the current working directory for
-\fBSTREAM\fB
+\fBSTREAM\fP
 
 .TP
 .B --verbose
@@ -61,14 +61,14 @@ This option decreases the verbosity of the output.
 .TP
 .B --fetch-calibrator
 
-This option has the script attempt to fetch the source for \fBcalibrator\fB,
-builds it, and makes it available to \fBtlbmiss_cost.sh\fB
+This option has the script attempt to fetch the source for \fBcalibrator\fP,
+builds it, and makes it available to \fBtlbmiss_cost.sh\fP
 
 .TP
 .B --fetch-stream
 
-This option has the script attempt to fetch the source for \fBSTREAM\fB, builds
-it, and makes it available to \fBtlbmiss_cost.sh\fB
+This option has the script attempt to fetch the source for \fBSTREAM\fP, builds
+it, and makes it available to \fBtlbmiss_cost.sh\fP
 
 .SH SEE ALSO
 .I cpupcstat(8)
