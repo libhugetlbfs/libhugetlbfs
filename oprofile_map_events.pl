@@ -60,6 +60,10 @@ $map_event_name{"ppc64##power5##dtlb_miss"} = "PM_DTLB_MISS_GRP44:100000";
 $map_event_name{"ppc64##power5##tablewalk_cycles"} = "PM_DATA_TABLEWALK_CYC_GRP44:1000";
 $map_event_name{"ppc64##power4##dtlb_miss"} = "PM_DTLB_MISS_GRP9:1000";
 $map_event_name{"ppc64##power4##tablewalk_cycles"} = "PM_DATA_TABLEWALK_CYC_GRP9:1000";
+$map_event_name{"ppc64##power7##timer"} = "PM_RUN_CYC_GRP12:10000";
+$map_event_name{"ppc64##power7##timer30"} = "PM_RUN_CYC_GRP86:10000";
+$map_event_name{"ppc64##power7##dtlb_miss"} = "PM_DTLB_MISS_GRP12:1000";
+$map_event_name{"ppc64##power7##tablewalk_cycles"} = "PM_DATA_TABLEWALK_CYC_GRP86:1000";
 
 GetOptions(
 	'verbose'			=>	\$opt_verbose,
