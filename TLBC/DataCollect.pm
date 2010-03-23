@@ -20,7 +20,7 @@ sub new()
 
 ##
 # The setup method should take care of setting up the data collector for
-# collecting DTLB miss data.  This method takes no args and returns $self
+# collecting event data.  This method takes no args and returns $self
 
 sub setup()
 {
@@ -29,9 +29,18 @@ sub setup()
 ##
 # This method should the return the total event count as of its
 # invocation.  This method takes no args and it returns the total number
-# of DTLB misses.
+# of events.
 
 sub get_current_eventcount()
+{
+}
+
+##
+# This method will read the counter information from the data source.
+# This was separated from get_current_eventcount to provide a logical
+# way of handling multiple events.
+
+sub read_eventcount()
 {
 }
 
