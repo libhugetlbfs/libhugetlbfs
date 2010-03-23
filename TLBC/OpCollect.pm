@@ -19,6 +19,7 @@ use TLBC::DataCollect;
 our @ISA = qw(TLBC::DataCollect);
 
 my $reference;
+my $report;
 my (%event_map, %lowlevel);
 my (%event_col_map, %event_name);
 
@@ -103,7 +104,6 @@ sub samples()
 sub _get_column()
 {
 	my $self = shift;
-	my $report = shift;
 	my $event = shift;
 	my @results;
 	my $line;
@@ -135,7 +135,6 @@ sub get_current_eventcount()
 {
 	my @results;
 	my $line;
-	my $report;
 	my $hits = 0;
 	my $self = shift;
 	my $binName = shift;
@@ -151,8 +150,6 @@ sub get_current_eventcount()
 	# The event column in opreport only uses the first 12 letters of
 	# the event name
 	$event = substr($event, 0, 12);
-	system("opcontrol --dump > /dev/null 2>&1");
-	$report = `opreport`;
 	@results = split(/\n/, $report);
 	$col = $self->_get_column($report, $event);
 
@@ -167,6 +164,12 @@ sub get_current_eventcount()
 		}
 	}
 	return $hits;
+}
+
+sub read_eventcount()
+{
+	system("opcontrol --dump > /dev/null 2>&1");
+	$report = `opreport`;
 }
 
 sub shutdown()

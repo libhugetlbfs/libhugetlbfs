@@ -20,6 +20,7 @@ our @ISA = qw(TLBC::DataCollect);
 
 my $perf_output = "/tmp/perf_" . $$ . ".data";
 my $reference;
+my $report;
 my $perf_pid;
 my $perf_bin;
 my $vmlinux;
@@ -95,8 +96,6 @@ sub get_current_eventcount()
 {
 	my $self = shift;
 	my $binName = shift;
-	my $cmd = $perf_bin . " report -k $vmlinux -i $perf_output";
-	my $report = `$cmd`;
 	my $count = 0;
 	my $total;
 	my $line;
@@ -124,6 +123,12 @@ sub get_current_eventcount()
 	}
 
 	return $count;
+}
+
+sub read_eventcount()
+{
+	my $cmd = $perf_bin . " report -k $vmlinux -i $perf_output";
+	$report = `$cmd`;
 }
 
 sub shutdown()

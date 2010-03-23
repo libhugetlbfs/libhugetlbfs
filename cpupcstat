@@ -130,6 +130,7 @@ sub run_profile()
 	# runtime, collect oprofile data every $wait_time seconds to display
 	# the dtlb miss rate.
 	while (waitpid($pid, WNOHANG) <= 0 || $persist) {
+		$collector->read_eventcount();
 		$ret = $collector->get_current_eventcount($binName, "dtlb_miss");
 		$new = $ret - $prev;
 		printf("%15s%18d%19f", $binName, $new, $new / $wait_time);
@@ -168,6 +169,7 @@ sub run_profile()
 	}
 	$end_time = time();
 	$time_elapsed = $end_time - $start_time;
+	$collector->read_eventcount();
 	$misses = $collector->get_current_eventcount($binName, "dtlb_miss");
 	if ($instruct_ratio) {
 		$instructions = $collector->get_current_eventcount($binName, "instructions");
