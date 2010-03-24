@@ -140,15 +140,23 @@ sub run_profile()
 			$ret = $collector->get_current_eventcount($binName,
 				"instructions");
 			$ins_new = $ret - $ins_prev;
-			printf("%24f\n",
+			if ($new == 0) {
+				printf("%24f\n", $new);
+			} else {
+				printf("%24f\n",
 				($ins_new * $ins_scale) / ($new * $miss_scale));
+			}
 			$ins_prev = $ret;
 		} elsif ($cycle_ratio) {
 			$ret = $collector->get_current_eventcount($binName,
 				"timer");
 			$cyc_new = $ret - $cyc_prev;
-			printf("%24f\n",
+			if ($new == 0) {
+				printf("%24f\n", $new);
+			} else {
+				printf("%24f\n",
 				($cyc_new * $cyc_scale) / ($new * $miss_scale));
+			}
 			$cyc_prev = $ret;
 		} else {
 			print("\n");
