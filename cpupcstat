@@ -299,7 +299,7 @@ if ($misses > 0) {
 			if ($cost_script eq "") {
 				$cost_script = "$Bin/contrib/tlbmiss_cost.sh";
 			}
-			my $data = `$cost_script`;
+			my $data = `$cost_script --vmlinux $vmlinux`;
 			($data,$cost_in_cycles) = split(/\=/, $data);
 			chomp($cost_in_cycles);
 			open (DAT, ">$tlbcost_cache");

@@ -393,7 +393,7 @@ seperate_dtlb_pagewalk_groups()
 	print_trace tablewalk cycles :: oprofile_start --event timer30 --event tablewalk_cycles --sample-cycle-factor 5 --sample-event-factor $SAMPLE_EVENT_FACTOR
 
 	print_trace Rerunning benchmark to measure number of DTLB misses
-	$OPST --event timer --event dtlb_miss --sample-cycle-factor 5 >/dev/null 2>&1 || \
+	$OPST $VMLINUX --event timer --event dtlb_miss --sample-cycle-factor 5 >/dev/null 2>&1 || \
 		die "Error starting oprofile, check oprofile_map_event.pl for appropriate timer and dtlb_miss events."
 	$STREAM >/dev/null 2>&1
 
@@ -460,7 +460,7 @@ seperate_dtlb_pagewalk_groups()
 			print_trace High diff with scaling x$LAST_SAMPLE_EVENT_FACTOR. Required $TIMER_DTLB +/ $TOLERANCE, got $TIMER_WALK
 		fi
 
-		$OPST --event timer30 --event tablewalk_cycles --sample-cycle-factor 5 --sample-event-factor $SAMPLE_EVENT_FACTOR >/dev/null 2>&1 || \
+		$OPST $VMLINUX --event timer30 --event tablewalk_cycles --sample-cycle-factor 5 --sample-event-factor $SAMPLE_EVENT_FACTOR >/dev/null 2>&1 || \
 			die "Error starting oprofile, check oprofile_map_event.pl for appropriate timer30 and tablewalk_cycles events."
 		$STREAM >/dev/null 2>&1
 
@@ -527,7 +527,7 @@ dtlb_pagewalk_same_group()
 	print_trace oprofile launch command as follows
 	print_trace $OPST --event dtlb_miss --event tablewalk_cycles
 
-	$OPST --event dtlb_miss --event tablewalk_cycles > /dev/null 2>&1 || \
+	$OPST $VMLINUX --event dtlb_miss --event tablewalk_cycles > /dev/null 2>&1 || \
 		die "Error starting oprofile, check oprofile_map_event.pl for appropriate dtlb_miss and tablewalk_cycles events."
 	$STREAM >/dev/null 2>&1
 
@@ -624,7 +624,7 @@ oprofile_calc()
 	LAST_LATENCY_CYCLES=$(($WALK/$DTLB))
 }
 
-ARGS=`getopt -o c:s:vqh --long calibrator:,stream:,verbose,quiet,fetch-calibrator,fetch-stream,help -n 'tlbmiss_cost.sh' -- "$@"`
+ARGS=`getopt -o c:s:vqh --long calibrator:,stream:,vmlinux:,verbose,quiet,fetch-calibrator,fetch-stream,help -n 'tlbmiss_cost.sh' -- "$@"`
 
 eval set -- "$ARGS"
 
@@ -632,6 +632,7 @@ while true ; do
 	case "$1" in
 		-c|--calibrator) CALIBRATOR="$2" ; shift 2 ;;
 		-s|--stream) STREAM="$2" ; shift 2 ;;
+		--vmlinux) VMLINUX="--vmlinux $2" ; shift 2 ;;
 		-v|--verbose) VERBOSE=$(($VERBOSE+1)); shift;;
 		-q|--quiet) VERBOSE=$(($VERBOSE-1)); shift;;
 		--fetch-calibrator) calibrator_fetch; shift;;
