@@ -37,6 +37,7 @@ my $collector;
 my $miss_scale = 0;
 my $ins_scale = 0;
 my $cyc_scale = 0;
+my $tlbcost_cache = "$Bin/tlbmisscost";
 
 sub start_target()
 {
@@ -116,7 +117,7 @@ sub run_profile()
 	if ($instruct_ratio) {
 		printf("%24s\n", "Instructions/TLB Miss\n");
 		$ins_scale = $collector->samples("instructions");
-	} elsif ($cycle_ratio) {
+	} elsif ($cycle_ratio || $service) {
 		printf("%24s\n", "Cycles/TLB Miss\n");
 		$cyc_scale = $collector->samples("timer");
 	} else {
@@ -264,14 +265,6 @@ $misses = 0;
 $kern_misses = 0;
 run_profile();
 
-if ($config) {
-	open(DAT, $config) || die "Failed to open $config\n";
-	my $data = <DAT>;
-	close(DAT);
-	($data,$cost_in_cycles) = split(/\=/, $data);
-	chomp($cost_in_cycles);
-}
-
 if ($misses > 0) {
 	print("\n$target saw $misses total DTLB miss samples over ",
 		"$time_elapsed seconds\n");
@@ -290,6 +283,17 @@ if ($misses > 0) {
 	}
 
 	if ($service && $cycles > 0) {
+		if ( !$config && -e $tlbcost_cache ) {
+			$config = $tlbcost_cache;
+		}
+		if ($config) {
+			open(DAT, $config) || die "Failed to open $config\n";
+			my $data = <DAT>;
+			close(DAT);
+			($data,$cost_in_cycles) = split(/\=/, $data);
+			chomp($cost_in_cycles);
+		}
+
 		if ($cost_in_cycles <= 0) {
 			my $cost_script = `which tlbmiss_cost.sh`;
 			if ($cost_script eq "") {
@@ -298,6 +302,9 @@ if ($misses > 0) {
 			my $data = `$cost_script`;
 			($data,$cost_in_cycles) = split(/\=/, $data);
 			chomp($cost_in_cycles);
+			open (DAT, ">$tlbcost_cache");
+			print DAT "TLB_MISS_COST=$cost_in_cycles";
+			close (DAT);
 		}
 		my $total_cost = $cost_in_cycles * $misses;
 		print("$target spent ",
