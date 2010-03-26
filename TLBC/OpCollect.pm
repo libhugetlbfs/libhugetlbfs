@@ -151,7 +151,7 @@ sub get_current_eventcount()
 	# the event name
 	$event = substr($event, 0, 12);
 	@results = split(/\n/, $report);
-	$col = $self->_get_column($report, $event);
+	$col = $self->_get_column($event);
 
 	foreach $line (@results) {
 		if ($line =~ /$binName/) {
