@@ -1,3 +1,20 @@
+libhugetlbfs 2.8 "Scotch Bonnet"
+======================================================================
+New Features
+* Add switch to let administrator limit new mount points by size or inodes
+* cpupcstat now caches the value returned by tlmiss_cost.sh to avoid
+  rerunning the script
+
+Bug Fixes
+* errno values are saved in get_huge_pages
+* tlbmiss_cost.sh patches calibrator to fix round naming collision
+* Fixed ALIGN_UP macro for aligning huge page segments
+* Fix --create-mounts switch in hugeadm
+* Library and helpers are all linked with -z noexecstack
+
+Test Suite
+* run_tests.py detects valid word sizes
+
 libhugetlbfs 2.7 "Adobo"
 ======================================================================
 New Features
