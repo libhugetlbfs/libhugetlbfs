@@ -69,6 +69,7 @@ void print_usage()
 	OPTION("--shm", "Requests remapping of shared memory segments");
 
 	OPTION("--no-preload", "Disable preloading the libhugetlbfs library");
+	OPTION("--no-reserve", "Disable huge page reservation for segments");
 	OPTION("--force-preload", "Force preloading the libhugetlbfs library");
 
 	OPTION("--dry-run", "describe what would be done without doing it");
@@ -161,6 +162,7 @@ void verbose_expose(void)
 #define LONG_BASE	0x2000
 
 #define LONG_NO_PRELOAD		(LONG_BASE | 'p')
+#define LONG_NO_RESERVE		(LONG_BASE | 'r')
 #define LONG_FORCE_PRELOAD	(LONG_BASE | 'F')
 
 #define LONG_DRY_RUN		(LONG_BASE | 'd')
@@ -337,6 +339,7 @@ int main(int argc, char** argv)
 {
 	int opt_mappings = 0;
 	int opt_preload = 1;
+	int opt_no_reserve = 0;
 	int opt_share = 0;
 	char *opt_library = NULL;
 
@@ -346,6 +349,7 @@ int main(int argc, char** argv)
 		{"help",       no_argument, NULL, 'h'},
 		{"verbose",    required_argument, NULL, 'v' },
 		{"no-preload", no_argument, NULL, LONG_NO_PRELOAD},
+		{"no-reserve", no_argument, NULL, LONG_NO_RESERVE},
 		{"force-preload",
 			       no_argument, NULL, LONG_FORCE_PRELOAD},
 		{"dry-run",    no_argument, NULL, LONG_DRY_RUN},
@@ -399,6 +403,11 @@ int main(int argc, char** argv)
 			INFO("LD_PRELOAD disabled\n");
 			break;
 
+		case LONG_NO_RESERVE:
+			opt_no_reserve = 1;
+			INFO("MAP_NORESERVE used for huge page mappings\n");
+			break;
+
 		case LONG_FORCE_PRELOAD:
 			opt_preload = 1;
 			opt_force_preload = 1;
@@ -448,6 +457,9 @@ int main(int argc, char** argv)
 
 	if (opt_preload)
 		ldpreload(opt_mappings);
+
+	if (opt_no_reserve)
+		setup_environment("HUGETLB_NO_RESERVE", "yes");
 
 	if (opt_share)
 		setup_environment("HUGETLB_SHARE", "1");

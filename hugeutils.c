@@ -300,6 +300,11 @@ void hugetlbfs_setup_env()
 	env = getenv("HUGETLB_SHM");
 	if (env && !strcmp(env, "yes"))
 		__hugetlb_opts.shm_enabled = 1;
+
+	/* Determine if all reservations should be avoided */
+	env = getenv("HUGETLB_NO_RESERVE");
+	if (env && !strcmp(env, "yes"))
+		__hugetlb_opts.no_reserve = 1;
 }
 
 void hugetlbfs_check_priv_resv()
@@ -313,6 +318,21 @@ void hugetlbfs_check_priv_resv()
 		INFO("Kernel has MAP_PRIVATE reservations.  Disabling "
 			"heap prefaulting.\n");
 		__hugetlbfs_prefault = 0;
+	}
+}
+
+void hugetlbfs_check_safe_noreserve()
+{
+	/*
+	 * Some kernels will trigger an OOM if MAP_NORESERVE is used and
+	 * a huge page allocation fails. This is unfortunate so limit
+	 * the user of NORESERVE where necessary
+	 */
+	if (__hugetlb_opts.no_reserve &&
+			!hugetlbfs_test_feature(HUGETLB_FEATURE_SAFE_NORESERVE)) {
+		INFO("Kernel is not safe for MAP_NORESERVE. Forcing "
+			"use of reservations.\n");
+		__hugetlb_opts.no_reserve = 0;
 	}
 }
 

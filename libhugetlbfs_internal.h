@@ -60,6 +60,7 @@ struct libhugeopts_t {
 	int		sharing;
 	int		shrink_ok;
 	int		shm_enabled;
+	int		no_reserve;
 	unsigned long	force_elfmap;
 	char		*ld_preload;
 	char		*elfmap;
@@ -100,6 +101,8 @@ extern void setup_mounts();
 extern void setup_features();
 #define hugetlbfs_check_priv_resv __lh_hugetlbfs_check_priv_resv
 extern void hugetlbfs_check_priv_resv();
+#define hugetlbfs_check_safe_noreserve __lh_hugetlbfs_check_safe_noreserve
+extern void hugetlbfs_check_safe_noreserve();
 #define __hugetlbfs_hostname __lh___hugetlbfs_hostname
 extern char __hugetlbfs_hostname[];
 #define hugetlbfs_prefault __lh_hugetlbfs_prefault

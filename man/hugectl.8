@@ -82,6 +82,16 @@ where binaries are aligned to 64K as required by the ABI and the kernel is
 using a 4K base pagesize.
 
 .TP
+.B --no-reserve
+By default, huge pages are reserved at mmap() time so future faults will
+succeed. This avoids unexpected application but some applications depend
+on memory overcommit to create large sparse mappings. For this type of
+application, this switch will create huge page backed mappings without a
+reservation if the kernel is recent enough to make this operation safe.
+Use this option with extreme care as in the event huge pages are not
+available when the mapping is faulted, the application will be killed.
+
+.TP
 .B --dry-run
 Instead of running the process, the \fBhugectl\fP utility will describe what
 environment variables it set for \fBlibhugetlbfs\fP. This is useful if

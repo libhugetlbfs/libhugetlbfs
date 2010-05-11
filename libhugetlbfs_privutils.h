@@ -75,6 +75,10 @@ void restore_overcommit_pages(long page_size, long oc_pool);
 enum {
 	/* Reservations are created for private mappings */
 	HUGETLB_FEATURE_PRIVATE_RESV,
+
+	/* Whether use of MAP_NORESERVE is safe or can result in OOM */
+	HUGETLB_FEATURE_SAFE_NORESERVE,
+
 	HUGETLB_FEATURE_NR,
 };
 #define hugetlbfs_test_feature __pu_hugetlbfs_test_feature

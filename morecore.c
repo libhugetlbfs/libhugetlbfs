@@ -72,6 +72,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	int ret;
 	void *p;
 	long delta;
+	int mmap_reserve = __hugetlb_opts.no_reserve ? MAP_NORESERVE : 0;
 
 	INFO("hugetlbfs_morecore(%ld) = ...\n", (long)increment);
 
@@ -94,7 +95,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 
 		/* map in (extend) more of the file at the end of our last map */
 		p = mmap(heapbase + mapsize, delta, PROT_READ|PROT_WRITE,
-			 MAP_PRIVATE, heap_fd, mapsize);
+			 MAP_PRIVATE|mmap_reserve, heap_fd, mapsize);
 		if (p == MAP_FAILED) {
 			WARNING("New heap segment map at %p failed: %s\n",
 				heapbase+mapsize, strerror(errno));

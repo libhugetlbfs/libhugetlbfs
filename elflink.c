@@ -836,6 +836,7 @@ static int prepare_segment(struct seg_info *seg)
 	unsigned long size, offset;
 	long page_size = getpagesize();
 	long hpage_size;
+	int mmap_reserve = __hugetlb_opts.no_reserve ? MAP_NORESERVE : 0;
 
 	hpage_size = seg->page_size;
 
@@ -869,7 +870,8 @@ static int prepare_segment(struct seg_info *seg)
 		check_range_empty(end, new_end - end);
 
 	/* Create the temporary huge page mmap */
-	p = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, seg->fd, 0);
+	p = mmap(NULL, size, PROT_READ|PROT_WRITE,
+				MAP_SHARED|mmap_reserve, seg->fd, 0);
 	if (p == MAP_FAILED) {
 		WARNING("Couldn't map hugepage segment to copy data: %s\n",
 			strerror(errno));
@@ -1123,6 +1125,10 @@ static void remap_segments(struct seg_info *seg, int num)
 		mapsize = ALIGN(offset + seg[i].memsz, hpage_size);
 		mmap_flags = MAP_PRIVATE|MAP_FIXED;
 
+		/* If requested, make no reservations */
+		if (__hugetlb_opts.no_reserve)
+			mmap_flags |= MAP_NORESERVE;
+
 		/*
 		 * If this is a read-only mapping whose contents are
 		 * entirely contained within the file, then use MAP_NORESERVE.
@@ -1243,6 +1249,10 @@ static int check_env(void)
 			__hugetlb_opts.sharing = 0;
 		}
 	}
+
+	INFO("HUGETLB_NO_RESERVE=%s, reservations %s\n",
+			__hugetlb_opts.no_reserve ? "yes" : "no",
+			__hugetlb_opts.no_reserve ? "disabled" : "enabled");
 
 	return 0;
 }

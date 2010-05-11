@@ -119,6 +119,19 @@ the hugepage pool is large enough to run the application or the kernel is
 2.6.27 or later, this environment variable should be set.
 
 .TP
+.B HUGETLB_NO_RESERVE=yes
+
+By default, the kernel will reserve huge pages at mmap() time to ensure that
+future faults will succeed. This avoids unexpected application failure at
+fault time but some applications depend on memory overcommit to create
+large sparse mappings. For this type of application, setting this environment
+variable will create huge page backed mappings without a reservation. Use
+this option with extreme care as in the event huge pages are not available
+when the mapping is used, the application will be killed. On older kernels,
+the use of this feature can trigger the OOM killer. Hence, even with this
+variable set, reservations may still be used for safety.
+
+.TP
 .B HUGETLB_MORECORE_HEAPBASE=address
 \fBlibhugetlbfs\fP normally picks an address to use as the base of the heap for
 malloc() automatically. This environment variable fixes which address is used.

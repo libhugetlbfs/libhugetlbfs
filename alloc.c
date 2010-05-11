@@ -79,6 +79,7 @@ void *get_huge_pages(size_t len, ghp_t flags)
 	void *buf;
 	int buf_fd;
 	int saved_error;
+	int mmap_reserve = __hugetlb_opts.no_reserve ? MAP_NORESERVE : 0;
 
 	/* Catch an altogether-too easy typo */
 	if (flags & GHR_MASK)
@@ -94,7 +95,7 @@ void *get_huge_pages(size_t len, ghp_t flags)
 
 	/* Map the requested region */
 	buf = mmap(NULL, len, PROT_READ|PROT_WRITE,
-		 MAP_PRIVATE, buf_fd, 0);
+		 MAP_PRIVATE|mmap_reserve, buf_fd, 0);
 	if (buf == MAP_FAILED) {
 		close(buf_fd);
 
