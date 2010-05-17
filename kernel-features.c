@@ -43,7 +43,7 @@ static struct feature kernel_features[] = {
 	},
 	[HUGETLB_FEATURE_SAFE_NORESERVE] = {
 		.name			= "noreserve_safe",
-		.required_version	= "2.6.35",
+		.required_version	= "2.6.34",
 	}
 };
 
