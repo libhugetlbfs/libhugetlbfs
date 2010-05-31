@@ -255,22 +255,29 @@ void cleanup(void)
 		cleanup_fake_data();
 }
 
-void validate_sizes(int line, long actual_sizes[], int actual, int max_actual,
-			long expected_sizes[], int expected)
+void validate_sizes(int line, long actual_sizes[], int actual,
+		    int max, int maxmax,
+		    long expected_sizes[], int expected)
 {
 	int i, j;
-	if (expected != actual)
-		FAIL("Line %i: Wrong number of sizes returned -- expected %i "
-			"got %i", line, expected, actual);
 
-	for (i = 0; i < expected; i++) {
-		for (j = 0; j < actual; j++)
-			if (expected_sizes[i] == actual_sizes[j])
-				break;
-		if (j >= actual)
-			FAIL("Line %i: Expected size %li not found in actual "
-				"results", line, expected_sizes[i]);
-	}
+	verbose_printf("Line %d: Expecting sizes:", line);
+	for (i = 0; i < expected; i++)
+		verbose_printf(" %ld", expected_sizes[i]);
+	verbose_printf("\n");
+	verbose_printf("Line %d: Actual sizes are:", line);
+	for (i = 0; i < actual; i++)
+		verbose_printf(" %ld", actual_sizes[i]);
+	verbose_printf("\n");
+
+	if (((expected <= max) && (expected != actual))
+	    || ((expected > max) && (actual < max)))
+		FAIL("Line %i: Wrong number of sizes returned -- expected %i "
+		     "got %i", line, expected, actual);
+	else if (actual > max)
+		FAIL("Line %i: %i sizes returned > maximum %i",
+		     line, actual, max);
+
 	for (i = 0; i < actual; i++) {
 		for (j = 0; j < expected; j++)
 			if (actual_sizes[i] == expected_sizes[j])
@@ -280,7 +287,13 @@ void validate_sizes(int line, long actual_sizes[], int actual, int max_actual,
 				"results", line, expected_sizes[i]);
 	}
 
-	for (i = expected; i < max_actual; i++)
+	for (i = 0; i < actual; i++)
+		for (j = i+1; j < actual; j++)
+			if (actual_sizes[i] == actual_sizes[j])
+				FAIL("Line %i: Duplicate size %li at %i/%i",
+				     line, actual_sizes[i], i, j);
+
+	for (i = actual; i < maxmax; i++)
 		if (actual_sizes[i] != 42)
 			FAIL("Line %i: Wrote past official limit at %i",
 				line, i);
@@ -291,11 +304,10 @@ void validate_sizes(int line, long actual_sizes[], int actual, int max_actual,
 ({									\
 	long __a[MAX] = { [0 ... MAX-1] = 42 };				\
 	int __na;							\
-	int __l = (count < max) ? count : max;				\
 									\
 	__na = func(__a, max);						\
 									\
-	validate_sizes(__LINE__, __a, __na, MAX, expected, __l);	\
+	validate_sizes(__LINE__, __a, __na, max, MAX, expected, count);	\
 									\
 	__na;								\
 })
