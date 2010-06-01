@@ -91,6 +91,8 @@ void print_usage()
 	CONT("specified count on failure");
 	OPTION("--pool-pages-min <size|DEFAULT>:[+|-]<pagecount|memsize<G|M|K>>", "");
 	CONT("Adjust pool 'size' lower bound");
+	OPTION("--obey-mempolicy", "Obey the NUMA memory policy when");
+	CONT("adjusting the pool 'size' lower bound");
 	OPTION("--pool-pages-max <size|DEFAULT>:[+|-]<pagecount|memsize<G|M|K>>", "");
 	CONT("Adjust pool 'size' upper bound");
 	OPTION("--set-recommended-min_free_kbytes", "");
@@ -150,6 +152,7 @@ int opt_set_hugetlb_shm_group = 0;
 int opt_temp_swap = 0;
 int opt_ramdisk_swap = 0;
 int opt_swap_persist = 0;
+int opt_obey_mempolicy = 0;
 unsigned long opt_limit_mount_size = 0;
 int opt_limit_mount_inodes = 0;
 int verbose_level = VERBOSITY_DEFAULT;
@@ -231,6 +234,7 @@ void verbose_expose(void)
 #define LONG_POOL_LIST		(LONG_POOL|'l')
 #define LONG_POOL_MIN_ADJ	(LONG_POOL|'m')
 #define LONG_POOL_MAX_ADJ	(LONG_POOL|'M')
+#define LONG_POOL_MEMPOL	(LONG_POOL|'p')
 
 #define LONG_SET_RECOMMENDED_MINFREEKBYTES	('k' << 8)
 #define LONG_SET_RECOMMENDED_SHMMAX		('x' << 8)
@@ -1176,8 +1180,18 @@ void pool_adjust(char *cmd, unsigned int counter)
 			add_ramdisk_swap(page_size);
 		check_swap();
 	}
-	INFO("setting HUGEPAGES_TOTAL to %ld\n", min);
-	set_huge_page_counter(page_size, HUGEPAGES_TOTAL, min);
+
+	if (opt_obey_mempolicy && get_huge_page_counter(page_size,
+				HUGEPAGES_TOTAL_MEMPOL) < 0) {
+		opt_obey_mempolicy = 0;
+		WARNING("Counter for NUMA huge page allocations is not found, continuing with normal pool adjustment\n");
+	}
+
+	INFO("setting HUGEPAGES_TOTAL%s to %ld\n",
+		opt_obey_mempolicy ? "_MEMPOL" : "", min);
+	set_huge_page_counter(page_size,
+		opt_obey_mempolicy ? HUGEPAGES_TOTAL_MEMPOL : HUGEPAGES_TOTAL,
+		min);
 	get_pool_size(page_size, &pools[pos]);
 
 	/* If we fail to make an allocation, retry if user requests */
@@ -1191,9 +1205,12 @@ void pool_adjust(char *cmd, unsigned int counter)
 		sleep(6);
 
 		last_pool_value = pools[pos].minimum;
-		INFO("Retrying allocation HUGEPAGES_TOTAL to %ld current %ld\n",
-							min, pools[pos].minimum);
-		set_huge_page_counter(page_size, HUGEPAGES_TOTAL, min);
+		INFO("Retrying allocation HUGEPAGES_TOTAL%s to %ld current %ld\n", opt_obey_mempolicy ? "_MEMPOL" : "", min, pools[pos].minimum);
+		set_huge_page_counter(page_size,
+			opt_obey_mempolicy ?
+				HUGEPAGES_TOTAL_MEMPOL :
+				HUGEPAGES_TOTAL,
+			min);
 		get_pool_size(page_size, &pools[pos]);
 	}
 
@@ -1280,6 +1297,7 @@ int main(int argc, char** argv)
 		{"pool-list", no_argument, NULL, LONG_POOL_LIST},
 		{"pool-pages-min", required_argument, NULL, LONG_POOL_MIN_ADJ},
 		{"pool-pages-max", required_argument, NULL, LONG_POOL_MAX_ADJ},
+		{"obey-mempolicy", no_argument, NULL, LONG_POOL_MEMPOL},
 		{"set-recommended-min_free_kbytes", no_argument, NULL, LONG_SET_RECOMMENDED_MINFREEKBYTES},
 		{"set-recommended-shmmax", no_argument, NULL, LONG_SET_RECOMMENDED_SHMMAX},
 		{"set-shm-group", required_argument, NULL, LONG_SET_HUGETLB_SHM_GROUP},
@@ -1377,6 +1395,10 @@ int main(int argc, char** argv)
 			} else {
 				opt_min_adj[minadj_count++] = optarg;
 			}
+			break;
+
+		case LONG_POOL_MEMPOL:
+			opt_obey_mempolicy = 1;
 			break;
 
 		case LONG_POOL_MAX_ADJ:

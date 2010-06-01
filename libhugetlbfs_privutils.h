@@ -34,12 +34,13 @@
 
 /* Hugetlb pool counter operations */
 /* Keys for reading hugetlb pool counters */
-enum {			 /* The number of pages of a given size that ... */
-	HUGEPAGES_TOTAL, /*  are allocated to the pool */
-	HUGEPAGES_FREE,  /*  are not in use */
-	HUGEPAGES_RSVD,  /*  are reserved for possible future use */
-	HUGEPAGES_SURP,  /*  are allocated to the pool on demand */
-	HUGEPAGES_OC,    /*  can be allocated on demand - maximum */
+enum {		 	/* The number of pages of a given size that ... */
+	HUGEPAGES_TOTAL, 	/* are allocated to the pool */
+	HUGEPAGES_TOTAL_MEMPOL,	/* are allocated following the NUMA mempolicy */
+	HUGEPAGES_FREE,  	/* are not in use */
+	HUGEPAGES_RSVD,  	/* are reserved for possible future use */
+	HUGEPAGES_SURP,  	/* are allocated to the pool on demand */
+	HUGEPAGES_OC,    	/* can be allocated on demand - maximum */
 	HUGEPAGES_MAX_COUNTERS,
 };
 #define get_huge_page_counter __pu_get_huge_page_counter

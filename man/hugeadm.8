@@ -160,6 +160,14 @@ requested for the Minimum pool. The size of the pools should be checked after
 executing this command to ensure they were successful.
 
 .TP
+.B --obey-numa-mempol
+
+This option requests that allocation of huge pages to the static pool with
+\fB--pool-pages-min\fP obey the NUMA memory policy of the current process. This
+policy can be explicitly specified using numactl or inherited from a parent
+process.
+
+.TP
 .B --pool-pages-max=<size|DEFAULT>:[+|-]<pagecount|memsize<G|M|K>>
 
 This option sets or adjusts the Maximum number of hugepages. Note that while

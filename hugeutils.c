@@ -146,6 +146,10 @@ static struct hugetlb_pool_counter_info_t hugetlb_counter_info[] = {
 		.meminfo_key	= "HugePages_Total:",
 		.sysfs_file	= "nr_hugepages",
 	},
+	[HUGEPAGES_TOTAL_MEMPOL] = {
+		.meminfo_key	= "HugePages_Total:",
+		.sysfs_file	= "nr_hugepages_mempolicy",
+	},
 	[HUGEPAGES_FREE] = {
 		.meminfo_key	= "HugePages_Free:",
 		.sysfs_file	= "free_hugepages",
