@@ -1,3 +1,15 @@
+libhugetlbfs 2.9 "Something Spicy"
+======================================================================
+New Features
+* Add --no-reseve to hugectl to request mmap'd pages are not reserved
+  for kernels newer than 2.6.34
+* POWER6 now supported by TLB miss cost estimator
+* Add --obey-numa-mempol to hugeadm to request static pool pages are
+  allocated following the process NUMA memory policy
+
+Test Suite
+* Fix gethugepagesizes test case
+
 libhugetlbfs 2.8 "Scotch Bonnet"
 ======================================================================
 New Features
