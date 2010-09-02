@@ -1,5 +1,5 @@
-PREFIX = /usr/local
-EXEDIR = /bin
+PREFIX ?= /usr/local
+EXEDIR ?= /bin
 
 LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o alloc.o shm.o kernel-features.o
 LIBPUOBJS = init_privutils.o debug.o hugeutils.o kernel-features.o
