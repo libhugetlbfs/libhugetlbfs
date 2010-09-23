@@ -1047,7 +1047,7 @@ enum {
 
 static long value_adjust(char *adjust_str, long base, long page_size)
 {
-	unsigned long long adjust;
+	long long adjust;
 	char *iter;
 
 	/* Convert and validate the adjust. */
