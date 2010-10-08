@@ -1,3 +1,10 @@
+libhugetlbfs 2.10 "Another Hottie"
+======================================================================
+Bug Fixes
+* hugeadm now handles pool size deltas properly
+* Makefile uses ?= to assign PREFIX and EXEDIR to allow for easier build
+  modification
+
 libhugetlbfs 2.9 "Something Spicy"
 ======================================================================
 New Features
