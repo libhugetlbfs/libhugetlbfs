@@ -37,7 +37,6 @@ my $collector;
 my $miss_scale = 0;
 my $ins_scale = 0;
 my $cyc_scale = 0;
-my $tlbcost_cache = "$Bin/tlbmisscost";
 
 sub start_target()
 {
@@ -283,17 +282,6 @@ if ($misses > 0) {
 	}
 
 	if ($service && $cycles > 0) {
-		if ( !$config && -e $tlbcost_cache ) {
-			$config = $tlbcost_cache;
-		}
-		if ($config) {
-			open(DAT, $config) || die "Failed to open $config\n";
-			my $data = <DAT>;
-			close(DAT);
-			($data,$cost_in_cycles) = split(/\=/, $data);
-			chomp($cost_in_cycles);
-		}
-
 		if ($cost_in_cycles <= 0) {
 			my $cost_script = `which tlbmiss_cost.sh`;
 			if ($cost_script eq "") {
@@ -302,9 +290,6 @@ if ($misses > 0) {
 			my $data = `$cost_script --vmlinux $vmlinux`;
 			($data,$cost_in_cycles) = split(/\=/, $data);
 			chomp($cost_in_cycles);
-			open (DAT, ">$tlbcost_cache");
-			print DAT "TLB_MISS_COST=$cost_in_cycles";
-			close (DAT);
 		}
 		my $total_cost = $cost_in_cycles * $misses;
 		print("$target spent ",
