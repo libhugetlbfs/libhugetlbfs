@@ -18,6 +18,7 @@ my $vmlinux;
 my $target;
 my $real_target;
 my $target_pid;
+my $target_global;
 my $misses;
 my $instructions = 0;
 my $cycles = 0;
@@ -115,6 +116,9 @@ sub run_profile()
 			$binName = $results[0];
 		}
 		$pid = start_target();
+	} elsif (defined $target_global) {
+		$binName='/';
+		$pid = $$;
 	}
 
 	$binName = `basename $binName`;
@@ -230,6 +234,7 @@ sub print_usage()
 	--vmlinux /path/to/vmlinux Sets the vmlinux file to use
 	--delay N                  Waits N seconds before rereading the
                                    miss rate
+	--target-global            Watch the miss rate of all processes
 	--target-pid P             Watch the miss rate of P instead of a target
 	--real-target T            Watch T instead of target in case target is
                                    a launcher script
@@ -262,6 +267,7 @@ Getopt::Long::Configure ('bundling');
 GetOptions ('v|vmlinux=s' => \$vmlinux,
 	    'h|help' => \&print_usage,
 	    'd|delay=i' => \$wait_time,
+	    'g|target-global' => \$target_global,
 	    'p|target-pid=i' => \$target_pid,
 	    'r|real-target=s' => \$real_target,
 	    'l|time-limit=i' => \$time_limit,
@@ -274,7 +280,7 @@ GetOptions ('v|vmlinux=s' => \$vmlinux,
 	    's|persist' => \$persist,
 	    '<>' => \&get_target);
 
-if (!$target && not defined $target_pid) {
+if (!$target && !$target_global && not defined $target_pid) {
 	print_usage();
 }
 

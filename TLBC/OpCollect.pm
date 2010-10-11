@@ -154,7 +154,10 @@ sub get_current_eventcount()
 	$col = $self->_get_column($event);
 
 	foreach $line (@results) {
-		if ($line =~ /$binName/) {
+		if ($line !~ /^\s+[0-9]/) {
+			next;
+		}
+		if ($binName eq "/" || $line =~ /$binName/) {
 			chomp($line);
 			$line =~ s/^\s+//;
 			$line =~ s/\s+$//;
@@ -169,7 +172,7 @@ sub get_current_eventcount()
 sub read_eventcount()
 {
 	system("opcontrol --dump > /dev/null 2>&1");
-	$report = `opreport`;
+	$report = `opreport -x`;
 }
 
 sub shutdown()

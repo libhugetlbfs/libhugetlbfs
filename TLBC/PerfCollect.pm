@@ -111,7 +111,7 @@ sub get_current_eventcount()
 	}
 
 	foreach $line (@lines) {
-		if ($line =~ /$binName/) {
+		if ($binName eq "/" || $line =~ /$binName/) {
 			chomp($line);
 			$line =~ s/^\s+//;
 			$line =~ s/\s+$//;
