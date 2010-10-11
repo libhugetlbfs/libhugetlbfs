@@ -55,7 +55,7 @@ sub _setup_oprofile()
 	my $self = shift;
 	my $vmlinux = shift;
 	my $refEvents = shift;
-	my $cmd = "$Bin/oprofile_start.sh --vmlinux=$vmlinux ";
+	my $cmd = "$Bin/oprofile_start.sh --sample-cycle-factor 6 --sample-event-factor 2 --vmlinux=$vmlinux ";
 	foreach my $event (@{$refEvents}) {
 		$cmd .= " --event=$event";
 		$self->_get_event($event);
