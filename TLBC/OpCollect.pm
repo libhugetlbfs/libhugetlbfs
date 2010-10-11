@@ -172,7 +172,7 @@ sub get_current_eventcount()
 sub read_eventcount()
 {
 	system("opcontrol --dump > /dev/null 2>&1");
-	$report = `opreport -x`;
+	$report = `opreport -x 2> /dev/null`;
 }
 
 sub shutdown()
