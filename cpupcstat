@@ -214,6 +214,8 @@ sub print_usage()
 	--time-limit L             Sets a time limit for watching the target
 	--kernel                   Output DTLB miss data for the kernel as well
                                    as the specified target
+	--time-servicing           Print the percentage of time servicing TLB
+                                   misses
 	--misses-per-instruction   Prints the ratio of TLB misses per
                                    instruction retired
 	--misses-per-cycle         Prints the ratio of TLB misses per CPU cycle
