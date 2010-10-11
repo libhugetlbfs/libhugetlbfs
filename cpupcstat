@@ -116,8 +116,11 @@ sub run_profile()
 	if ($instruct_ratio) {
 		printf("%24s\n", "Instructions/TLB Miss\n");
 		$ins_scale = $collector->samples("instructions");
-	} elsif ($cycle_ratio || $service) {
+	} elsif ($cycle_ratio) {
 		printf("%24s\n", "Cycles/TLB Miss\n");
+		$cyc_scale = $collector->samples("timer");
+	} elsif ($service) {
+		printf("%24s\n", "TLB Miss %age Time\n");
 		$cyc_scale = $collector->samples("timer");
 	} else {
 		print("\n");
