@@ -624,7 +624,7 @@ oprofile_calc()
 	LAST_LATENCY_CYCLES=$(($WALK/$DTLB))
 }
 
-ARGS=`getopt -o c:s:vqh --long calibrator:,stream:,vmlinux:,verbose,quiet,fetch-calibrator,fetch-stream,help -n 'tlbmiss_cost.sh' -- "$@"`
+ARGS=`getopt -o c:s:fvqh --long calibrator:,stream:,vmlinux:,verbose,quiet,fetch-calibrator,fetch-stream,ignore-cache,help -n 'tlbmiss_cost.sh' -- "$@"`
 
 eval set -- "$ARGS"
 
@@ -635,6 +635,7 @@ while true ; do
 		--vmlinux) VMLINUX="--vmlinux $2" ; shift 2 ;;
 		-v|--verbose) VERBOSE=$(($VERBOSE+1)); shift;;
 		-q|--quiet) VERBOSE=$(($VERBOSE-1)); shift;;
+		-f|--ignore-cache) IGNORE_CACHE=yes; shift;;
 		--fetch-calibrator) calibrator_fetch; shift;;
 		--fetch-stream) stream_fetch; shift;;
 		-h|--help) usage; shift;;
@@ -644,7 +645,34 @@ while true ; do
 	esac
 done
 
+HOSTNAME=`hostname 2> /dev/null`
 ARCH=`uname -m | sed -e s/i.86/i386/`
+
+if [ "$IGNORE_CACHE" != "yes" ]; then
+	print_trace Searching for a cached value for TLB miss
+
+	# Look for a cached entry for the TLB miss value
+	if [ -e /etc/tlbmisscost.conf ]; then
+		print_trace Checking /etc/tlbmisscost.conf
+		grep TLB_MISS_COST /etc/tlbmisscost.conf
+		if [ $? -eq 0 ]; then
+			exit 0
+		fi
+	fi
+
+	# Look for a cached entry in home
+	if [ -e $HOME/.tlbmisscostrc ]; then
+		print_trace Checking $HOME/.tlbmisscostrc
+		HOSTNAME=`hostname 2> /dev/null`
+		if [ "$HOSTNAME" != "" -a "$HOSTNAME" != "localhost" ]; then
+			grep $HOSTNAME:TLB_MISS_COST $HOME/.tlbmisscostrc | sed -e "s/^$HOSTNAME://"
+			if [ $? -eq 0 ]; then
+				exit 0
+			fi
+		fi
+	fi
+	print_trace Cached value unavailable
+fi
 
 if [[ "$ARCH" == "ppc64" || "$ARCH" == "ppc" ]]; then
 	oprofile_calc
@@ -653,4 +681,13 @@ else
 fi
 
 echo TLB_MISS_COST=$LAST_LATENCY_CYCLES
+
+# Save for future reference
+echo TLB_MISS_COST=$LAST_LATENCY_CYCLES 2> /dev/null > /etc/tlbmisscost.conf
+if [ "$HOSTNAME" != "" -a "$HOSTNAME" != "localhost" ]; then
+	grep -v $HOSTNAME:TLB_MISS_COST $HOME/.tlbmisscostrc > $HOME/.tlbmisscostrc.$$ 2> /dev/null
+	echo $HOSTNAME:TLB_MISS_COST=$LAST_LATENCY_CYCLES >> $HOME/.tlbmisscostrc.$$
+	mv $HOME/.tlbmisscostrc.$$ $HOME/.tlbmisscostrc
+fi
+
 exit 0
