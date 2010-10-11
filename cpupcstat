@@ -38,6 +38,17 @@ my $miss_scale = 0;
 my $ins_scale = 0;
 my $cyc_scale = 0;
 
+sub calc_tlbmiss_cost()
+{
+	my $cost_script = `which tlbmiss_cost.sh`;
+	if ($cost_script eq "") {
+		$cost_script = "$Bin/contrib/tlbmiss_cost.sh";
+	}
+	my $data = `$cost_script --vmlinux $vmlinux`;
+	($data,$cost_in_cycles) = split(/\=/, $data);
+	chomp($cost_in_cycles);
+}
+
 sub start_target()
 {
 	my $pid = fork();
@@ -161,6 +172,17 @@ sub run_profile()
 				($cyc_new * $cyc_scale) / ($new * $miss_scale));
 			}
 			$cyc_prev = $ret;
+		} elsif ($service) {
+
+			$ret = $collector->get_current_eventcount($binName,
+				"timer");
+			$cyc_new = $ret - $cyc_prev;
+			my $miss_cycles = $new * $cost_in_cycles * $miss_scale;
+			my $total_cycles = $cyc_new * $cyc_scale;
+
+			printf "%24.4f%%\n", $miss_cycles * 100/$total_cycles;
+
+			$cyc_prev = $ret;
 		} else {
 			print("\n");
 		}
@@ -265,6 +287,10 @@ if ($target) {
 	chomp($target);
 }
 
+if ($service) {
+	calc_tlbmiss_cost();
+}
+
 $misses = 0;
 $kern_misses = 0;
 run_profile();
@@ -288,13 +314,7 @@ if ($misses > 0) {
 
 	if ($service && $cycles > 0) {
 		if ($cost_in_cycles <= 0) {
-			my $cost_script = `which tlbmiss_cost.sh`;
-			if ($cost_script eq "") {
-				$cost_script = "$Bin/contrib/tlbmiss_cost.sh";
-			}
-			my $data = `$cost_script --vmlinux $vmlinux`;
-			($data,$cost_in_cycles) = split(/\=/, $data);
-			chomp($cost_in_cycles);
+			calc_tlbmiss_cost();
 		}
 		my $total_cost = $cost_in_cycles * $misses;
 		print("$target spent ",
