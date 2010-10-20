@@ -10,7 +10,12 @@
 #
 import os
 
-debug = True
+debug = False
+
+# must be executed under the root to operate
+if os.geteuid() != 0:
+    print "You must be root to setup hugepages!"
+    os._exit(1)
 
 # config files we need access to
 sysctlConf = "/etc/sysctl.conf"
