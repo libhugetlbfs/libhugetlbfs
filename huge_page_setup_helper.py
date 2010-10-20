@@ -134,8 +134,10 @@ inputIsValid = False
 # ask for the name of the group allowed access to huge pages
 while inputIsValid == False:
     foundbad = False
-    userGroupReq = raw_input("What group should have access to the huge pages? "
-                             "(The group will be created, if need be): ")
+    userGroupReq = raw_input("What group should have access to the huge pages?"
+                             "(The group will be created, if need be) [hugepages]: ")
+    if userGroupReq is '':
+        userGroupReq = 'hugepages'
     if userGroupReq[0].isdigit() or userGroupReq[0] == "-":
         foundbad = True
         print "Group names cannot start with a number or dash, please try again!"
