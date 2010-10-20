@@ -109,7 +109,7 @@ while not userIn:
         if userHugePageReqMB > (memTotal - 128):
             userIn = None
             print "Refusing to allocate %d, you must leave at least 128MB for the system" % userHugePageReqMB
-        elif userHugePageReqMB < (hugePageSize / 1024):
+        elif userHugePageReqMB < (hugePageSize / (1024 * 1024)):
             userIn = None
             print "Sorry, allocation must be at least a page's worth!"
         else:
