@@ -296,8 +296,13 @@ if debug == False:
     for line in limitsConfLines:
         cfgExist = False
         for hugeUser in hugePageUserList:
-            if line.split()[0] == hugeUser:
-                cfgExist = True
+            try:
+                if line.split()[0] == hugeUser:
+                    cfgExist = True
+            except IndexError:
+                # hit either white or comment line, it is safe not to take
+                # any action and continue.
+                pass
         if cfgExist == True:
             continue
         else:
