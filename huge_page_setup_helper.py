@@ -220,7 +220,10 @@ for hugeUser in hugePageUserList:
     if userExists == False:
         print "Creating user %s with membership in huge page group" % hugeUser
         if debug == False:
-            os.popen("/usr/sbin/useradd %s -G %s" % (hugeUser, userGroupReq))
+            if hugeUser == userGroupReq:
+                os.popen("/usr/sbin/useradd %s -g %s" % (hugeUser, userGroupReq))
+            else:
+                os.popen("/usr/sbin/useradd %s -G %s" % (hugeUser, userGroupReq))
         else:
             print "/usr/sbin/useradd %s -G %s" % (hugeUser, userGroupReq)
 print
