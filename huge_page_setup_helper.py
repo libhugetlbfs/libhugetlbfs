@@ -95,13 +95,13 @@ while not userIn:
     try:
         userIn = raw_input("How much memory would you like to allocate for huge pages? "
                            "(input in MB, unless postfixed with GB): ")
-	if userIn[-2:] == "GB":
+        if userIn[-2:] == "GB":
             userHugePageReqMB = int(userIn[0:-2]) * 1024
-	elif userIn[-1:] == "G":
+        elif userIn[-1:] == "G":
             userHugePageReqMB = int(userIn[0:-1]) * 1024
-	elif userIn[-2:] == "MB":
+        elif userIn[-2:] == "MB":
             userHugePageReqMB = int(userIn[0:-2])
-	elif userIn[-1:] == "M":
+        elif userIn[-1:] == "M":
             userHugePageReqMB = int(userIn[0:-1])
         else:
             userHugePageReqMB = int(userIn)
@@ -159,7 +159,7 @@ if userGIDReq > -1:
     print "Group %s (gid %d) already exists, we'll use it" % (userGroupReq, userGIDReq)
 else:
     if debug == False:
-    	os.popen("/usr/sbin/groupadd %s" % userGroupReq)
+        os.popen("/usr/sbin/groupadd %s" % userGroupReq)
     else:
         print "/usr/sbin/groupadd %s" % userGroupReq
     groupNames = os.popen("/usr/bin/getent group %s" % userGroupReq).readlines()
@@ -325,5 +325,4 @@ print " * Total size of Huge Pages.: %6d MB" % (userHugePagesReq * hugePageSize 
 print " * Remaining System Memory..: %6d MB" % (memTotal - userHugePageReqMB)
 print " * Huge Page User Group.....:  %s (%d)" % (userGroupReq, userGIDReq)
 print
-
 
