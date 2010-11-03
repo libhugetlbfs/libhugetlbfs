@@ -318,7 +318,7 @@ void hugetlbfs_check_priv_resv()
 	 * prefaulting the huge pages we allocate since the kernel
 	 * guarantees them.  This can help NUMA performance quite a bit.
 	 */
-	if (hugetlbfs_test_feature(HUGETLB_FEATURE_PRIVATE_RESV)) {
+	if (hugetlbfs_test_feature(HUGETLB_FEATURE_PRIVATE_RESV) > 0) {
 		INFO("Kernel has MAP_PRIVATE reservations.  Disabling "
 			"heap prefaulting.\n");
 		__hugetlbfs_prefault = 0;
@@ -333,7 +333,7 @@ void hugetlbfs_check_safe_noreserve()
 	 * the user of NORESERVE where necessary
 	 */
 	if (__hugetlb_opts.no_reserve &&
-			!hugetlbfs_test_feature(HUGETLB_FEATURE_SAFE_NORESERVE)) {
+		hugetlbfs_test_feature(HUGETLB_FEATURE_SAFE_NORESERVE) <= 0) {
 		INFO("Kernel is not safe for MAP_NORESERVE. Forcing "
 			"use of reservations.\n");
 		__hugetlb_opts.no_reserve = 0;
