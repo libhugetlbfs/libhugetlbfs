@@ -216,7 +216,7 @@ void hugetlbfs_setup_morecore(void)
 	if (hpage_size <= 0) {
 		if (errno == ENOSYS)
 			WARNING("Hugepages unavailable\n");
-		else if (errno == EOVERFLOW)
+		else if (errno == EOVERFLOW || errno == ERANGE)
 			WARNING("Hugepage size too large\n");
 		else if (errno == EINVAL)
 			WARNING("Invalid huge page size\n");
@@ -225,16 +225,6 @@ void hugetlbfs_setup_morecore(void)
 		return;
 	} else if (!hugetlbfs_find_path_for_size(hpage_size)) {
 		WARNING("Hugepage size %li unavailable", hpage_size);
-		return;
-	}
-
-	if (hpage_size <= 0) {
-		if (errno == ENOSYS)
-			WARNING("Hugepages unavailable\n");
-		else if (errno == EOVERFLOW || errno == ERANGE)
-			WARNING("Hugepage size too large\n");
-		else
-			WARNING("Hugepage size (%s)\n", strerror(errno));
 		return;
 	}
 
