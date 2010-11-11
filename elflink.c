@@ -59,6 +59,14 @@
 #define ELF_ST_TYPE(x)  ELF64_ST_TYPE(x)
 #endif
 
+/*
+ * SHARED_TIMEOUT is used by find_or_prepare_shared_file for when it
+ * should timeout while waiting for other users to finish preparing
+ * the file it wants.  The value is the number of tries before giving
+ * up with a 1 second wait between tries
+ */
+#define SHARED_TIMEOUT 10
+
 /* This function prints an error message to stderr, then aborts.  It
  * is safe to call, even if the executable segments are presently
  * unmapped.
@@ -971,9 +979,10 @@ static int fork_and_prepare_segment(struct seg_info *htlb_seg_info)
  */
 static int find_or_prepare_shared_file(struct seg_info *htlb_seg_info)
 {
-	int fdx, fds;
+	int fdx = -1, fds;
 	int errnox, errnos;
 	int ret;
+	int i;
 	char final_path[PATH_MAX+1];
 	char tmp_path[PATH_MAX+1];
 
@@ -982,7 +991,7 @@ static int find_or_prepare_shared_file(struct seg_info *htlb_seg_info)
 		return -1;
 	assemble_path(tmp_path, "%s.tmp", final_path);
 
-	do {
+	for (i = 0; i < SHARED_TIMEOUT; i++) {
 		/* NB: mode is modified by umask */
 		fdx = open(tmp_path, O_CREAT | O_EXCL | O_RDWR, 0666);
 		errnox = errno;
@@ -1038,8 +1047,7 @@ static int find_or_prepare_shared_file(struct seg_info *htlb_seg_info)
 		/* Both opens failed, somebody else is still preparing */
 		/* Wait and try again */
 		sleep(1);
-		/* FIXME: should have a timeout */
-	} while (1);
+	}
 
  fail:
 	if (fdx > 0) {
