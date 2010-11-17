@@ -121,8 +121,8 @@ extern long gethugepagesize (void) __attribute__ ((weak));
 
 static inline long check_hugepagesize()
 {
-	long hpage_size = gethugepagesize();
-	if (hpage_size < 0) {
+	long __hpage_size = gethugepagesize();
+	if (__hpage_size < 0) {
 		if (errno == ENOSYS)
 			CONFIG("No hugepage kernel support\n");
 		else if (errno == EOVERFLOW)
@@ -130,7 +130,7 @@ static inline long check_hugepagesize()
 		else
 			CONFIG("Hugepage size (%s)", strerror(errno));
 	}
-	return hpage_size;
+	return __hpage_size;
 }
 
 int using_system_hpage_size(const char *mount);
