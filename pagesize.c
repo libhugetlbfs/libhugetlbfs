@@ -47,7 +47,7 @@ extern char *optarg;
 
 void print_usage()
 {
-	fprintf(stderr, "hugectl [options] target\n");
+	fprintf(stderr, "pagesize [options] target\n");
 	fprintf(stderr, "options:\n");
 
 	OPTION("--help, -h", "Prints this message");
