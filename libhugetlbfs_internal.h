@@ -33,6 +33,7 @@
 #include <elf.h>
 #include <link.h>
 #include <limits.h>
+#include <stdbool.h>
 
 #ifndef __LIBHUGETLBFS__
 #error This header should not be included by library users.
@@ -61,6 +62,7 @@ struct libhugeopts_t {
 	int		shrink_ok;
 	int		shm_enabled;
 	int		no_reserve;
+	bool		map_hugetlb;
 	unsigned long	force_elfmap;
 	char		*ld_preload;
 	char		*elfmap;
@@ -103,6 +105,8 @@ extern void setup_features();
 extern void hugetlbfs_check_priv_resv();
 #define hugetlbfs_check_safe_noreserve __lh_hugetlbfs_check_safe_noreserve
 extern void hugetlbfs_check_safe_noreserve();
+#define hugetlbfs_check_map_hugetlb __lh_hugetblfs_check_map_hugetlb
+extern void hugetlbfs_check_map_hugetlb();
 #define __hugetlbfs_hostname __lh___hugetlbfs_hostname
 extern char __hugetlbfs_hostname[];
 #define hugetlbfs_prefault __lh_hugetlbfs_prefault

@@ -340,6 +340,27 @@ void hugetlbfs_check_safe_noreserve()
 	}
 }
 
+void hugetlbfs_check_map_hugetlb()
+{
+/*
+ * FIXME: MAP_HUGETLB has not been picked up by glibc so even though the
+ * kernel may support it, without the userspace mmap flag it cannot be
+ * used.  This ifdef should be removed when the MAP_HUGETLB flag makes it
+ * into glibc.
+ */
+#ifdef MAP_HUGETLB
+	/*
+	 * Kernels after 2.6.32 support mmaping pseudo-anonymous regions
+	 * backed by huge pages, use this feature for huge pages we
+	 * don't intend to share.
+	 */
+	if (hugetlbfs_test_feature(HUGETLB_FEATURE_MAP_HUGETLB) > 0) {
+		INFO("Kernel supports MAP_HUGETLB\n");
+		__hugetlb_opts.map_hugetlb = 1;
+	}
+#endif
+}
+
 /*
  * Pool counters are typically exposed in sysfs in modern kernels, the
  * counters for the default page size are exposed in procfs in all kernels
