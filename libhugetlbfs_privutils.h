@@ -80,6 +80,9 @@ enum {
 	/* Whether use of MAP_NORESERVE is safe or can result in OOM */
 	HUGETLB_FEATURE_SAFE_NORESERVE,
 
+	/* If the kernel has the ability to mmap(MAP_HUGETLB)*/
+	HUGETLB_FEATURE_MAP_HUGETLB,
+
 	HUGETLB_FEATURE_NR,
 };
 #define hugetlbfs_test_feature __pu_hugetlbfs_test_feature
