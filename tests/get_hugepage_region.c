@@ -45,8 +45,10 @@ void free_and_confirm_region_free(void *p, int line) {
 
 int test_unaligned_addr_huge(void *p)
 {
+	unsigned long long mapping_size;
 	p = (void *)((unsigned long)p & ~((gethugepagesize()) - 1));
-	return test_addr_huge(p);
+	mapping_size = get_mapping_page_size(p);
+	return (mapping_size == hpage_size);
 }
 
 #define TESTLEN ((num_hugepages - 1) * hpage_size + hpage_size / 2)

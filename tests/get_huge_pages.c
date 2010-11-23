@@ -45,20 +45,22 @@ void free_and_confirm_region_free(void *p, int line) {
 
 void test_get_huge_pages(int num_hugepages)
 {
-	int err;
+	unsigned long long mapping_size;
 	void *p = get_huge_pages(num_hugepages * hpage_size, GHP_DEFAULT);
 	if (p == NULL)
 		FAIL("get_huge_pages() for %d hugepages", num_hugepages);
 
 	memset(p, 1, hpage_size);
 
-	err = test_addr_huge(p + (num_hugepages -1) * hpage_size);
-	if (err != 1)
+	mapping_size = get_mapping_page_size(
+			(void *)p + (num_hugepages -1) * hpage_size);
+	if (mapping_size != hpage_size)
 		FAIL("Returned page is not hugepage");
 
 	free_and_confirm_region_free(p, __LINE__);
-	err = test_addr_huge(p);
-	if (err == 1)
+	mapping_size = get_mapping_page_size(
+			(void *)p + (num_hugepages -1) * hpage_size);
+	if (mapping_size)
 		FAIL("hugepage was not correctly freed");
 }
 
