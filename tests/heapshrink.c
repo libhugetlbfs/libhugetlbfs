@@ -22,11 +22,20 @@
 #include <string.h>
 #include "hugetests.h"
 
+/*
+ * We cannot test mapping size against huge page size because we are not linked
+ * against libhugetlbfs so gethugepagesize() won't work.  So instead we define
+ * our MIN_PAGE_SIZE as 64 kB (the largest base page available) and make sure
+ * the mapping page size is larger than this.
+ */
+#define MIN_PAGE_SIZE 65536
+
 #define	SIZE	(32 * 1024 * 1024)
 
 int main(int argc, char **argv)
 {
 	int is_huge, have_env, shrink_ok, have_helper;
+	unsigned long long mapping_size;
 	void *p;
 
 	test_init(argc, argv);
@@ -45,7 +54,8 @@ int main(int argc, char **argv)
 			FAIL("malloc(%d) failed\n", SIZE);
 	}
 	memset(p, 0, SIZE);
-	is_huge = test_addr_huge(p+SIZE-1) == 1;
+	mapping_size = get_mapping_page_size(p);
+	is_huge = (mapping_size > MIN_PAGE_SIZE);
 	if (have_env && !is_huge) {
 		if (shrink_ok && have_helper) {
 			/* Hitting unexpected behavior in malloc() */
@@ -57,7 +67,8 @@ int main(int argc, char **argv)
 		FAIL("Heap unexpectedly on hugepages");
 
 	free(p);
-	if (shrink_ok && test_addr_huge(p+SIZE-1) == 1)
+	mapping_size = get_mapping_page_size(p+SIZE-1);
+	if (shrink_ok && mapping_size > MIN_PAGE_SIZE)
 		FAIL("Heap did not shrink");
 	PASS();
 }

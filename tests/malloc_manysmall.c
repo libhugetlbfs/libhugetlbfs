@@ -25,6 +25,14 @@
 
 #include "hugetests.h"
 
+/*
+ * We cannot test mapping size against huge page size because we are not linked
+ * against libhugetlbfs so gethugepagesize() won't work.  So instead we define
+ * our MIN_PAGE_SIZE as 64 kB (the largest base page available) and make sure
+ * the mapping page size is larger than this.
+ */
+#define MIN_PAGE_SIZE 65536
+
 #define ALLOC_SIZE	(128)
 #define NUM_ALLOCS	(262144)
 
@@ -55,9 +63,11 @@ int main(int argc, char *argv[])
 		if ((i % 157) == 0) {
 			/* With this many allocs, testing every one
 			 * takes forever */
-			if (expect_hugepage && (test_addr_huge(p) != 1))
+			unsigned long long mapping_size =
+					get_mapping_page_size(p);
+			if (expect_hugepage && (mapping_size <= MIN_PAGE_SIZE))
 				FAIL("Address is not hugepage");
-			if (!expect_hugepage && (test_addr_huge(p) == 1))
+			if (!expect_hugepage && (mapping_size > MIN_PAGE_SIZE))
 				FAIL("Address is unexpectedly huge");
 		}
 	}

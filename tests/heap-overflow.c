@@ -41,6 +41,7 @@ int main(int argc, char **argv)
 	long size1, size2;
 	void *p1, *p2;
 	int st, pid, rv;
+	unsigned long long mapping_size;
 
 	test_init(argc, argv);
 
@@ -68,7 +69,8 @@ int main(int argc, char **argv)
 	p1 = malloc(size1);
 	if (!p1)
 		FAIL("Couldn't malloc %ld bytes", size1);
-	if (!test_addr_huge(p1))
+	mapping_size = get_mapping_page_size(p1);
+	if (mapping_size != hpagesize)
 		FAIL("First allocation %p not on hugepages", p1);
 
 	/*
@@ -78,7 +80,8 @@ int main(int argc, char **argv)
 	p2 = malloc(size2);
 	if (!p2)
 		FAIL("Couldn't malloc %ld bytes", size2);
-	st = test_addr_huge(p2);
+	mapping_size = get_mapping_page_size(p1);
+	st = (mapping_size == hpagesize);
 	verbose_printf("Second allocation %p huge?  %s\n", p2, st < 0 ? "??" :
 		       (st ? "yes" : "no"));
 
