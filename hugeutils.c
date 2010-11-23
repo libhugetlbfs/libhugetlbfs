@@ -956,6 +956,15 @@ int hugetlbfs_unlinked_fd(void)
 #define IOV_LEN 64
 int hugetlbfs_prefault(int fd, void *addr, size_t length)
 {
+	size_t offset;
+	struct iovec iov[IOV_LEN];
+	int ret;
+	int i;
+	int close_fd = -1;
+
+	if (!__hugetlbfs_prefault)
+		return 0;
+
 	/*
 	 * The NUMA users of libhugetlbfs' malloc feature are
 	 * expected to use the numactl program to specify an
@@ -972,29 +981,37 @@ int hugetlbfs_prefault(int fd, void *addr, size_t length)
 	 * -ENOMEM is returned. The caller is expected to release the entire
 	 * mapping and optionally it may recover by mapping base pages instead.
 	 */
-	if (__hugetlbfs_prefault) {
-		int i;
-		size_t offset;
-		struct iovec iov[IOV_LEN];
-		int ret;
 
-		for (offset = 0; offset < length; ) {
-			for (i = 0; i < IOV_LEN && offset < length; i++) {
-				iov[i].iov_base = addr + offset;
-				iov[i].iov_len = 1;
-				offset += gethugepagesize();
-			}
-			ret = readv(fd, iov, i);
-			if (ret != i) {
-				DEBUG("Got %d of %d requested; err=%d\n", ret,
-						i, ret < 0 ? errno : 0);
-				WARNING("Failed to reserve %ld huge pages "
-						"for new region\n",
-						length / gethugepagesize());
-				return -ENOMEM;
-			}
+	if (fd < 0 && __hugetlb_opts.map_hugetlb) {
+		fd = open("/dev/zero", O_RDONLY);
+		if (fd < 0) {
+			ERROR("Failed to open /dev/zero for reading\n");
+			return -ENOMEM;
+		}
+		close_fd = fd;
+	}
+
+	for (offset = 0; offset < length; ) {
+		for (i = 0; i < IOV_LEN && offset < length; i++) {
+			iov[i].iov_base = addr + offset;
+			iov[i].iov_len = 1;
+			offset += gethugepagesize();
+		}
+		ret = readv(fd, iov, i);
+		if (ret != i) {
+			DEBUG("Got %d of %d requested; err=%d\n", ret,
+					i, ret < 0 ? errno : 0);
+			WARNING("Failed to reserve %ld huge pages "
+					"for new region\n",
+					length / gethugepagesize());
+			if (close_fd >= 0)
+				close(close_fd);
+			return -ENOMEM;
 		}
 	}
+
+	if (close_fd >= 0)
+		close(close_fd);
 
 	return 0;
 }
