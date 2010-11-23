@@ -77,38 +77,58 @@ static void *fallback_base_pages(size_t len, ghp_t flags)
 void *get_huge_pages(size_t len, ghp_t flags)
 {
 	void *buf;
-	int buf_fd;
+	int buf_fd = -1;
 	int saved_error;
 	int mmap_reserve = __hugetlb_opts.no_reserve ? MAP_NORESERVE : 0;
+	int mmap_hugetlb = 0;
 
 	/* Catch an altogether-too easy typo */
 	if (flags & GHR_MASK)
 		ERROR("Improper use of GHR_* in get_huge_pages()\n");
 
-	/* Create a file descriptor for the new region */
-	buf_fd = hugetlbfs_unlinked_fd();
-	if (buf_fd < 0) {
-		WARNING("Couldn't open hugetlbfs file for %zd-sized buffer\n",
-				len);
-		return NULL;
+#ifdef MAP_HUGETLB
+	mmap_hugetlb = MAP_HUGETLB;
+#endif
+
+	if (__hugetlb_opts.map_hugetlb &&
+			gethugepagesize() == kernel_default_hugepage_size()) {
+		/* Because we can use MAP_HUGETLB, we simply mmap the region */
+		buf = mmap(NULL, len, PROT_READ|PROT_WRITE,
+			MAP_PRIVATE|MAP_ANONYMOUS|mmap_hugetlb|mmap_reserve,
+			0, 0);
+	} else {
+		/* Create a file descriptor for the new region */
+		buf_fd = hugetlbfs_unlinked_fd();
+		if (buf_fd < 0) {
+			WARNING("Couldn't open hugetlbfs file for %zd-sized buffer\n",
+					len);
+			return NULL;
+		}
+
+		/* Map the requested region */
+		buf = mmap(NULL, len, PROT_READ|PROT_WRITE,
+			MAP_PRIVATE|mmap_reserve, buf_fd, 0);
 	}
 
-	/* Map the requested region */
-	buf = mmap(NULL, len, PROT_READ|PROT_WRITE,
-		 MAP_PRIVATE|mmap_reserve, buf_fd, 0);
 	if (buf == MAP_FAILED) {
-		close(buf_fd);
+		if (buf_fd >= 0)
+			close(buf_fd);
 
 		WARNING("get_huge_pages: New region mapping failed (flags: 0x%lX): %s\n",
 			flags, strerror(errno));
 		return NULL;
 	}
 
-	/* Fault the region to ensure accesses succeed */
+	/*
+	 * Fault the region to ensure accesses succeed, buf_fd is passed
+	 * regarless of how we mmap'd because if MAP_HUGETLB was used the value
+	 * in buf_fd is ignored
+	 */
 	if (hugetlbfs_prefault(buf_fd, buf, len) != 0) {
 		saved_error = errno;
 		munmap(buf, len);
-		close(buf_fd);
+		if (buf_fd >= 0)
+			close(buf_fd);
 
 		WARNING("get_huge_pages: Prefaulting failed (flags: 0x%lX): %s\n",
 			flags, strerror(saved_error));
@@ -116,7 +136,7 @@ void *get_huge_pages(size_t len, ghp_t flags)
 	}
 
 	/* Close the file so we do not have to track the descriptor */
-	if (close(buf_fd) != 0) {
+	if (buf_fd >= 0 && close(buf_fd) != 0) {
 		WARNING("Failed to close new buffer fd: %s\n", strerror(errno));
 		munmap(buf, len);
 		return NULL;
