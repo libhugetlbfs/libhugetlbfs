@@ -113,6 +113,12 @@ extern char __hugetlbfs_hostname[];
 extern int hugetlbfs_prefault(int fd, void *addr, size_t length);
 #define parse_page_size __lh_parse_page_size
 extern long parse_page_size(const char *str);
+#define probe_default_hpage_size __lh__probe_default_hpage_size
+extern void probe_default_hpage_size(void);
+#define debug_show_page_sizes __lh__debug_show_page_sizes
+extern void debug_show_page_sizes(void);
+#define hugetlbfs_setup_kernel_page_size __lh__hugetlbfs_setup_kernel_page_size
+extern void hugetlbfs_setup_kernel_page_size(void);
 #define __hugetlb_opts __lh__hugetlb_opts
 extern struct libhugeopts_t __hugetlb_opts;
 

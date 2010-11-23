@@ -23,7 +23,11 @@ static void __attribute__ ((constructor)) setup_libhugetlbfs(void)
 {
 	hugetlbfs_setup_env();
 	hugetlbfs_setup_debug();
+	hugetlbfs_setup_kernel_page_size();
 	setup_mounts();
+	probe_default_hpage_size();
+	if (__hugetlbfs_debug)
+		debug_show_page_sizes();
 	setup_features();
 	hugetlbfs_check_priv_resv();
 	hugetlbfs_check_safe_noreserve();

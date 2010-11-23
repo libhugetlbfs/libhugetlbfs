@@ -311,6 +311,21 @@ void hugetlbfs_setup_env()
 		__hugetlb_opts.no_reserve = 1;
 }
 
+void hugetlbfs_setup_kernel_page_size()
+{
+	long page_size = kernel_default_hugepage_size();
+
+	if (page_size <= 0) {
+		WARNING("Unable to find default kernel huge page size\n");
+		return;
+	}
+
+	INFO("Found pagesize %ld kB\n", page_size / 1024);
+	hpage_sizes[0].pagesize = page_size;
+
+	nr_hpage_sizes = 1;
+}
+
 void hugetlbfs_check_priv_resv()
 {
 	/*
@@ -420,7 +435,7 @@ static int hpage_size_to_index(unsigned long size)
 	return -1;
 }
 
-static void probe_default_hpage_size(void)
+void probe_default_hpage_size(void)
 {
 	long size;
 	int index;
@@ -510,7 +525,7 @@ static void add_hugetlbfs_mount(char *path, int user_mount)
 	strcpy(hpage_sizes[idx].mount, path);
 }
 
-static void debug_show_page_sizes(void)
+void debug_show_page_sizes(void)
 {
 	int i;
 
@@ -600,10 +615,6 @@ void setup_mounts(void)
 	/* Then probe all mounted filesystems */
 	if (do_scan)
 		find_mounts();
-
-	probe_default_hpage_size();
-	if (__hugetlbfs_debug)
-		debug_show_page_sizes();
 }
 
 int get_pool_size(long size, struct hpage_pool *pool)
