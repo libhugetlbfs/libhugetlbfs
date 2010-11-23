@@ -162,6 +162,60 @@ static int read_maps(unsigned long addr, char *buf)
 	return 0;
 }
 
+/*
+ * With the inclusion of MAP_HUGETLB it is now possible to have huge pages
+ * without using hugetlbfs, so not all huge page regions will show with the
+ * test that reads /proc/self/maps.  Instead we ask /proc/self/smaps for
+ * the KernelPageSize.  On success we return the page size (in bytes) for the
+ * mapping that contains addr, on failure we return 0
+ */
+unsigned long long get_mapping_page_size(void *p)
+{
+	FILE *f;
+	char line[MAPS_BUF_SZ];
+	char *tmp;
+	unsigned long addr = (unsigned long)p;
+
+	f = fopen("/proc/self/smaps", "r");
+	if (!f) {
+		ERROR("Unable to open /proc/self/smaps\n");
+		return 0;
+	}
+
+	while ((tmp = fgets(line, MAPS_BUF_SZ, f))) {
+		unsigned long start, end, dummy;
+		char map_name[256];
+		char buf[64];
+		int ret;
+
+		ret = sscanf(line, "%lx-%lx %s %lx %s %ld %s", &start, &end,
+				buf, &dummy, buf, &dummy, map_name);
+		if (ret < 7 || start > addr || end <= addr)
+			continue;
+
+		while ((tmp = fgets(line, MAPS_BUF_SZ, f))) {
+			unsigned long long page_size;
+
+			ret = sscanf(line, "KernelPageSize: %lld kB",
+					&page_size);
+			if (ret == 0 )
+				continue;
+			if (ret < 1 || page_size <= 0) {
+				ERROR("Cannot parse /proc/self/smaps\n");
+				page_size = 0;
+			}
+
+			fclose(f);
+			/* page_size is reported in kB, we return B */
+			return page_size * 1024;
+		}
+	}
+
+	/* We couldn't find an entry for this addr in smaps */
+	fclose(f);
+	return 0;
+}
+
 /* We define this function standalone, rather than in terms of
  * hugetlbfs_test_path() so that we can use it without -lhugetlbfs for
  * testing PRELOAD */

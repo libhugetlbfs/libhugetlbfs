@@ -45,6 +45,7 @@ void check_must_be_root(void);
 void check_hugetlb_shm_group(void);
 void test_init(int argc, char *argv[]);
 int test_addr_huge(void *p);
+unsigned long long get_mapping_page_size(void *p);
 long read_meminfo(const char *tag);
 ino_t get_addr_inode(void *p);
 
