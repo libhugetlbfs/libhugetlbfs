@@ -249,13 +249,13 @@ void hugetlbfs_setup_env()
 
 	env = getenv("HUGETLB_DEBUG");
 	if (env) {
-		__hugetlbfs_debug = 1;
+		__hugetlbfs_debug = true;
 		__hugetlbfs_verbose = VERBOSE_DEBUG;
 	}
 
 	env = getenv("HUGETLB_NO_PREFAULT");
 	if (env)
-		__hugetlbfs_prefault = 0;
+		__hugetlbfs_prefault = false;
 
 	__hugetlb_opts.share_path = getenv("HUGETLB_SHARE_PATH");
 	__hugetlb_opts.elfmap = getenv("HUGETLB_ELFMAP");
@@ -336,7 +336,7 @@ void hugetlbfs_check_priv_resv()
 	if (hugetlbfs_test_feature(HUGETLB_FEATURE_PRIVATE_RESV) > 0) {
 		INFO("Kernel has MAP_PRIVATE reservations.  Disabling "
 			"heap prefaulting.\n");
-		__hugetlbfs_prefault = 0;
+		__hugetlbfs_prefault = false;
 	}
 }
 

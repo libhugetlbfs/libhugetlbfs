@@ -86,9 +86,9 @@ struct libhugeopts_t {
 #define __hugetlbfs_verbose __lh___hugetlbfs_verbose
 extern int __hugetlbfs_verbose;
 #define __hugetlbfs_debug __lh___hugetlbfs_debug
-extern int __hugetlbfs_debug;
+extern bool __hugetlbfs_debug;
 #define __hugetlbfs_prefault __lh___hugetlbfs_prefault
-extern int __hugetlbfs_prefault;
+extern bool __hugetlbfs_prefault;
 #define hugetlbfs_setup_env __lh_hugetlbfs_setup_env
 extern void hugetlbfs_setup_env();
 #define hugetlbfs_setup_elflink __lh_hugetlbfs_setup_elflink

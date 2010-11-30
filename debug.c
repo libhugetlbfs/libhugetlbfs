@@ -28,8 +28,8 @@
 #include "libhugetlbfs_internal.h"
 
 int __hugetlbfs_verbose = VERBOSITY_DEFAULT;
-int __hugetlbfs_debug = 0;
-int __hugetlbfs_prefault = 1;
+bool __hugetlbfs_debug = false;
+bool __hugetlbfs_prefault = true;
 char __hugetlbfs_hostname[64];
 
 static int initialized;
