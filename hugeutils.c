@@ -241,7 +241,7 @@ void hugetlbfs_setup_env()
 {
 	char *env;
 
-	__hugetlb_opts.min_copy = 1;
+	__hugetlb_opts.min_copy = true;
 
 	env = getenv("HUGETLB_VERBOSE");
 	if (env)
@@ -274,7 +274,7 @@ void hugetlbfs_setup_env()
 	if (__hugetlb_opts.min_copy && env && (strcasecmp(env, "no") == 0)) {
 		INFO("HUGETLB_MINIMAL_COPY=%s, disabling filesz copy "
 			"optimization\n", env);
-		__hugetlb_opts.min_copy = 0;
+		__hugetlb_opts.min_copy = false;
 	}
 
 	env = getenv("HUGETLB_SHARE");
@@ -298,17 +298,17 @@ void hugetlbfs_setup_env()
 	 */
 	env = getenv("HUGETLB_MORECORE_SHRINK");
 	if (env && strcasecmp(env, "yes") == 0)
-		__hugetlb_opts.shrink_ok = 1;
+		__hugetlb_opts.shrink_ok = true;
 
 	/* Determine if shmget() calls should be overridden */
 	env = getenv("HUGETLB_SHM");
 	if (env && !strcmp(env, "yes"))
-		__hugetlb_opts.shm_enabled = 1;
+		__hugetlb_opts.shm_enabled = true;
 
 	/* Determine if all reservations should be avoided */
 	env = getenv("HUGETLB_NO_RESERVE");
 	if (env && !strcmp(env, "yes"))
-		__hugetlb_opts.no_reserve = 1;
+		__hugetlb_opts.no_reserve = true;
 }
 
 void hugetlbfs_setup_kernel_page_size()
@@ -351,7 +351,7 @@ void hugetlbfs_check_safe_noreserve()
 		hugetlbfs_test_feature(HUGETLB_FEATURE_SAFE_NORESERVE) <= 0) {
 		INFO("Kernel is not safe for MAP_NORESERVE. Forcing "
 			"use of reservations.\n");
-		__hugetlb_opts.no_reserve = 0;
+		__hugetlb_opts.no_reserve = false;
 	}
 }
 
@@ -371,7 +371,7 @@ void hugetlbfs_check_map_hugetlb()
 	 */
 	if (hugetlbfs_test_feature(HUGETLB_FEATURE_MAP_HUGETLB) > 0) {
 		INFO("Kernel supports MAP_HUGETLB\n");
-		__hugetlb_opts.map_hugetlb = 1;
+		__hugetlb_opts.map_hugetlb = true;
 	}
 #endif
 }

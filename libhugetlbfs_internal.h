@@ -57,11 +57,11 @@
 #endif
 
 struct libhugeopts_t {
-	int		min_copy;
 	int		sharing;
-	int		shrink_ok;
-	int		shm_enabled;
-	int		no_reserve;
+	bool		min_copy;
+	bool		shrink_ok;
+	bool		shm_enabled;
+	bool		no_reserve;
 	bool		map_hugetlb;
 	unsigned long	force_elfmap;
 	char		*ld_preload;

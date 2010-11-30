@@ -1231,7 +1231,7 @@ static int check_env(void)
 					"remapping for non-relinked "
 					"binaries\n");
 			INFO("Disabling filesz copy optimization\n");
-			__hugetlb_opts.min_copy = 0;
+			__hugetlb_opts.min_copy = false;
 		} else {
 			if (&__executable_start) {
 				WARNING("LD_PRELOAD is incompatible with "
