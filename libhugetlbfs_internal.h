@@ -110,7 +110,7 @@ extern void hugetlbfs_check_map_hugetlb();
 #define __hugetlbfs_hostname __lh___hugetlbfs_hostname
 extern char __hugetlbfs_hostname[];
 #define hugetlbfs_prefault __lh_hugetlbfs_prefault
-extern int hugetlbfs_prefault(int fd, void *addr, size_t length);
+extern int hugetlbfs_prefault(void *addr, size_t length);
 #define parse_page_size __lh_parse_page_size
 extern long parse_page_size(const char *str);
 #define probe_default_hpage_size __lh__probe_default_hpage_size

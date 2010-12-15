@@ -954,13 +954,13 @@ int hugetlbfs_unlinked_fd(void)
 }
 
 #define IOV_LEN 64
-int hugetlbfs_prefault(int fd, void *addr, size_t length)
+int hugetlbfs_prefault(void *addr, size_t length)
 {
 	size_t offset;
 	struct iovec iov[IOV_LEN];
 	int ret;
 	int i;
-	int close_fd = -1;
+	int fd;
 
 	if (!__hugetlbfs_prefault)
 		return 0;
@@ -982,13 +982,10 @@ int hugetlbfs_prefault(int fd, void *addr, size_t length)
 	 * mapping and optionally it may recover by mapping base pages instead.
 	 */
 
-	if (fd < 0 && __hugetlb_opts.map_hugetlb) {
-		fd = open("/dev/zero", O_RDONLY);
-		if (fd < 0) {
-			ERROR("Failed to open /dev/zero for reading\n");
-			return -ENOMEM;
-		}
-		close_fd = fd;
+	fd = open("/dev/zero", O_RDONLY);
+	if (fd < 0) {
+		ERROR("Failed to open /dev/zero for reading\n");
+		return -ENOMEM;
 	}
 
 	for (offset = 0; offset < length; ) {
@@ -1004,15 +1001,12 @@ int hugetlbfs_prefault(int fd, void *addr, size_t length)
 			WARNING("Failed to reserve %ld huge pages "
 					"for new region\n",
 					length / gethugepagesize());
-			if (close_fd >= 0)
-				close(close_fd);
+			close(fd);
 			return -ENOMEM;
 		}
 	}
 
-	if (close_fd >= 0)
-		close(close_fd);
-
+	close(fd);
 	return 0;
 }
 

@@ -119,12 +119,8 @@ void *get_huge_pages(size_t len, ghp_t flags)
 		return NULL;
 	}
 
-	/*
-	 * Fault the region to ensure accesses succeed, buf_fd is passed
-	 * regarless of how we mmap'd because if MAP_HUGETLB was used the value
-	 * in buf_fd is ignored
-	 */
-	if (hugetlbfs_prefault(buf_fd, buf, len) != 0) {
+	/* Fault the region to ensure accesses succeed */
+	if (hugetlbfs_prefault(buf, len) != 0) {
 		saved_error = errno;
 		munmap(buf, len);
 		if (buf_fd >= 0)

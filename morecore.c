@@ -136,7 +136,7 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 		}
 
 		/* Fault the region to ensure accesses succeed */
-		if (hugetlbfs_prefault(zero_fd, p, delta) != 0) {
+		if (hugetlbfs_prefault(p, delta) != 0) {
 			munmap(p, delta);
 			return NULL;
 		}
