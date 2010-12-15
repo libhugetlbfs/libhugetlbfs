@@ -34,7 +34,6 @@
 #include "libhugetlbfs_internal.h"
 
 static int heap_fd;
-static int zero_fd;
 
 static void *heapbase;
 static void *heaptop;
@@ -265,7 +264,6 @@ void hugetlbfs_setup_morecore(void)
 		heapaddr = (unsigned long)sbrk(0);
 		heapaddr = hugetlbfs_next_addr(heapaddr);
 	}
-	zero_fd = open("/dev/zero", O_RDONLY);
 
 	INFO("setup_morecore(): heapaddr = 0x%lx\n", heapaddr);
 
