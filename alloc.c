@@ -78,9 +78,9 @@ void *get_huge_pages(size_t len, ghp_t flags)
 {
 	void *buf;
 	int buf_fd = -1;
-	int saved_error;
 	int mmap_reserve = __hugetlb_opts.no_reserve ? MAP_NORESERVE : 0;
 	int mmap_hugetlb = 0;
+	int ret;
 
 	/* Catch an altogether-too easy typo */
 	if (flags & GHR_MASK)
@@ -120,14 +120,14 @@ void *get_huge_pages(size_t len, ghp_t flags)
 	}
 
 	/* Fault the region to ensure accesses succeed */
-	if (hugetlbfs_prefault(buf, len) != 0) {
-		saved_error = errno;
+	ret = hugetlbfs_prefault(buf, len);
+	if (ret != 0) {
 		munmap(buf, len);
 		if (buf_fd >= 0)
 			close(buf_fd);
 
 		WARNING("get_huge_pages: Prefaulting failed (flags: 0x%lX): %s\n",
-			flags, strerror(saved_error));
+			flags, strerror(ret));
 		return NULL;
 	}
 
