@@ -1,3 +1,20 @@
+libhugetlbfs 2.11 "Ghost Pepper"
+======================================================================
+New Features
+* cpupcstat reports time servicing tlb misses when requested
+* When supported by the kernel and glibc, MAP_HUGETLB is used
+  for the heap and to back memory returned by get_huge_pages.
+  These features can now be used without mounting hugetlbfs
+
+Bug Fixes
+* tlbmiss_cost.sh supresses oprofile errors
+* numerous fixes to setup_helper.py
+* Corrected usage of hugetlbfs_test_feature return value
+* find_mounts now correctly ignores non-hugetlbfs mount points
+* When prefaulting pages for get_huge_pages readv was using the fd
+  for the mapping, this caused the prefault to fail on older libc.
+  Now /dev/zero is used for all prefaulting
+
 libhugetlbfs 2.10 "Another Hottie"
 ======================================================================
 Bug Fixes
