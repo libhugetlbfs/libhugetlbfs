@@ -10,7 +10,9 @@ LIB_TESTS = gethugepagesize test_root find_path unlinked_fd misalign \
 	counters quota heap-overflow get_huge_pages get_hugepage_region \
 	shmoverride_linked gethugepagesizes \
 	madvise_reserve fadvise_reserve readahead_reserve \
-	shm-perms
+	shm-perms \
+	mremap-expand-slice-collision \
+	mremap-fixed-normal-near-huge mremap-fixed-huge-near-normal
 LIB_TESTS_64 = straddle_4GB huge_at_4GB_normal_below \
 	huge_below_4GB_normal_above
 NOLIB_TESTS = malloc malloc_manysmall dummy heapshrink shmoverride_unlinked
@@ -18,6 +20,7 @@ LDSCRIPT_TESTS = zero_filesize_segment
 HUGELINK_TESTS = linkhuge linkhuge_nofd linkshare
 HUGELINK_RW_TESTS = linkhuge_rw
 STRESS_TESTS = mmap-gettest mmap-cow shm-gettest shm-getraw shm-fork
+# NOTE: all named tests in WRAPPERS must also be named in TESTS
 WRAPPERS = quota counters madvise_reserve fadvise_reserve \
 	readahead_reserve mremap-expand-slice-collision \
 	mremap-fixed-normal-near-huge mremap-fixed-huge-near-normal
@@ -233,7 +236,7 @@ obj32/install:
 	$(INSTALL) -m 755 wrapper-utils.sh $(DESTDIR)$(INST_TESTSDIR32)/obj32
 	$(INSTALL) -m 755 $(HELPERS:%=obj32/%) $(DESTDIR)$(INST_TESTSDIR32)/obj32
 	$(INSTALL) -m 755 $(HELPER_LIBS:%=obj32/%) $(DESTDIR)$(INST_TESTSDIR32)/obj32
-	$(INSTALL) -m 755 run_tests.sh $(DESTDIR)$(INST_TESTSDIR32)
+	$(INSTALL) -m 755 run_tests.py $(DESTDIR)$(INST_TESTSDIR32)
 
 obj64/install:
 	@$(VECHO) INSTALL64 $(INST_TESTSDIR64)
@@ -245,6 +248,6 @@ obj64/install:
 	$(INSTALL) -m 755 $(HELPERS:%=obj64/%) $(DESTDIR)$(INST_TESTSDIR64)/obj64
 	$(INSTALL) -m 755 $(HELPER_LIBS:%=obj64/%) $(DESTDIR)$(INST_TESTSDIR64)/obj64
 	$(INSTALL) -m 755 $(TESTS_64:%=obj64/%) $(DESTDIR)$(INST_TESTSDIR64)/obj64
-	$(INSTALL) -m 755 run_tests.sh $(DESTDIR)$(INST_TESTSDIR64)
+	$(INSTALL) -m 755 run_tests.py $(DESTDIR)$(INST_TESTSDIR64)
 
 install: $(OBJDIRS:%=%/install)
