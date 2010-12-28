@@ -471,7 +471,8 @@ void probe_default_hpage_size(void)
 			 * is purely informational in nature.
 			 */
 			char msg[] = "No mount point found for default huge " \
-				"page size. Using first available mount point.";
+				"page size. Using first available mount "
+				"point.\n";
 			if (default_overrided)
 				WARNING("%s", msg);
 			else
