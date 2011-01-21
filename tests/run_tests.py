@@ -597,7 +597,11 @@ def functional_tests():
 
     # Test overriding of shmget()
     do_shm_test("shmoverride_linked")
+    do_shm_test("shmoverride_linked", HUGETLB_SHM="yes")
+    do_shm_test("shmoverride_linked_static")
+    do_shm_test("shmoverride_linked_static", HUGETLB_SHM="yes")
     do_shm_test("shmoverride_unlinked", LD_PRELOAD="libhugetlbfs.so")
+    do_shm_test("shmoverride_unlinked", LD_PRELOAD="libhugetlbfs.so", HUGETLB_SHM="yes")
 
     # Test hugetlbfs filesystem quota accounting
     do_test("quota.sh")

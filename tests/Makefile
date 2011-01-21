@@ -30,7 +30,9 @@ BADTOOLCHAIN = bad-toolchain.sh
 
 CFLAGS = -O2 -Wall -g
 CPPFLAGS = -I..
-LDLIBS = -Wl,--no-as-needed -ldl -lpthread -lhugetlbfs_privutils
+STATIC_LIBHUGE = -Wl,--whole-archive -lhugetlbfs -Wl,--no-whole-archive
+STATIC_LDLIBS = -Wl,--no-as-needed -lpthread
+LDLIBS = $(STATIC_LDLIBS) -ldl -lhugetlbfs_privutils
 LDFLAGS32 = -L../obj32
 LDFLAGS64 = -L../obj64
 INSTALL = install
@@ -72,6 +74,19 @@ ALLHELPERS = $(foreach DIR,$(OBJDIRS),$(HELPERS:%=$(DIR)/%))
 ALLHELPERLIBS = $(foreach DIR,$(OBJDIRS),$(HELPER_LIBS:%=$(DIR)/%))
 ifdef CC64
 ALLTESTS += $(TESTS_64:%=obj64/%)
+endif
+
+# For now, build only one test as a static binary.
+# Can be changed once libhugetlbfs has better support for static linking.
+# Also, some tests should be changed to use syscall() instead of
+#  dlsym() / rtld_next().
+ifdef CC32
+#ALLTESTS += $(LIB_TESTS:%=obj32/%_static) $(STRESS_TESTS:%=obj32/%_static)
+ALLTESTS += obj32/shmoverride_linked_static
+endif
+ifdef CC64
+#ALLTESTS += $(LIB_TESTS:%=obj64/%_static) $(STRESS_TESTS:%=obj64/%_static)
+ALLTESTS += obj64/shmoverride_linked_static
 endif
 
 objs_needing_wrappers = \
@@ -122,6 +137,14 @@ $(LIB_TESTS:%=obj32/%): %: %.o obj32/testutils.o obj32/libtestutils.o
 $(LIB_TESTS:%=obj64/%) $(LIB_TESTS_64:%=obj64/%): %: %.o obj64/testutils.o obj64/libtestutils.o
 	@$(VECHO) LD64 "(lib test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs
+
+$(LIB_TESTS:%=obj32/%_static): %_static: %.o obj32/testutils.o obj32/libtestutils.o
+	@$(VECHO) LD32 "(lib test)" $@
+	$(CC32) -static $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(STATIC_LDLIBS) $(STATIC_LIBHUGE)
+
+$(LIB_TESTS:%=obj64/%_static) $(LIB_TESTS_64:%=obj64/%_static): %_static: %.o obj64/testutils.o obj64/libtestutils.o
+	@$(VECHO) LD64 "(lib test)" $@
+	$(CC64) -static $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(STATIC_LDLIBS) $(STATIC_LIBHUGE)
 
 $(NOLIB_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 	@$(VECHO) LD32 "(nolib test)" $@
@@ -174,6 +197,14 @@ $(STRESS_TESTS:%=obj32/%): %: %.o obj32/testutils.o
 $(STRESS_TESTS:%=obj64/%): %: %.o obj64/testutils.o
 	@$(VECHO) LD64 "(lib test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs
+
+$(STRESS_TESTS:%=obj32/%_static): %_static: %.o obj32/testutils.o
+	@$(VECHO) LD32 "(lib test)" $@
+	$(CC32) -static $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(STATIC_LDLIBS) $(STATIC_LIBHUGE)
+
+$(STRESS_TESTS:%=obj64/%_static): %_static: %.o obj64/testutils.o
+	@$(VECHO) LD64 "(lib test)" $@
+	$(CC64) -static $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(STATIC_LDLIBS) $(STATIC_LIBHUGE)
 
 obj32/xB.%: $(SCRIPTS32).xB $(HUGETLBFS_LD) obj32/%.o obj32/testutils.o
 	@$(VECHO) LD32 "(xB test)" $@
