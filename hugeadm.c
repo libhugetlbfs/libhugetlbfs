@@ -860,6 +860,13 @@ void check_user(void)
 	uid = getuid();
 	pwd = getpwuid(uid);
 
+	/* Don't segfault if user does not have a passwd entry. */
+	if (!pwd) {
+		printf("\n");
+		WARNING("User uid %d is not in the password file!\n", uid);
+		return;
+	}
+
 	if (gid != pwd->pw_gid && !user_in_group(grp->gr_mem, pwd->pw_name) && uid != 0) {
 		printf("\n");
 		WARNING("User %s (uid: %d) is not a member of the hugetlb_shm_group %s (gid: %d)!\n", pwd->pw_name, uid, grp->gr_name, gid);
