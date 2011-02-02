@@ -554,6 +554,10 @@ def functional_tests():
     do_test("direct")
     do_test("malloc")
     do_test("malloc", LD_PRELOAD="libhugetlbfs.so", HUGETLB_MORECORE="yes")
+    do_test("malloc", LD_PRELOAD="libhugetlbfs.so", HUGETLB_MORECORE="yes",
+            HUGETLB_RESTRICT_EXE="unknown:none")
+    do_test("malloc", LD_PRELOAD="libhugetlbfs.so", HUGETLB_MORECORE="yes",
+            HUGETLB_RESTRICT_EXE="unknown:malloc")
     do_test("malloc_manysmall")
     do_test("malloc_manysmall", LD_PRELOAD="libhugetlbfs.so",
             HUGETLB_MORECORE="yes")

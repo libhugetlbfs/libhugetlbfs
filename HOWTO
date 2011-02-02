@@ -2,7 +2,7 @@ libhugetlbfs HOWTO
 ==================
 
 Author: David Gibson <dwg@au1.ibm.com>, Adam Litke <agl@us.ibm.com>, and others
-Last updated: Tuesday, Oct 28th, 2008
+Last updated: February 1st, 2011
 
 Introduction
 ============
@@ -553,6 +553,35 @@ libhugetlbfs:
 	HUGETLB_DEFAULT_PAGE_SIZE
 		Override the system default huge page size for all uses
 		except hugetlb-backed shared memory
+
+	HUGETLB_RESTRICT_EXE
+		By default, libhugetlbfs will act on any program that it
+		is loaded with, either via LD_PRELOAD or by explicitly
+		linking with -lhugetlbfs.
+
+		There are situations in which it is desirable to restrict
+		libhugetlbfs' actions to specific programs.  For example,
+		some ISV applications are wrapped in a series of scripts
+		that invoke bash, python, and/or perl.	It is more
+		convenient to set the environment variables related
+		to libhugetlbfs before invoking the wrapper scripts,
+		yet this has the unintended and undesirable consequence
+		of causing the script interpreters to use and consume
+		hugepages.  There is no obvious benefit to causing the
+		script interpreters to use hugepages, and there is a
+		clear disadvantage: fewer hugepages are available to
+		the actual application.
+
+		To address this scenario, set HUGETLB_RESTRICT_EXE to a
+		colon-separated list of programs to which the other
+		libhugetlbfs environment variables should apply.  (If
+		not set, libhugetlbfs will attempt to apply the requested
+		actions to all programs.)  For example,
+
+		    HUGETLB_RESTRICT_EXE="hpcc:long_hpcc"
+
+		will restrict libhugetlbfs' actions to programs named
+		/home/fred/hpcc and /bench/long_hpcc but not /usr/hpcc_no.
 
 	HUGETLB_ELFMAP
 		Control or disable segment remapping (see above)

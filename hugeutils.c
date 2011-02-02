@@ -233,6 +233,52 @@ int file_write_ulong(char *file, unsigned long val)
 	return ret > 0 ? 0 : -1;
 }
 
+
+/*
+ * Return the name of this executable, using buf as temporary space.
+ */
+#define MAX_EXE 4096
+static char *get_exe_name(char *buf, int size)
+{
+	char *p;
+	int fd;
+	ssize_t nread;
+
+	buf[0] = 0;
+	fd = open("/proc/self/cmdline", O_RDONLY);
+	if (fd < 0) {
+		WARNING("Unable to open cmdline, no exe name\n");
+		return buf;
+	}
+	nread = read(fd, buf, size-1);
+	close(fd);
+
+	if (nread < 0) {
+		WARNING("Error %d reading cmdline, no exe name\n", errno);
+		return buf;
+	}
+	if (nread == 0) {
+		WARNING("Read zero bytes from cmdline, no exe name\n");
+		return buf;
+	}
+
+	buf[nread] = 0; /* make sure we're null terminated */
+	/*
+	 * Take advantage of cmdline being a series of null-terminated
+	 * strings.  The first string is the path to the executable in
+	 * the form:
+	 *
+	 *      /path/to/exe
+	 *
+	 * The exe name starts one character after the last '/'.
+	 */
+	p = strrchr(buf, '/');
+	if (!p)
+		return buf;
+	return p + 1;           /* skip over "/" */
+}
+
+
 /*
  * Reads the contents of hugetlb environment variables and save their
  * values for later use.
@@ -251,6 +297,29 @@ void hugetlbfs_setup_env()
 	if (env) {
 		__hugetlbfs_debug = true;
 		__hugetlbfs_verbose = VERBOSE_DEBUG;
+	}
+
+	env = getenv("HUGETLB_RESTRICT_EXE");
+	if (env) {
+		char *p, *tok, *exe, buf[MAX_EXE+1], restrict[MAX_EXE];
+		int found = 0;
+
+		exe = get_exe_name(buf, sizeof buf);
+		DEBUG("Found HUGETLB_RESTRICT_EXE, this exe is \"%s\"\n", exe);
+		strncpy(restrict, env, sizeof restrict);
+		restrict[sizeof(restrict)-1] = 0;
+		for (p = restrict; (tok = strtok(p, ":")) != NULL; p = NULL) {
+			DEBUG("  ...check exe match for \"%s\"\n",  tok);
+			if (strcmp(tok, exe) == 0) {
+				found = 1;
+				DEBUG("exe match - libhugetlbfs is active for this exe\n");
+				break;
+			}
+		}
+		if (!found) {
+			DEBUG("No exe match - libhugetlbfs is inactive for this exe\n");
+			return;
+		}
 	}
 
 	env = getenv("HUGETLB_NO_PREFAULT");

@@ -42,16 +42,24 @@ static int block_sizes[] = {
 int main(int argc, char *argv[])
 {
 	int i;
-	char *env;
+	char *env1, *env2, *exe;
 	int expect_hugepage = 0;
 	char *p;
 
 	test_init(argc, argv);
+	exe = strrchr(test_name, '/');
+	if (exe)
+		exe++;		/* skip over "/" */
+	else
+		exe = test_name;
 
-	env = getenv("HUGETLB_MORECORE");
-	verbose_printf("HUGETLB_MORECORE=%s\n", env);
-	if (env)
+	env1 = getenv("HUGETLB_MORECORE");
+	verbose_printf("HUGETLB_MORECORE=%s\n", env1);
+	env2 = getenv("HUGETLB_RESTRICT_EXE");
+	verbose_printf("HUGETLB_RESTRICT_EXE=%s\n", env2);
+	if (env1 && (!env2 || strstr(env2, exe)))
 		expect_hugepage = 1;
+	verbose_printf("expect_hugepage=%d\n", expect_hugepage);
 
 	for (i = 0; i < NUM_SIZES; i++) {
 		int size = block_sizes[i];
