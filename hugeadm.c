@@ -44,6 +44,10 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#define KB (1024)
+#define MB (1024*KB)
+#define GB (1024*MB)
+
 #define REPORT_UTIL "hugeadm"
 #define REPORT(level, prefix, format, ...)                                    \
 	do {                                                                  \
@@ -553,6 +557,15 @@ int mount_dir(char *path, char *options, mode_t mode, uid_t uid, gid_t gid)
 	return 0;
 }
 
+void scale_size(char *buf, unsigned long pagesize)
+{
+	if(pagesize >= GB)
+		snprintf(buf, OPT_MAX, "%luGB", pagesize / GB);
+	else if(pagesize >= MB)
+		snprintf(buf, OPT_MAX, "%luMB", pagesize / MB);
+	else
+		snprintf(buf, OPT_MAX, "%luKB", pagesize / KB);
+}
 
 void create_mounts(char *user, char *group, char *base, mode_t mode)
 {
@@ -560,6 +573,7 @@ void create_mounts(char *user, char *group, char *base, mode_t mode)
 	char path[PATH_MAX];
 	char options[OPT_MAX];
 	char limits[OPT_MAX];
+	char scaled[OPT_MAX];
 	int cnt, pos;
 	struct passwd *pwd;
 	struct group *grp;
@@ -598,15 +612,17 @@ void create_mounts(char *user, char *group, char *base, mode_t mode)
 	}
 
 	for (pos=0; cnt--; pos++) {
+		scaled[0] = 0;
+		scale_size(scaled, pools[pos].pagesize);
 		if (user)
-			snprintf(path, PATH_MAX, "%s/%s/pagesize-%ld",
-				base, user, pools[pos].pagesize);
+			snprintf(path, PATH_MAX, "%s/%s/pagesize-%s",
+				base, user, scaled);
 		else if (group)
-			snprintf(path, PATH_MAX, "%s/%s/pagesize-%ld",
-				base, group, pools[pos].pagesize);
+			snprintf(path, PATH_MAX, "%s/%s/pagesize-%s",
+				base, group, scaled);
 		else
-			snprintf(path, PATH_MAX, "%s/pagesize-%ld",
-				base, pools[pos].pagesize);
+			snprintf(path, PATH_MAX, "%s/pagesize-%s",
+				base, scaled);
 
 		snprintf(options, OPT_MAX, "pagesize=%ld",
 				pools[pos].pagesize);
