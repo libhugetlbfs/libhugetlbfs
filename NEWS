@@ -1,3 +1,18 @@
+libhugetlbfs 2.12 "Serrano"
+======================================================================
+New Features
+* libhugetlbfs usage can now be restricted to certain binary names
+* lihugetlbfs now supports static linking
+* hugeadm uses more human readable directory names for mount points
+
+Bug Fixes
+* hugeadm would segfault if specified user was not in passwd, failure in
+  getpwuid() is now checked
+
+Test Suite
+* Added missing tests to driver script
+* Added tests for static linking
+
 libhugetlbfs 2.11 "Ghost Pepper"
 ======================================================================
 New Features
