@@ -371,12 +371,12 @@ void hugetlbfs_setup_env()
 
 	/* Determine if shmget() calls should be overridden */
 	env = getenv("HUGETLB_SHM");
-	if (env && !strcmp(env, "yes"))
+	if (env && !strcasecmp(env, "yes"))
 		__hugetlb_opts.shm_enabled = true;
 
 	/* Determine if all reservations should be avoided */
 	env = getenv("HUGETLB_NO_RESERVE");
-	if (env && !strcmp(env, "yes"))
+	if (env && !strcasecmp(env, "yes"))
 		__hugetlb_opts.no_reserve = true;
 }
 
