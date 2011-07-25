@@ -196,7 +196,7 @@ libs:	$(foreach file,$(INSTALL_OBJ_LIBS),$(OBJDIRS:%=%/$(file))) $(BIN_OBJ_DIR)/
 tests:	libs # Force make to build the library first
 tests:	tests/all
 
-tests/%:
+tests/%: libs
 	$(MAKE) -C tests $*
 
 tools:  $(foreach file,$(INSTALL_BIN),$(BIN_OBJ_DIR)/$(file))
