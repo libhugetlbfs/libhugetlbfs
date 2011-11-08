@@ -34,11 +34,10 @@
 
 #define SEGMENT_SIZE	((size_t)0x4000000)
 #define SEGMENT_KEY	0x82ba15ff
-#define SEGMENT_ADDR	((void *)0x80000000)
-
 #define STRIDE		0x200000
 
 static int global_shmid = -1;
+void *shm_addr = NULL;
 
 void cleanup(void)
 {
@@ -53,12 +52,14 @@ int attach_segment(size_t segsize, int shmflags, int shmperms)
 	shmid = shmget(SEGMENT_KEY, segsize, shmflags);
 	if (shmid == -1) {
 		perror("shmget(SEGMENT)");
+		cleanup();
 		exit(EXIT_FAILURE);
 	}
 
 	/* Attach large segment */
-	if (shmat(shmid, SEGMENT_ADDR, shmperms) == (void *)-1) {
+	if ( (shm_addr = shmat(shmid, shm_addr, shmperms)) == (void *)-1) {
 		perror("shmat(SEGMENT)");
+		cleanup();
 		exit(EXIT_FAILURE);
 	}
 
@@ -90,12 +91,12 @@ int main(int argc, char **argv)
 
 	/* Create, attach and part init segment */
 	attach_segment(SEGMENT_SIZE, IPC_CREAT|SHM_HUGETLB|0640, 0);
-	p = (char *)SEGMENT_ADDR;
+	p = (char *)shm_addr;
 	for (i = 0; i < 4; i++, p += STRIDE)
 		memset(p, 0x55, STRIDE);
 
 	/* Detach segment */
-	if (shmdt(SEGMENT_ADDR) != 0)
+	if (shmdt(shm_addr) != 0)
 		FAIL("shmdt(SEGMENT)");
 
 	/* Create children to reattach read-only */
@@ -109,7 +110,7 @@ int main(int argc, char **argv)
 			wait_list[i] = pid;
 		} else {
 			attach_segment(0, 0, SHM_RDONLY);
-			if (shmdt(SEGMENT_ADDR) != 0) {
+			if (shmdt(shm_addr) != 0) {
 				perror("shmdt(SEGMENT)");
 				exit(EXIT_FAILURE);
 			}
