@@ -202,6 +202,73 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 	return p;
 }
 
+static void *thp_morecore(ptrdiff_t increment)
+{
+	void *p;
+	long delta;
+
+	INFO("thp_morecore(%ld) = ...\n", (long)increment);
+
+	delta = (heaptop - heapbase) + increment - mapsize;
+	delta = ALIGN(delta, hpage_size);
+
+	if (delta > 0) {
+		/*
+		 * This first time we expand the mapping we need to account for
+		 * the initial heap mapping not necessarily being huge page
+		 * aligned
+		 */
+		if (!mapsize)
+			delta = hugetlbfs_next_addr((long)heapbase + delta) -
+					(unsigned long)heapbase;
+
+		INFO("Adding %ld bytes to heap\n", delta);
+
+		p = sbrk(delta);
+		if (p == (void *)-1) {
+			WARNING("sbrk returned ENOMEM\n");
+			return NULL;
+		}
+
+		if (!mapsize) {
+			if (heapbase && (heapbase != p)) {
+				WARNING("Heap was expected at %p instead of %p, "
+					"heap has been modified by someone else!\n",
+					heapbase, p);
+				if (__hugetlbfs_debug)
+					dump_proc_pid_maps();
+			}
+			heapbase = heaptop = p;
+		}
+
+		mapsize += delta;
+#ifdef MADV_HUGEPAGE
+		madvise(p, delta, MADV_HUGEPAGE);
+#endif
+	} else if (delta < 0) {
+		/* shrinking the heap */
+		if (!mapsize) {
+			WARNING("Can't shrink an empty heap\n");
+			return NULL;
+		}
+
+		INFO("Attempting to shrink heap by %ld bytes with sbrk\n",
+			-delta);
+		p = sbrk(delta);
+		if (p == (void *)-1) {
+			WARNING("Unable to shrink heap\n");
+			return heaptop;
+		}
+
+		mapsize += delta;
+	}
+
+	p = heaptop;
+	heaptop += increment;
+	INFO("... = %p\n", p);
+	return p;
+}
+
 void hugetlbfs_setup_morecore(void)
 {
 	char *ep;
@@ -222,6 +289,8 @@ void hugetlbfs_setup_morecore(void)
 	 */
 	if (strncasecmp(__hugetlb_opts.morecore, "y", 1) == 0)
 		hpage_size = gethugepagesize();
+	else if (__hugetlb_opts.thp_morecore)
+		hpage_size = kernel_default_hugepage_size();
 	else
 		hpage_size = parse_page_size(__hugetlb_opts.morecore);
 
@@ -237,8 +306,12 @@ void hugetlbfs_setup_morecore(void)
 		return;
 	}
 
-	if(__hugetlb_opts.map_hugetlb &&
-			hpage_size == kernel_default_hugepage_size()) {
+	/*
+	 * We won't need an fd for the heap mmaps if we are using MAP_HUGETLB
+	 * or we are depending on transparent huge pages
+	 */
+	if(__hugetlb_opts.thp_morecore || (__hugetlb_opts.map_hugetlb &&
+			hpage_size == kernel_default_hugepage_size())) {
 		heap_fd = -1;
 	} else {
 		if (!hugetlbfs_find_path_for_size(hpage_size)) {
@@ -253,7 +326,12 @@ void hugetlbfs_setup_morecore(void)
 		}
 	}
 
-	if (__hugetlb_opts.heapbase) {
+	/*
+	 * THP morecore uses sbrk to allocate more heap space, counting on the
+	 * kernel to back the area with THP.  So setting heapbase is
+	 * meaningless if thp_morecore is used.
+	 */
+	if (!__hugetlb_opts.thp_morecore && __hugetlb_opts.heapbase) {
 		heapaddr = strtoul(__hugetlb_opts.heapbase, &ep, 16);
 		if (*ep != '\0') {
 			WARNING("Can't parse HUGETLB_MORECORE_HEAPBASE: %s\n",
@@ -262,13 +340,17 @@ void hugetlbfs_setup_morecore(void)
 		}
 	} else {
 		heapaddr = (unsigned long)sbrk(0);
-		heapaddr = hugetlbfs_next_addr(heapaddr);
+		if (!__hugetlb_opts.thp_morecore)
+			heapaddr = hugetlbfs_next_addr(heapaddr);
 	}
 
 	INFO("setup_morecore(): heapaddr = 0x%lx\n", heapaddr);
 
 	heaptop = heapbase = (void *)heapaddr;
-	__morecore = &hugetlbfs_morecore;
+	if (__hugetlb_opts.thp_morecore)
+		__morecore = &thp_morecore;
+	else
+		__morecore = &hugetlbfs_morecore;
 
 	/* Set some allocator options more appropriate for hugepages */
 

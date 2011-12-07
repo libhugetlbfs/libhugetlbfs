@@ -335,6 +335,15 @@ void hugetlbfs_setup_env()
 	__hugetlb_opts.morecore = getenv("HUGETLB_MORECORE");
 	__hugetlb_opts.heapbase = getenv("HUGETLB_MORECORE_HEAPBASE");
 
+	if (__hugetlb_opts.morecore)
+		__hugetlb_opts.thp_morecore =
+			(strcasecmp(__hugetlb_opts.morecore, "thp") == 0);
+
+	if (__hugetlb_opts.thp_morecore && __hugetlb_opts.heapbase) {
+		DEBUG("Heapbase specified with THP for morecore, ignoring heapbase\n");
+		__hugetlb_opts.heapbase = NULL;
+	}
+
 	env = getenv("HUGETLB_FORCE_ELFMAP");
 	if (env && (strcasecmp(env, "yes") == 0))
 		__hugetlb_opts.force_elfmap = 1;

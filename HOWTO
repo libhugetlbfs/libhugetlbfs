@@ -2,7 +2,7 @@ libhugetlbfs HOWTO
 ==================
 
 Author: David Gibson <dwg@au1.ibm.com>, Adam Litke <agl@us.ibm.com>, and others
-Last updated: February 1st, 2011
+Last updated: December 07, 2011
 
 Introduction
 ============
@@ -264,6 +264,11 @@ environment variables:
   To use a specific huge page size:
        HUGETLB_MORECORE=<pagesize>
 
+  To use Transparent Huge Pages (THP):
+       HUGETLB_MORECORE=thp
+
+Note: This option requires a kernel that supports Transparent Huge Pages
+
 Usually it's preferable to set these environment variables on the
 command line of the program you wish to run, rather than using
 "export", because you'll only want to enable the hugepage malloc() for
@@ -284,9 +289,9 @@ it yet, the following would work for a 64-bit program:
 Under some circumstances, you might want to specify the address where
 the hugepage heap is located.  You can do this by setting the
 HUGETLB_MORECORE_HEAPBASE environment variable to the heap address in
-hexadecimal.  (NOTE: this will not work on PowerPC systems with old kernels
+hexadecimal.  NOTE: this will not work on PowerPC systems with old kernels
 which don't respect the hugepage hint address; see Kernel Prerequisites
-above).
+above.  Also note that this option is ignored for THP morecore.
 
 By default, the hugepage heap begins at roughly the same place a
 normal page heap would, rounded up by an amount determined by your

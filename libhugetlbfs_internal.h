@@ -63,6 +63,7 @@ struct libhugeopts_t {
 	bool		shm_enabled;
 	bool		no_reserve;
 	bool		map_hugetlb;
+	bool		thp_morecore;
 	unsigned long	force_elfmap;
 	char		*ld_preload;
 	char		*elfmap;
