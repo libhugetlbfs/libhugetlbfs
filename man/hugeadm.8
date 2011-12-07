@@ -238,10 +238,45 @@ make the swap space persist after the resize operation is completed.  The swap
 spaces can later be removed manually using the swapoff command.
 
 .PP
+The following options tune the transparent huge page usage
+
+.TP
+.B --thp-always
+
+Enable transparent huge pages always
+
+.TP
+.B --thp-madvise
+
+Enable transparent huge pages only on madvised regions
+
+.TP
+.B --thp-never
+
+Disable transparent huge pages
+
+.TP
+.B --thp-khugepaged-pages <pages to scan>
+
+Configure the number of pages that khugepaged should scan on each pass
+
+.TP
+.B --thp-khugepaged-scan-sleep <milliseconds>
+
+Configure how many milliseconds khugepaged should wait between passes
+
+.TP
+.B --thp-khugepages-alloc-sleep <milliseconds>
+
+Configure how many milliseconds khugepaged should wait after failing to
+allocate a huge page to throttle the next attempt.
+
+.PP
 The following options affect the verbosity of libhugetlbfs.
 
 .TP
 .B --verbose <level>, -v
+
 The default value for the verbosity level is 1 and the range of the value can
 be set with --verbose from 0 to 99. The higher the value, the more verbose the
 library will be. 0 is quiet and 3 will output much debugging information. The

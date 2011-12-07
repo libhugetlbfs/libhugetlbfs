@@ -83,6 +83,14 @@ extern char *optarg;
 #define SWAP_FREE "SwapFree:"
 #define SWAP_TOTAL "SwapTotal:"
 
+#define ALWAYS		  "always"
+#define MADVISE		  "madvise"
+#define NEVER		  "never"
+#define TRANS_ENABLE	  "/sys/kernel/mm/transparent_hugepage/enabled"
+#define KHUGE_SCAN_PAGES  "/sys/kernel/mm/transparent_hugepage/khugepaged/pages_to_scan"
+#define KHUGE_SCAN_SLEEP  "/sys/kernel/mm/transparent_hugepage/khugepaged/scan_sleep_millisecs"
+#define KHUGE_ALLOC_SLEEP "/sys/kernel/mm/transparent_hugepage/khugepaged/alloc_sleep_millisecs"
+
 void print_usage()
 {
 	fprintf(stderr, "hugeadm [options]\n");
@@ -97,6 +105,15 @@ void print_usage()
 	CONT("Adjust pool 'size' lower bound");
 	OPTION("--obey-mempolicy", "Obey the NUMA memory policy when");
 	CONT("adjusting the pool 'size' lower bound");
+	OPTION("--thp-always", "Enable transparent huge pages always");
+	OPTION("--thp-madvise", "Enable transparent huge pages with madvise");
+	OPTION("--thp-never", "Disable transparent huge pages");
+	OPTION("--thp-khugepaged-pages <pages to scan>", "Number of pages that khugepaged");
+	CONT("should scan on each pass");
+	OPTION("--thp-khugepaged-scan-sleep <milliseconds>", "Time in ms to sleep between");
+	CONT("khugepaged passes");
+	OPTION("--thp-khugepages-alloc-sleep <milliseconds>", "Time in ms for khugepaged");
+	CONT("to wait if there was a huge page allocation failure");
 	OPTION("--pool-pages-max <size|DEFAULT>:[+|-]<pagecount|memsize<G|M|K>>", "");
 	CONT("Adjust pool 'size' upper bound");
 	OPTION("--set-recommended-min_free_kbytes", "");
@@ -270,6 +287,16 @@ void verbose_expose(void)
 #define LONG_LIMIT_INODES		(LONG_LIMITS|'I')
 
 #define LONG_EXPLAIN	('e' << 8)
+
+#define LONG_TRANS			('t' << 8)
+#define LONG_TRANS_ALWAYS		(LONG_TRANS|'a')
+#define LONG_TRANS_MADVISE		(LONG_TRANS|'m')
+#define LONG_TRANS_NEVER		(LONG_TRANS|'n')
+
+#define LONG_KHUGE			('K' << 8)
+#define LONG_KHUGE_PAGES		(LONG_KHUGE|'p')
+#define LONG_KHUGE_SCAN			(LONG_KHUGE|'s')
+#define LONG_KHUGE_ALLOC		(LONG_KHUGE|'a')
 
 #define MAX_POOLS	32
 
@@ -1062,6 +1089,30 @@ void rem_ramdisk_swap(){
 	}
 }
 
+void set_trans_opt(const char *file, const char *value)
+{
+	FILE *f;
+
+	if (geteuid() != 0) {
+                ERROR("Transparent huge page options can only be set by root\n");
+                exit(EXIT_FAILURE);
+        }
+
+	if (opt_dry_run) {
+		printf("echo '%s' > %s\n", value, file);
+		return;
+	}
+
+	f = fopen(file, "w");
+	if (!f) {
+		ERROR("Couldn't open %s: %s\n", file, strerror(errno));
+		return;
+	}
+
+	fprintf(f, "%s", value);
+	fclose(f);
+}
+
 enum {
 	POOL_MIN,
 	POOL_MAX,
@@ -1308,7 +1359,10 @@ int main(int argc, char** argv)
 	int opt_list_mounts = 0, opt_pool_list = 0, opt_create_mounts = 0;
 	int opt_global_mounts = 0, opt_pgsizes = 0, opt_pgsizes_all = 0;
 	int opt_explain = 0, minadj_count = 0, maxadj_count = 0;
+	int opt_trans_always = 0, opt_trans_never = 0, opt_trans_madvise = 0;
+	int opt_khuge_pages = 0, opt_khuge_scan = 0, opt_khuge_alloc = 0;
 	int ret = 0, index = 0;
+	char *khuge_pages = NULL, *khuge_alloc = NULL, *khuge_scan = NULL;
 	gid_t opt_gid = 0;
 	struct group *opt_grp = NULL;
 	int group_invalid = 0;
@@ -1321,6 +1375,12 @@ int main(int argc, char** argv)
 		{"pool-pages-min", required_argument, NULL, LONG_POOL_MIN_ADJ},
 		{"pool-pages-max", required_argument, NULL, LONG_POOL_MAX_ADJ},
 		{"obey-mempolicy", no_argument, NULL, LONG_POOL_MEMPOL},
+		{"thp-always", no_argument, NULL, LONG_TRANS_ALWAYS},
+		{"thp-madvise", no_argument, NULL, LONG_TRANS_MADVISE},
+		{"thp-never", no_argument, NULL, LONG_TRANS_NEVER},
+		{"thp-khugepaged-pages", required_argument, NULL, LONG_KHUGE_PAGES},
+		{"thp-khugepaged-scan-sleep", required_argument, NULL, LONG_KHUGE_SCAN},
+		{"thp-khugepaged-alloc-sleep", required_argument, NULL, LONG_KHUGE_ALLOC},
 		{"set-recommended-min_free_kbytes", no_argument, NULL, LONG_SET_RECOMMENDED_MINFREEKBYTES},
 		{"set-recommended-shmmax", no_argument, NULL, LONG_SET_RECOMMENDED_SHMMAX},
 		{"set-shm-group", required_argument, NULL, LONG_SET_HUGETLB_SHM_GROUP},
@@ -1422,6 +1482,33 @@ int main(int argc, char** argv)
 
 		case LONG_POOL_MEMPOL:
 			opt_obey_mempolicy = 1;
+			break;
+
+		case LONG_TRANS_ALWAYS:
+			opt_trans_always = 1;
+			break;
+
+		case LONG_TRANS_MADVISE:
+			opt_trans_madvise = 1;
+			break;
+
+		case LONG_TRANS_NEVER:
+			opt_trans_never = 1;
+			break;
+
+		case LONG_KHUGE_PAGES:
+			opt_khuge_pages = 1;
+			khuge_pages = optarg;
+			break;
+
+		case LONG_KHUGE_SCAN:
+			opt_khuge_scan = 1;
+			khuge_scan = optarg;
+			break;
+
+		case LONG_KHUGE_ALLOC:
+			opt_khuge_alloc = 1;
+			khuge_alloc = optarg;
 			break;
 
 		case LONG_POOL_MAX_ADJ:
@@ -1533,6 +1620,24 @@ int main(int argc, char** argv)
 
 	if (opt_movable != -1)
 		setup_zone_movable(opt_movable);
+
+	if (opt_trans_always)
+		set_trans_opt(TRANS_ENABLE, ALWAYS);
+
+	if (opt_trans_madvise)
+		set_trans_opt(TRANS_ENABLE, MADVISE);
+
+	if (opt_trans_never)
+		set_trans_opt(TRANS_ENABLE, NEVER);
+
+	if (opt_khuge_pages)
+		set_trans_opt(KHUGE_SCAN_PAGES, khuge_pages);
+
+	if (opt_khuge_alloc)
+		set_trans_opt(KHUGE_ALLOC_SLEEP, khuge_alloc);
+
+	if (opt_khuge_scan)
+		set_trans_opt(KHUGE_SCAN_SLEEP, khuge_scan);
 
 	if (opt_set_recommended_minfreekbytes)
 		set_recommended_minfreekbytes();
