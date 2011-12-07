@@ -67,6 +67,10 @@ void print_usage()
 	OPTION("--heap[=<size>]", "Requests remapping of the program heap");
 	CONT("(malloc space)");
 	OPTION("--shm", "Requests remapping of shared memory segments");
+	OPTION("--thp", "Setup the heap space to be aligned for merging");
+	CONT("by khugepaged into huge pages.  This requires");
+	CONT("kernel support for transparent huge pages to be");
+	CONT("enabled");
 
 	OPTION("--no-preload", "Disable preloading the libhugetlbfs library");
 	OPTION("--no-reserve", "Disable huge page reservation for segments");
@@ -170,6 +174,8 @@ void verbose_expose(void)
 #define LONG_SHARE		(LONG_BASE | 's')
 #define LONG_NO_LIBRARY		(LONG_BASE | 'L')
 #define LONG_LIBRARY		(LONG_BASE | 'l')
+
+#define LONG_THP_HEAP		('t')
 
 /*
  * Mapping selectors, one per remappable/backable area as requested
@@ -341,6 +347,7 @@ int main(int argc, char** argv)
 	int opt_preload = 1;
 	int opt_no_reserve = 0;
 	int opt_share = 0;
+	int opt_thp_heap = 0;
 	char *opt_library = NULL;
 
 	char opts[] = "+hvq";
@@ -365,7 +372,7 @@ int main(int argc, char** argv)
 		{"bss",        optional_argument, NULL, MAP_BASE|MAP_BSS},
 		{"heap",       optional_argument, NULL, MAP_BASE|MAP_HEAP},
 		{"shm",        optional_argument, NULL, MAP_BASE|MAP_SHM},
-
+		{"thp",        no_argument, NULL, LONG_THP_HEAP},
 		{0},
 	};
 
@@ -396,6 +403,11 @@ int main(int argc, char** argv)
 
 		case 'q':
 			quiet();
+			break;
+
+		case LONG_THP_HEAP:
+			opt_thp_heap = 1;
+			INFO("Aligning heap for use with THP\n");
 			break;
 
 		case LONG_NO_PRELOAD:
@@ -463,6 +475,9 @@ int main(int argc, char** argv)
 
 	if (opt_share)
 		setup_environment("HUGETLB_SHARE", "1");
+
+	if (opt_thp_heap)
+		setup_environment("HUGETLB_MORECORE", "thp");
 
 	if (opt_dry_run)
 		exit(EXIT_SUCCESS);

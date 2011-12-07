@@ -63,6 +63,11 @@ Request that multiple application instances share text segments that are
 backed with huge pages.  This option sets the environment variable
 HUGETLB_SHARE to 1.
 
+.TP
+.B --thp
+Align heap regions to huge page size for promotion by khugepaged.  For more
+information on transparent huge pages see linux-2.6/Documentation/transhuge.txt
+
 .PP
 The following options affect how \fBhugectl\fP behaves.
 
