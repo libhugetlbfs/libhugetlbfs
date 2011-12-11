@@ -661,7 +661,8 @@ static void find_mounts(void)
 		 */
 		err = sscanf(line, "%*s %" stringify(PATH_MAX) "s hugetlbfs "
 			"%*s %d", path, &dummy);
-		if ((err == 2) && (hugetlbfs_test_path(path) == 1))
+		if ((err == 2) && (hugetlbfs_test_path(path) == 1) &&
+		    !(access(path, R_OK | W_OK | X_OK)))
 			add_hugetlbfs_mount(path, 0);
 	}
 	close(fd);
