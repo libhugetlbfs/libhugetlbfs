@@ -1,3 +1,16 @@
+libhugetlbfs 2.13 "Insert Clever Title Here"
+======================================================================
+New Features
+* hugeadm can now be used to control Transparent Huge Page tunables
+* New morecore mode to better support THP
+
+Bug Fixes
+* Check permissions on hugetlbfs mount point before marking it as available
+
+Test Suite
+* Fix shm tests to use random address instead of fixed, old address failed
+  on ARM
+
 libhugetlbfs 2.12 "Serrano"
 ======================================================================
 New Features
