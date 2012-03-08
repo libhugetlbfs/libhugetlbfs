@@ -19,7 +19,6 @@
 gethugepagesizes - Get the system supported huge page sizes
 .SH SYNOPSIS
 .B #include <hugetlbfs.h>
-.br
 
 .br
 int gethugepagesizes(long pagesizes[], int n_elem);
@@ -41,12 +40,10 @@ the number of huge page sizes stored in pagesizes is returned. On failure,
 .SH ERRORS
 
 .TP
-.B ERRNO
+.B EINVAL
 \fBn_elem\fP is less than zero or \fBn_elem\fP is greater than zero and
 \fBpagesizes\fP is NULL.
-
 .PP
-
 Also see opendir(3) for other possible values for errno. This error occurs
 when the sysfs directory exists but cannot be opened.
 
@@ -61,9 +58,9 @@ specific size to see if a mount point is configured.
 .SH SEE ALSO
 .I oprofile(1),
 .I opendir(3),
+.I hugetlbfs_find_path_for_size(3),
 .I libhugetlbfs(7)
 
 .SH AUTHORS
 libhugetlbfs was written by various people on the libhugetlbfs-devel
 mailing list.
-

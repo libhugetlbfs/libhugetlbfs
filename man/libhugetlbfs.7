@@ -39,8 +39,8 @@ they are large enough.
 For the effective backing of text and data with huge pages, the application
 must be linked to the library and the ELF segments correctly aligned using
 the ld helpers. Once linked, malloc or shared memory can still be backed
-but no pre-loading is required. See /usr/share/docs/libhugetlbfs/HOWTO for
-detailed instructions on relinking applications.
+but no pre-loading is required. See /usr/share/doc/libhugetlbfs/HOWTO and
+ld.hugetlbfs(1) for detailed instructions on relinking applications.
 
 For applications that are hugepage-aware and linked to the library
 \fBget_huge_pages()\fP can be used for the direct allocation of
@@ -62,6 +62,11 @@ as a quick reference.
 The following variables affect what memory regions are backed by hugepages. In
 all cases, the environment being unset implies the feature should remain
 disabled.
+
+.TP
+.B HUGETLB_DEFAULT_PAGE_SIZE=<pagesize>
+This sets the default hugepage size to be used by libhugetlbfs.  If not
+set, libhugetlbfs will use the kernel's default hugepage size.
 
 .TP
 .B HUGETLB_MORECORE=[yes|<pagesize>]
@@ -199,14 +204,27 @@ The default value for this is 1 and the range of the value is from 0 to
 Once set, this will give very detailed output on what is happening in the
 library and run extra diagnostics.
 
+.SH FILES
+[DESTDIR|/usr/share]/doc/libhugetlbfs/HOWTO
+
 .SH SEE ALSO
 .I oprofile(1),
+.I ld.hugetlbfs(1),
 .I hugectl(8),
 .I hugeedit(8),
+.I gethugepagesize(3),
+.I gethugepagesizes(3),
+.I getpagesizes(3),
+.I hugetlbfs_test_path(3),
+.I hugetlbfs_find_path(3),
+.I hugetlbfs_find_path_for_size(3),
+.I hugetlbfs_test_path(3),
+.I hugetlbfs_test_path_for_size(3),
+.I hugetlbfs_unlinked_fd(3),
+.I hugetlbfs_unlinked_fd_for_size(3),
 .I get_huge_pages(3),
 .I free_huge_pages(3)
 .br
 .SH AUTHORS
 libhugetlbfs was written by various people on the libhugetlbfs-devel
 mailing list.
-

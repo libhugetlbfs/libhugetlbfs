@@ -11,9 +11,10 @@ INSTALL_SCRIPT = cpupcstat oprofile_map_events.pl oprofile_start.sh
 INSTALL_HELPER = huge_page_setup_helper.py
 INSTALL_PERLMOD = DataCollect.pm OpCollect.pm PerfCollect.pm Report.pm
 INSTALL_HEADERS = hugetlbfs.h
-INSTALL_MAN1 = pagesize.1
-INSTALL_MAN3 = get_huge_pages.3 get_hugepage_region.3 \
-		gethugepagesizes.3 getpagesizes.3
+INSTALL_MAN1 = ld.hugetlbfs.1 pagesize.1
+INSTALL_MAN3 = get_huge_pages.3 get_hugepage_region.3 gethugepagesize.3 \
+		gethugepagesizes.3 getpagesizes.3 hugetlbfs_find_path.3 \
+		hugetlbfs_test_path.3 hugetlbfs_unlinked_fd.3
 INSTALL_MAN7 = libhugetlbfs.7
 INSTALL_MAN8 = hugectl.8 hugeedit.8 hugeadm.8 cpupcstat.8
 LDSCRIPT_TYPES = B BDT
@@ -392,8 +393,12 @@ install-man:
 	done
 	rm -f $(DESTDIR)$(MANDIR3)/free_huge_pages.3.gz
 	rm -f $(DESTDIR)$(MANDIR3)/free_hugepage_region.3.gz
+	rm -f $(DESTDIR)$(MANDIR3)/hugetlbfs_unlinked_fd_for_size.3.gz
+	rm -f $(DESTDIR)$(MANDIR3)/hugetlbfs_find_path_for_size.3.gz
 	ln -s get_huge_pages.3.gz $(DESTDIR)$(MANDIR3)/free_huge_pages.3.gz
 	ln -s get_hugepage_region.3.gz $(DESTDIR)$(MANDIR3)/free_hugepage_region.3.gz
+	ln -s hugetlbfs_unlinked_fd.3.gz $(DESTDIR)$(MANDIR3)/hugetlbfs_unlinked_fd_for_size.3.gz
+	ln -s hugetlbfs_find_path.3.gz $(DESTDIR)$(MANDIR3)/hugetlbfs_find_path_for_size.3.gz
 	for x in $(INSTALL_MAN7); do \
 		$(INSTALL) -m 444 man/$$x $(DESTDIR)$(MANDIR7); \
 		gzip -f $(DESTDIR)$(MANDIR7)/$$x; \
