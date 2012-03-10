@@ -1321,7 +1321,7 @@ void hugetlbfs_setup_elflink(void)
 					"%d\n", i);
 
 			/* Close files we have already prepared */
-			for (; i >= 0; i--)
+			for (i--; i >= 0; i--)
 				close(htlb_seg_table[i].fd);
 
 			return;
