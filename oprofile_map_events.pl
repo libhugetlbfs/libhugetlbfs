@@ -22,6 +22,7 @@ my $oprofile_event;
 my (%map_event_name, %map_event_mask);
 
 # CPU events miss table
+$map_event_name{"i386##timer"} = "CPU_CLK_UNHALTED:6000";
 $map_event_name{"i386##dtlb_miss"} = "PAGE_WALK_TYPE:100000:0x01";
 $map_event_name{"i386##p4##timer"} = "GLOBAL_POWER_EVENTS:100000:0x01";
 $map_event_name{"i386##p4##dtlb_miss"} = "PAGE_WALK_TYPE:3000:0x01";
@@ -35,6 +36,10 @@ $map_event_name{"i386##core##instructions"} = "INST_RETIRED:6000";
 $map_event_name{"i386##core_2##dtlb_miss"} = "DTLB_MISSES:500:0x01";
 $map_event_name{"i386##core_2##timer"} = "CPU_CLK_UNHALTED:6000";
 $map_event_name{"i386##core_2##instructions"} = "INST_RETIRED_ANY_P:6000";
+$map_event_name{"i386##core_7##dtlb_miss"} = "DTLB_LOAD_MISSES:6000:0x01";
+$map_event_name{"i386##core_7##l2cache_miss"} = "LLC_MISSES:6000";
+$map_event_name{"i386##core_7##timer"} = "CPU_CLK_UNHALTED:6000";
+$map_event_name{"i386##core_7##instructions"} = "INST_RETIRED:6000:0x01";
 $map_event_name{"x86-64##timer"} = "CPU_CLK_UNHALTED:100000";
 $map_event_name{"x86-64##hammer##dtlb_miss"} = "L1_AND_L2_DTLB_MISSES:100000";
 $map_event_name{"x86-64##hammer##l1cache_miss"} = "DATA_CACHE_MISSES:500";
