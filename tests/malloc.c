@@ -61,6 +61,9 @@ int main(int argc, char *argv[])
 		expect_hugepage = 1;
 	verbose_printf("expect_hugepage=%d\n", expect_hugepage);
 
+	if (expect_hugepage)
+		consume_heap(1024*1024);
+
 	for (i = 0; i < NUM_SIZES; i++) {
 		int size = block_sizes[i];
 		unsigned long long mapping_size;
