@@ -64,8 +64,7 @@ int main(int argc, char *argv[])
 	verbose_printf("Reserve count after map: %lu\n", map_rsvd);
 
 	/* readahead the region and record reservations */
-	if (readahead(fd, 0, hpage_size) == -1)
-		FAIL("readahead(): %s", strerror(errno));
+	readahead(fd, 0, hpage_size);
 	readahead_rsvd = get_huge_page_counter(hpage_size, HUGEPAGES_RSVD);
 	verbose_printf("Reserve count after readahead: %lu\n", readahead_rsvd);
 
