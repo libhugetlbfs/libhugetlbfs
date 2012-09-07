@@ -320,7 +320,8 @@ void validate_sizes(int line, long actual_sizes[], int actual,
 
 int main(int argc, char *argv[])
 {
-	long expected_sizes[MAX], actual_sizes[MAX];
+	int i, fakes_no;
+	long expected_sizes[MAX], actual_sizes[MAX], fake_sizes[MAX];
 	long base_size = sysconf(_SC_PAGESIZE);
 
 	test_init(argc, argv);
@@ -351,7 +352,14 @@ int main(int argc, char *argv[])
 	 */
 
 	INIT_LIST(expected_sizes, HPAGE_KB * 1024, 1024 * 1024, 64 * 1024);
-	setup_fake_data(expected_sizes, 3);
+	fakes_no = 0;
+	for (i = 0; i < 3; i++)
+		/* don't include base_size in 'fake' hugepagesizes */
+		if (base_size != expected_sizes[i]) {
+			fake_sizes[fakes_no] = expected_sizes[i];
+			fakes_no++;
+		}
+	setup_fake_data(fake_sizes, fakes_no);
 
 	/*
 	 * Check handling when /proc/meminfo indicates no huge page support
@@ -382,30 +390,30 @@ int main(int argc, char *argv[])
 	sysfs_state = OVERRIDE_ON;
 	kernel_default_hugepage_size_reset();
 
-	INIT_LIST(expected_sizes, HPAGE_KB * 1024, 1024 * 1024, 64 * 1024);
+	memcpy(expected_sizes, fake_sizes, sizeof(fake_sizes));
 
 	/* ... make sure all sizes are returned without duplicates */
 	/* ... while making sure we do not overstep our limit */
-	EXPECT_SIZES(gethugepagesizes, MAX, 3, expected_sizes);
-	EXPECT_SIZES(gethugepagesizes, 1, 3, expected_sizes);
-	EXPECT_SIZES(gethugepagesizes, 2, 3, expected_sizes);
-	EXPECT_SIZES(gethugepagesizes, 3, 3, expected_sizes);
-	EXPECT_SIZES(gethugepagesizes, 4, 3, expected_sizes);
+	EXPECT_SIZES(gethugepagesizes, MAX, fakes_no, expected_sizes);
+	EXPECT_SIZES(gethugepagesizes, 1, fakes_no, expected_sizes);
+	EXPECT_SIZES(gethugepagesizes, 2, fakes_no, expected_sizes);
+	EXPECT_SIZES(gethugepagesizes, 3, fakes_no, expected_sizes);
+	EXPECT_SIZES(gethugepagesizes, 4, fakes_no, expected_sizes);
 
-	INIT_LIST(expected_sizes,
-			base_size, HPAGE_KB * 1024, 1024 * 1024, 64 * 1024);
-	EXPECT_SIZES(getpagesizes, MAX, 4, expected_sizes);
-	EXPECT_SIZES(getpagesizes, 1, 4, expected_sizes);
-	EXPECT_SIZES(getpagesizes, 2, 4, expected_sizes);
-	EXPECT_SIZES(getpagesizes, 3, 4, expected_sizes);
-	EXPECT_SIZES(getpagesizes, 4, 4, expected_sizes);
-	EXPECT_SIZES(getpagesizes, 5, 4, expected_sizes);
+	memcpy(expected_sizes, fake_sizes, sizeof(fake_sizes));
+	expected_sizes[fakes_no] = base_size;
+	EXPECT_SIZES(getpagesizes, MAX, fakes_no + 1, expected_sizes);
+	EXPECT_SIZES(getpagesizes, 1, fakes_no + 1, expected_sizes);
+	EXPECT_SIZES(getpagesizes, 2, fakes_no + 1, expected_sizes);
+	EXPECT_SIZES(getpagesizes, 3, fakes_no + 1, expected_sizes);
+	EXPECT_SIZES(getpagesizes, 4, fakes_no + 1, expected_sizes);
+	EXPECT_SIZES(getpagesizes, 5, fakes_no + 1, expected_sizes);
 
 	/* ... we can check how many sizes are supported. */
-	if (gethugepagesizes(NULL, 0) != 3)
+	if (gethugepagesizes(NULL, 0) != fakes_no)
 		FAIL("Unable to check the number of supported sizes");
 
-	if (getpagesizes(NULL, 0) != 4)
+	if (getpagesizes(NULL, 0) != fakes_no + 1)
 		FAIL("Unable to check the number of supported sizes");
 
 	PASS();
