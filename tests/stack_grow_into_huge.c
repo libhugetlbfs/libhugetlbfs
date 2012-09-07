@@ -56,7 +56,17 @@
 
 void do_child(void *stop_address)
 {
+	struct rlimit r;
 	volatile int *x;
+
+	/* corefile from this process is not interesting and limiting
+	 * its size can save a lot of time. '1' is a special value,
+	 * that will also abort dumping via pipe, which by default
+	 * sets limit to RLIM_INFINITY. */
+	r.rlim_cur = 1;
+	r.rlim_max = 1;
+	setrlimit(RLIMIT_CORE, &r);
+
 	do {
 		x = alloca(STACK_ALLOCATION_SIZE);
 		*x = 1;
