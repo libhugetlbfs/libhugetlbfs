@@ -1,3 +1,16 @@
+libhugetlbfs 2.13 "The White Album"
+======================================================================
+New Features
+* Updated man pages
+* Added basic events for core_i7 to oprofile_map_events
+
+Bug Fixes
+* Fix clean on failure code to avoid closing stdout
+
+Test Suite
+* Fixed readahead, malloc, and hugepagesizes tests
+* Avoid core dumps on stack_grow_into_huge test
+
 libhugetlbfs 2.13 "Insert Clever Title Here"
 ======================================================================
 New Features
