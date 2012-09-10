@@ -30,13 +30,62 @@
 
 #define RANDOM_CONSTANT	0x1234ABCD
 
+unsigned long slice_boundary;
+long hpage_size, page_size;
+
+void init_slice_boundary(int fd)
+{
+	unsigned long slice_size;
+	void *p1, *p2, *heap;
+	int slices_ok, i, rc;
 #ifdef __LP64__
-#define SLICE_BOUNDARY 0x20000000000
+	/* powerpc: 1TB slices starting at 1 TB */
+	slice_boundary = 0x10000000000;
+	slice_size = 0x10000000000;
 #else
-#define SLICE_BOUNDARY 0xe0000000
+	/* powerpc: 256MB slices up to 4GB */
+	slice_boundary = 0x00000000;
+	slice_size = 0x10000000;
 #endif
 
-long hpage_size, page_size;
+	/* dummy malloc so we know where is heap */
+	heap = malloc(1);
+	free(heap);
+
+	/* find 2 neighbour slices, which are both free,
+	 * 16 is the maximum number of slices (low/high) */
+	for (i = 0; i < 16-1; i++) {
+		slices_ok = 0;
+		p1 = mmap((void *)slice_boundary, hpage_size,
+			PROT_READ, MAP_SHARED | MAP_FIXED, fd, 0);
+		p2 = mmap((void *)(slice_boundary+slice_size), hpage_size,
+			PROT_READ, MAP_SHARED | MAP_FIXED, fd, 0);
+
+		if (p1 != MAP_FAILED) {
+			slices_ok++;
+			rc = munmap(p1, hpage_size);
+			if (rc != 0)
+				FAIL("munmap(p1): %s", strerror(errno));
+		}
+		if (p2 != MAP_FAILED) {
+			slices_ok++;
+			rc = munmap(p2, hpage_size);
+			if (rc != 0)
+				FAIL("munmap(p2): %s", strerror(errno));
+		}
+
+		slice_boundary += slice_size;
+		if (slices_ok == 2)
+			break;
+		else
+			verbose_printf("can't use slice_boundary: 0x%lx\n",
+				slice_boundary);
+	}
+
+	if (slices_ok != 2)
+		FAIL("couldn't find 2 free neighbour slices");
+	verbose_printf("using slice_boundary: 0x%lx\n", slice_boundary);
+}
 
 void do_readback(void *p, size_t size, const char *stage)
 {
@@ -102,9 +151,10 @@ int main(int argc, char *argv[])
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)
 		FAIL("hugetlbfs_unlinked_fd()");
+	init_slice_boundary(fd);
 
 	/* First, hugepages above, normal below */
-	p = mmap((void *)(SLICE_BOUNDARY + hpage_size), hpage_size,
+	p = mmap((void *)(slice_boundary + hpage_size), hpage_size,
 		 PROT_READ | PROT_WRITE,
 		 MAP_SHARED | MAP_FIXED, fd, 0);
 	if (p == MAP_FAILED)
@@ -112,7 +162,7 @@ int main(int argc, char *argv[])
 
 	do_readback(p, hpage_size, "huge above");
 
-	q = mmap((void *)(SLICE_BOUNDARY - page_size), page_size,
+	q = mmap((void *)(slice_boundary - page_size), page_size,
 		 PROT_READ | PROT_WRITE,
 		 MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
 	if (q == MAP_FAILED)
@@ -144,7 +194,7 @@ int main(int argc, char *argv[])
 		FAIL("munmap(huge above)");
 
 	/* Next, normal pages above, huge below */
-	p = mmap((void *)(SLICE_BOUNDARY + hpage_size), page_size,
+	p = mmap((void *)(slice_boundary + hpage_size), page_size,
 		 PROT_READ|PROT_WRITE,
 		 MAP_SHARED | MAP_FIXED | MAP_ANONYMOUS, -1, 0);
 	if (p == MAP_FAILED)
@@ -152,7 +202,7 @@ int main(int argc, char *argv[])
 
 	do_readback(p, page_size, "normal above");
 
-	q = mmap((void *)(SLICE_BOUNDARY - hpage_size),
+	q = mmap((void *)(slice_boundary - hpage_size),
 		 hpage_size, PROT_READ | PROT_WRITE,
 		 MAP_SHARED | MAP_FIXED, fd, 0);
 	if (q == MAP_FAILED)
