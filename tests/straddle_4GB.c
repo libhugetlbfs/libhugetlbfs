@@ -80,8 +80,17 @@ int main(int argc, char *argv[])
 	verbose_printf("Mapping with MAP_FIXED at %lx...", straddle_addr);
 	p = mmap((void *)straddle_addr, 2*hpage_size, PROT_READ|PROT_WRITE,
 		 MAP_SHARED|MAP_FIXED, fd, 0);
-	if (p == MAP_FAILED)
-		FAIL("mmap() FIXED: %s", strerror(errno));
+	if (p == MAP_FAILED) {
+		/* this area crosses last low slice and first high slice */
+		unsigned long below_start = FOURGB - 256L*1024*1024;
+		unsigned long above_end = 1024L*1024*1024*1024;
+		if (range_is_mapped(below_start, above_end) == 1) {
+			verbose_printf("region (4G-256M)-1T is not free\n");
+			verbose_printf("mmap() failed: %s\n", strerror(errno));
+			PASS_INCONCLUSIVE();
+		} else
+			FAIL("mmap() FIXED failed: %s\n", strerror(errno));
+	}
 	if (p != (void *)straddle_addr) {
 		verbose_printf("got %p instead\n", p);
 		FAIL("Wrong address with MAP_FIXED");

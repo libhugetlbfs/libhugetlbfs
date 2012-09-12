@@ -162,6 +162,49 @@ static int read_maps(unsigned long addr, char *buf)
 	return 0;
 }
 
+int range_is_mapped(unsigned long low, unsigned long high)
+{
+	FILE *f;
+	char line[MAPS_BUF_SZ];
+	char *tmp;
+
+	f = fopen("/proc/self/maps", "r");
+	if (!f) {
+		ERROR("Failed to open /proc/self/maps: %s\n", strerror(errno));
+		return -1;
+	}
+
+	while (1) {
+		unsigned long start, end;
+		int ret;
+
+		tmp = fgets(line, MAPS_BUF_SZ, f);
+		if (!tmp)
+			break;
+
+		ret = sscanf(line, "%lx-%lx", &start, &end);
+		if (ret != 2) {
+			ERROR("Couldn't parse /proc/self/maps line: %s\n",
+			      line);
+			fclose(f);
+			return -1;
+		}
+
+		if ((start >= low) && (start < high)) {
+			fclose(f);
+			return 1;
+		}
+		if ((end >= low) && (end < high)) {
+			fclose(f);
+			return 1;
+		}
+
+	}
+
+	fclose(f);
+	return 0;
+}
+
 /* malloc memory one byte at a time until:
  * - max limit is reached
  * - malloc-ed memory is no longer on heap

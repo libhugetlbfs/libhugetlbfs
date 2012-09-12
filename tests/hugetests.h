@@ -49,6 +49,7 @@ unsigned long long get_mapping_page_size(void *p);
 long read_meminfo(const char *tag);
 ino_t get_addr_inode(void *p);
 int consume_heap(long max);
+int range_is_mapped(unsigned long low, unsigned long high);
 
 #define ALIGN(x, a)	(((x) + (a) - 1) & ~((a) - 1))
 #define PALIGN(p, a)	((void *)ALIGN((unsigned long)(p), (a)))

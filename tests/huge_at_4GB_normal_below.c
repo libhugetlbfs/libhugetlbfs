@@ -66,8 +66,17 @@ int main(int argc, char *argv[])
 
 	p = mmap((void *)FOURGB, hpage_size, PROT_READ|PROT_WRITE,
 		 MAP_SHARED | MAP_FIXED, fd, 0);
-	if (p == MAP_FAILED)
-		FAIL("mmap() huge: %s", strerror(errno));
+	if (p == MAP_FAILED) {
+		/* slice 0 (high) spans from 4G-1T */
+		unsigned long below_start = FOURGB;
+		unsigned long above_end = 1024L*1024*1024*1024;
+		if (range_is_mapped(below_start, above_end) == 1) {
+			verbose_printf("region 4G-1T is not free\n");
+			verbose_printf("mmap() failed: %s\n", strerror(errno));
+			PASS_INCONCLUSIVE();
+		} else
+			FAIL("mmap() huge: %s\n", strerror(errno));
+	}
 	if (p != (void *)FOURGB)
 		FAIL("Wrong address with MAP_FIXED huge");
 
@@ -83,8 +92,16 @@ int main(int argc, char *argv[])
 	lowaddr = FOURGB - page_size;
 	q = mmap((void *)lowaddr, page_size, PROT_READ|PROT_WRITE,
 		 MAP_SHARED|MAP_FIXED|MAP_ANONYMOUS, 0, 0);
-	if (q == MAP_FAILED)
-		FAIL("mmap() normal: %s", strerror(errno));
+	if (p == MAP_FAILED) {
+		unsigned long below_start = FOURGB - page_size;
+		unsigned long above_end = FOURGB;
+		if (range_is_mapped(below_start, above_end) == 1) {
+			verbose_printf("region (4G-page)-4G is not free\n");
+			verbose_printf("mmap() failed: %s\n", strerror(errno));
+			PASS_INCONCLUSIVE();
+		} else
+			FAIL("mmap() normal: %s\n", strerror(errno));
+	}
 	if (q != (void *)lowaddr)
 		FAIL("Wrong address with MAP_FIXED normal");
 

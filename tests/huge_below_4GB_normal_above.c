@@ -72,8 +72,17 @@ int main(int argc, char *argv[])
 	verbose_printf("Mapping hugepage at at %lx...", lowaddr);
 	p = mmap((void *)lowaddr, hpage_size, PROT_READ|PROT_WRITE,
 		 MAP_SHARED|MAP_FIXED, fd, 0);
-	if (p == MAP_FAILED)
-		FAIL("mmap() huge: %s", strerror(errno));
+	if (p == MAP_FAILED) {
+		/* This is last low slice - 256M just before 4G */
+		unsigned long below_start = FOURGB - 256L*1024*1024;
+		unsigned long above_end = FOURGB;
+		if (range_is_mapped(below_start, above_end) == 1) {
+			verbose_printf("region (4G-256M)-4G is not free\n");
+			verbose_printf("mmap() failed: %s\n", strerror(errno));
+			PASS_INCONCLUSIVE();
+		} else
+			FAIL("mmap() huge: %s\n", strerror(errno));
+	}
 	if (p != (void *)lowaddr)
 		FAIL("Wrong address with MAP_FIXED huge");
 	verbose_printf("done\n");
@@ -89,8 +98,16 @@ int main(int argc, char *argv[])
 	verbose_printf("Mapping normal page at %lx...", highaddr);
 	q = mmap((void *)highaddr, page_size, PROT_READ|PROT_WRITE,
 		 MAP_SHARED|MAP_FIXED|MAP_ANONYMOUS, 0, 0);
-	if (q == MAP_FAILED)
-		FAIL("mmap() normal 1: %s", strerror(errno));
+	if (p == MAP_FAILED) {
+		unsigned long below_start = FOURGB;
+		unsigned long above_end = FOURGB + page_size;
+		if (range_is_mapped(below_start, above_end) == 1) {
+			verbose_printf("region 4G-(4G+page) is not free\n");
+			verbose_printf("mmap() failed: %s\n", strerror(errno));
+			PASS_INCONCLUSIVE();
+		} else
+			FAIL("mmap() normal 1: %s\n", strerror(errno));
+	}
 	if (q != (void *)highaddr)
 		FAIL("Wrong address with MAP_FIXED normal 2");
 	verbose_printf("done\n");
@@ -105,8 +122,16 @@ int main(int argc, char *argv[])
 	verbose_printf("Mapping normal page at %lx...", highaddr);
 	q = mmap((void *)highaddr, page_size, PROT_READ|PROT_WRITE,
 		 MAP_SHARED|MAP_FIXED|MAP_ANONYMOUS, 0, 0);
-	if (q == MAP_FAILED)
-		FAIL("mmap() normal 2: %s", strerror(errno));
+	if (p == MAP_FAILED) {
+		unsigned long below_start = highaddr;
+		unsigned long above_end = highaddr + page_size;
+		if (range_is_mapped(below_start, above_end) == 1) {
+			verbose_printf("region haddr-(haddr+page) not free\n");
+			verbose_printf("mmap() failed: %s\n", strerror(errno));
+			PASS_INCONCLUSIVE();
+		} else
+			FAIL("mmap() normal 2: %s\n", strerror(errno));
+	}
 	if (q != (void *)highaddr)
 		FAIL("Wrong address with MAP_FIXED normal 2");
 	verbose_printf("done\n");
