@@ -13,8 +13,10 @@ LIB_TESTS = gethugepagesize test_root find_path unlinked_fd misalign \
 	shm-perms \
 	mremap-expand-slice-collision \
 	mremap-fixed-normal-near-huge mremap-fixed-huge-near-normal
-LIB_TESTS_64 = straddle_4GB huge_at_4GB_normal_below \
+LIB_TESTS_64 =
+LIB_TESTS_64_STATIC = straddle_4GB huge_at_4GB_normal_below \
 	huge_below_4GB_normal_above
+LIB_TESTS_64_ALL = $(LIB_TESTS_64) $(LIB_TESTS_64_STATIC)
 NOLIB_TESTS = malloc malloc_manysmall dummy heapshrink shmoverride_unlinked
 LDSCRIPT_TESTS = zero_filesize_segment
 HUGELINK_TESTS = linkhuge linkhuge_nofd linkshare
@@ -50,6 +52,7 @@ endif
 
 ifneq ($(ARCH),ia64)
 TESTS_64 = $(LIB_TESTS_64)
+TESTS_64_STATIC = $(LIB_TESTS_64_STATIC)
 endif
 
 SCRIPTS=../ldscripts
@@ -74,6 +77,7 @@ ALLHELPERS = $(foreach DIR,$(OBJDIRS),$(HELPERS:%=$(DIR)/%))
 ALLHELPERLIBS = $(foreach DIR,$(OBJDIRS),$(HELPER_LIBS:%=$(DIR)/%))
 ifdef CC64
 ALLTESTS += $(TESTS_64:%=obj64/%)
+ALLTESTS += $(TESTS_64_STATIC:%=obj64/%_static)
 endif
 
 # For now, build only one test as a static binary.
@@ -134,7 +138,7 @@ $(LIB_TESTS:%=obj32/%): %: %.o obj32/testutils.o obj32/libtestutils.o
 	@$(VECHO) LD32 "(lib test)" $@
 	$(CC32) $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(LDLIBS) -lhugetlbfs
 
-$(LIB_TESTS:%=obj64/%) $(LIB_TESTS_64:%=obj64/%): %: %.o obj64/testutils.o obj64/libtestutils.o
+$(LIB_TESTS:%=obj64/%) $(LIB_TESTS_64_ALL:%=obj64/%): %: %.o obj64/testutils.o obj64/libtestutils.o
 	@$(VECHO) LD64 "(lib test)" $@
 	$(CC64) $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(LDLIBS) -lhugetlbfs
 
@@ -142,7 +146,7 @@ $(LIB_TESTS:%=obj32/%_static): %_static: %.o obj32/testutils.o obj32/libtestutil
 	@$(VECHO) LD32 "(lib test)" $@
 	$(CC32) -static $(LDFLAGS) $(LDFLAGS32) -o $@ $^ $(STATIC_LDLIBS) $(STATIC_LIBHUGE)
 
-$(LIB_TESTS:%=obj64/%_static) $(LIB_TESTS_64:%=obj64/%_static): %_static: %.o obj64/testutils.o obj64/libtestutils.o
+$(LIB_TESTS:%=obj64/%_static) $(LIB_TESTS_64_ALL:%=obj64/%_static): %_static: %.o obj64/testutils.o obj64/libtestutils.o
 	@$(VECHO) LD64 "(lib test)" $@
 	$(CC64) -static $(LDFLAGS) $(LDFLAGS64) -o $@ $^ $(STATIC_LDLIBS) $(STATIC_LIBHUGE)
 
