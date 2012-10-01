@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 
 	q = mmap((void *)(SLICE_BOUNDARY - page_size), page_size,
 		 PROT_READ | PROT_WRITE,
-		 MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+		 MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
 	if (q == MAP_FAILED)
 		FAIL("mmap(normal below): %s", strerror(errno));
 
