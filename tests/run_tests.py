@@ -377,6 +377,11 @@ def elflink_test(cmd, **env):
     do_test(cmd, **env)
     # Test we don't blow up if not linked for hugepage
     do_test(cmd, LD_PRELOAD="libhugetlbfs.so", **env)
+
+    # Only run custom ldscript tests when -l option is set
+    if not custom_ldscripts:
+        return
+
     do_elflink_test("xB." + cmd, **env)
     do_elflink_test("xBDT." + cmd, **env)
     # Test we don't blow up if HUGETLB_MINIMAL_COPY is diabled
@@ -578,9 +583,11 @@ def functional_tests():
     elflink_test("linkhuge_nofd", HUGETLB_VERBOSE="0")
     elflink_test("linkhuge")
 
-    # Original elflink sharing tests
-    elfshare_test("linkshare")
-    elflink_and_share_test("linkhuge")
+    # Only run custom ldscript tests when -l option is set
+    if custom_ldscripts:
+        # Original elflink sharing tests
+        elfshare_test("linkshare")
+        elflink_and_share_test("linkhuge")
 
     # elflink_rw tests
     elflink_rw_test("linkhuge_rw")
@@ -645,15 +652,17 @@ def stress_tests():
 
 def main():
     global wordsizes, pagesizes, dangerous, paranoid_pool_check, system_default_hpage_size
+    global custom_ldscripts
     testsets = set()
     env_override = {"QUIET_TEST": "1", "HUGETLBFS_MOUNTS": "",
                     "HUGETLB_ELFMAP": None, "HUGETLB_MORECORE": None}
     env_defaults = {"HUGETLB_VERBOSE": "0"}
     dangerous = 0
     paranoid_pool_check = False
+    custom_ldscripts = False
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "vVfdt:b:p:c")
+        opts, args = getopt.getopt(sys.argv[1:], "vVfdt:b:p:c:l")
     except getopt.GetoptError, err:
         print str(err)
         sys.exit(1)
@@ -673,6 +682,8 @@ def main():
            for p in arg.split(): pagesizes.add(int(p))
        elif opt == '-c':
            paranoid_pool_check = True
+       elif opt == '-l':
+           custom_ldscripts = True
        else:
            assert False, "unhandled option"
     if len(testsets) == 0: testsets = set(["func", "stress"])

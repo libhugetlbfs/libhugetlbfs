@@ -34,6 +34,8 @@ CPPFLAGS += -D__LIBHUGETLBFS__
 
 ARCH = $(shell uname -m | sed -e s/i.86/i386/)
 
+CUSTOM_LDSCRIPTS = yes
+
 ifeq ($(ARCH),ppc64)
 CC64 = gcc -m64
 ELF64 = elf64ppc
@@ -128,6 +130,10 @@ LIB64 = $(TMPLIB64)
 endif
 endif
 
+ifeq ($(CUSTOM_LDSCRIPTS),yes)
+TEST_LDSCRIPTS = -l
+endif
+
 # If TMPLIB64 is set, then sure we are not resolving LIB32 and LIB64 to the
 # same place
 ifdef TMPLIB64
@@ -187,6 +193,7 @@ export ELF32
 export ELF64
 export LIBDIR32
 export LIBDIR64
+export CUSTOM_LDSCRIPTS
 
 all:	libs tests tools
 
@@ -203,16 +210,16 @@ tests/%: libs
 tools:  $(foreach file,$(INSTALL_BIN),$(BIN_OBJ_DIR)/$(file))
 
 check:	all
-	cd tests; ./run_tests.py
+	cd tests; ./run_tests.py $(TEST_LDSCRIPTS)
 
 checkv:	all
-	cd tests; ./run_tests.py -vV
+	cd tests; ./run_tests.py -vV $(TEST_LDSCRIPTS)
 
 func:	all
-	cd tests; ./run_tests.py -t func
+	cd tests; ./run_tests.py -t func $(TEST_LDSCRIPTS)
 
 funcv:	all
-	cd tests; ./run_tests.py -t func -vV
+	cd tests; ./run_tests.py -t func -vV $(TEST_LDSCRIPTS)
 
 stress:	all
 	cd tests; ./run_tests.py -t stress
@@ -365,7 +372,7 @@ obj64/install:
 
 objscript.%: %
 	@$(VECHO) OBJSCRIPT $*
-	sed "s!### SET DEFAULT LDSCRIPT PATH HERE ###!HUGETLB_LDSCRIPT_PATH=$(LDSCRIPTDIR)!" < $< > $@
+	sed "s!### SET DEFAULT LDSCRIPT PATH HERE ###!HUGETLB_LDSCRIPT_PATH=$(LDSCRIPTDIR)!;s!### SET CUSTOM_LDSCRIPTS HERE ###!CUSTOM_LDSCRIPTS=\"$(CUSTOM_LDSCRIPTS)\"!" < $< > $@
 
 install-libs: libs $(OBJDIRS:%=%/install) $(INSTALL_OBJSCRIPT:%=objscript.%)
 	$(INSTALL) -d $(DESTDIR)$(HEADERDIR)
