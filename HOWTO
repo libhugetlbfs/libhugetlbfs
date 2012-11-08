@@ -43,13 +43,14 @@ Hardware prerequisites
 ----------------------
 
 You will need a CPU with some sort of hugepage support, which is
-handled by your kernel.  The covers recent x86, AMD64 and 64-bit
-PowerPC(R) (POWER4, PPC970 and later) CPUs.
+handled by your kernel.  This covers recent x86, AMD64, 64-bit
+PowerPC(R) (POWER4, PPC970 and later), and IBM System z CPUs.
 
 Currently, only x86, AMD64 and PowerPC are fully supported by
 libhugetlbfs. IA64 and Sparc64 have a working malloc, and SH64
 should also but it has not been tested. IA64, Sparc64, and SH64
-do not support segment remapping at this time.
+do not support segment remapping at this time. IBM System z supports
+malloc and also segment remapping with --hugetlbfs-align.
 
 Kernel prerequisites
 --------------------
