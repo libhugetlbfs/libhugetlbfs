@@ -67,39 +67,67 @@ static void debug_kernel_version(void)
 
 static int str_to_ver(const char *str, struct kernel_version *ver)
 {
-	int err;
-	int nr_chars;
-	char extra[4];
+	char *start;
+	char *end;
 
 	/* Clear out version struct */
 	ver->major = ver->minor = ver->release = ver->post = ver->pre = 0;
 
-	/* The kernel always starts x.y.z */
-	err = sscanf(str, "%u.%u.%u%n", &ver->major, &ver->minor, &ver->release,
-			&nr_chars);
 	/*
-	 * The sscanf man page says that %n may or may not affect the return
-	 * value so make sure it is at least 3 to cover the three kernel
-	 * version variables and assume nr_chars will be correctly assigned.
+	 * The kernel always starts x.y.z
+	 *
+	 * Note: strtol is used in place of sscanf because when heap override is
+	 * used this step happens before the _morecore replacement and sscanf
+	 * does an internal heap allocation.  This mean that the next allocation
+	 * from the heap would be on small pages until the first block allocated
+	 * by _morecore is exhausted
 	 */
-	if (err < 3) {
+	errno = 0;
+	ver->major = strtol(str, &end, 10);
+	if (!ver->major && errno == EINVAL) {
 		ERROR("Unable to determine base kernel version: %s\n",
 			strerror(errno));
 		return -1;
 	}
 
-	/* Advance the str by the number of characters indicated by sscanf */
-	str += nr_chars;
+	start = end + 1;
+	errno = 0;
+	ver->minor = strtol(start, &end, 10);
+	if (!ver->minor && errno == EINVAL) {
+		ERROR("Unable to determine base kernel version: %s\n",
+			strerror(errno));
+		return -1;
+	}
+
+	start = end + 1;
+	errno = 0;
+	ver->release = strtol(start, &end, 10);
+	if (!ver->release && errno == EINVAL) {
+		ERROR("Unable to determine base kernel version: %s\n",
+			strerror(errno));
+		return -1;
+	}
 
 	/* Try to match a post/stable version */
-	err = sscanf(str, ".%u", &ver->post);
-	if (err == 1)
-		return 0;
+	start = end + 1;
+	if (*end == '.') {
+		ver->post = strtol(start, &end, 10);
+		if (!ver->post && errno == EINVAL)
+			return 0;
+	}
 
 	/* Try to match a preN/rcN version */
-	err = sscanf(str, "-%3[^0-9]%u", extra, &ver->pre);
-	if (err != 2 || (strcmp(extra, "pre") != 0 && strcmp(extra, "rc") != 0))
-		ver->pre = 0;
+	start = end + 1;
+	if (*end == '-') {
+		if (*start == 'r' && *(start + 1) == 'c')
+			start += 2;
+		else if (*start == 'p' &&
+			 *(start + 1) == 'r' &&
+			 *(start + 2) == 'e')
+			start += 3;
+
+		ver->pre = strtol(start, &end, 10);
+	}
 
 	/*
 	 * For now we ignore any extraversions besides pre and post versions
