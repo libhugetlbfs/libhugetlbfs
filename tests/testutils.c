@@ -205,42 +205,6 @@ int range_is_mapped(unsigned long low, unsigned long high)
 	return 0;
 }
 
-/* malloc memory one byte at a time until:
- * - max limit is reached
- * - malloc-ed memory is no longer on heap
- */
-int consume_heap(long max)
-{
-	char aname[256];
-	int ret;
-	long consumed = 0;
-	void *p;
-
-	while (1) {
-		p = malloc(1);
-		if (p == NULL)
-			FAIL("Could not malloc memory");
-
-		ret = read_maps((unsigned long)p, aname);
-		if (ret <= 0)
-			FAIL("read_maps ret <= 0");
-
-		if (strstr(aname, "heap") == NULL) {
-			ret = 0;
-			break;
-		}
-
-		consumed++;
-		if (consumed > max) {
-			verbose_printf("Warning: heap unexpectedly large\n");
-			ret = 1;
-			break;
-		}
-	}
-	verbose_printf("malloc-ed %ld bytes from heap\n", consumed);
-	return ret;
-}
-
 /*
  * With the inclusion of MAP_HUGETLB it is now possible to have huge pages
  * without using hugetlbfs, so not all huge page regions will show with the

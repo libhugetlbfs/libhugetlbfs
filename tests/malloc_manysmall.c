@@ -50,9 +50,6 @@ int main(int argc, char *argv[])
 	if (env)
 		expect_hugepage = 1;
 
-	if (expect_hugepage)
-		consume_heap(1024*1024);
-
 	for (i = 0; i < NUM_ALLOCS; i++) {
 		p = malloc(ALLOC_SIZE);
 		if (! p)
