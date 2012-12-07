@@ -271,7 +271,7 @@ void setup_mappings(int count)
 
 void library_path(char *path)
 {
-	char val[NAME_MAX] = "";
+	char val[PATH_MAX] = "";
 	char *env;
 
 	env = getenv("LD_LIBRARY_PATH");
