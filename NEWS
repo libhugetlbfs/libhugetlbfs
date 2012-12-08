@@ -1,4 +1,24 @@
-libhugetlbfs 2.13 "The White Album"
+libhugetlbfs 2.15 "Minature Panda"
+======================================================================
+New Features
+* Add variable in Makefile to disable using deprecated linker scripts
+* s390 support
+
+Bug Fixes
+* Disable Unable to verify address range warning when offset < page_size
+* Remove sscanf in library setup to avoid heap allocation before _morecore
+  override
+* Revert heap exhaustion patch
+* hugectl no longer clips LD_LIBRARY_PATH variable
+
+
+Test Suite
+* Fix mremap-expand-slice-collision expanding anon shm
+* mremap-expand-slice-collision now asks kernel for availble slices
+* Make 4GB boundary tests only fail when allocation fails on free slice
+* Link 4GB test cases with --static so libraries are not placed in the way
+
+libhugetlbfs 2.14 "The White Album"
 ======================================================================
 New Features
 * Updated man pages
