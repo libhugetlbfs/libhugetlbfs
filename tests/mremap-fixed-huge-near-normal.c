@@ -87,6 +87,7 @@ void do_remap(int fd, void *target)
 void *map_align(size_t size, size_t align)
 {
 	unsigned long xsize = size + align - getpagesize();
+	size_t t;
 	void *p, *q;
 	int rc;
 
@@ -97,14 +98,19 @@ void *map_align(size_t size, size_t align)
 
 	q = PALIGN(p, align);
 
-	rc = munmap(p, q-p);
-	if (rc != 0)
-		FAIL("munmap(lower aligning): %s", strerror(errno));
+	t = q - p;
+	if (t) {
+		rc = munmap(p, t);
+		if (rc != 0)
+			FAIL("munmap(lower aligning): %s", strerror(errno));
+	}
 
-	rc = munmap(q + size, p + xsize - (q + size));
-	if (rc != 0)
-		FAIL("munmap(upper aligning): %s", strerror(errno));
-
+	t = p + xsize - (q + size);
+	if (t) {
+		rc = munmap(q + size, t);
+		if (rc != 0)
+			FAIL("munmap(upper aligning): %s", strerror(errno));
+	}
 
 	return q;
 }
