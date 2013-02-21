@@ -79,6 +79,11 @@ if [ -n "$HTLB_LINK" ]; then
     HTLB_ALIGN="" # --hugetlbfs-link overrides --hugetlbfs-align
     LDSCRIPT="$EMU.x$HTLB_LINK"
     HTLBOPTS="-T${HUGETLB_LDSCRIPT_PATH}/${LDSCRIPT}"
+
+    if [ "$EMU" == "armelf_linux_eabi" ]; then
+        echo "Please use --hugetlbfs-align when targeting ARM."
+	exit -1
+    fi
 fi
 
 MB=$((1024*1024))
@@ -86,11 +91,18 @@ case "$EMU" in
 elf32ppclinux|elf64ppc)	HPAGE_SIZE=$((16*$MB)) SLICE_SIZE=$((256*$MB)) ;;
 elf_i386|elf_x86_64)	HPAGE_SIZE=$((4*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
 elf_s390|elf64_s390)	HPAGE_SIZE=$((1*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
+armelf_linux_eabi)	HPAGE_SIZE=$((2*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
 esac
 
 if [ "$HTLB_ALIGN" == "slice" ]; then
 	HTLBOPTS="-zcommon-page-size=$SLICE_SIZE -zmax-page-size=$SLICE_SIZE"
 	HTLBOPTS="$HTLBOPTS -lhugetlbfs"
+
+	# targeting the ARM platform one needs to explicitly set the text segment offset
+	# otherwise it will be NULL.
+	if [ "$EMU" == "armelf_linux_eabi" ]; then
+		HTLBOPTS="$HTLBOPTS -Ttext-segment=$SLICE_SIZE"
+	fi
 fi
 
 ${LD} "${args[@]}" ${HTLBOPTS}

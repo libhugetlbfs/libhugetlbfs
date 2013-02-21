@@ -51,6 +51,12 @@ CC32 = gcc -m32
 ELF32 = elf32ppclinux
 TMPLIB32 = lib
 else
+ifeq ($(ARCH),armv7l)
+CC32 = gcc
+TMPLIB32 = lib
+ELF32 += armelf_linux_eabi
+CUSTOM_LDSCRIPTS = no
+else
 ifeq ($(ARCH),i386)
 CC32 = gcc
 ELF32 = elf_i386
@@ -86,6 +92,7 @@ TMPLIB32 = lib
 CUSTOM_LDSCRIPTS = no
 else
 $(error "Unrecognized architecture ($(ARCH))")
+endif
 endif
 endif
 endif
