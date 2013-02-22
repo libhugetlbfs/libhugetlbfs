@@ -52,8 +52,10 @@ static long hpage_size;
 
 static void cacheflush(void *p)
 {
-#ifdef __powerpc__
+#if defined(__powerpc__)
 	asm volatile("dcbst 0,%0; sync; icbi 0,%0; isync" : : "r"(p));
+#elif defined(__arm__)
+	__clear_cache(p, p + COPY_SIZE);
 #endif
 }
 
@@ -97,7 +99,7 @@ static void sig_handler(int signum, siginfo_t *si, void *uc)
 		}
 		FAIL("SIGILL somewhere unexpected");
 	}
-#elif defined(__i386__) || defined(__x86_64__)
+#elif defined(__i386__) || defined(__x86_64__) || defined(__arm__)
 	/* On x86, zero bytes form a valid instruction:
 	 *	add %al,(%eax)		(i386)
 	 * or	add %al,(%rax)		(x86_64)
@@ -109,7 +111,14 @@ static void sig_handler(int signum, siginfo_t *si, void *uc)
 	 * on the second, truncated page.  If [ER]AX does not contain
 	 * a valid pointer, we will SEGV on the first instruction in
 	 * the cleared page.  We check for both possibilities
-	 * below. */
+	 * below.
+	 *
+	 * On 32 bit ARM, zero bytes are interpreted as follows:
+	 * 	andeq	r0, r0, r0	(ARM state, 4 bytes)
+	 * 	movs	r0, r0		(Thumb state, 2 bytes)
+	 *
+	 * So, we only expect to run off the end of the huge page and
+	 * generate a SIGBUS. */
 	if (signum == SIGBUS) {
 		verbose_printf("SIGBUS at %p (sig_expected=%p)\n", si->si_addr,
 			       sig_expected);
@@ -120,6 +129,7 @@ static void sig_handler(int signum, siginfo_t *si, void *uc)
 		}
 		FAIL("SIGBUS somewhere unexpected");
 	}
+#if defined(__x86_64__) || defined(__i386__)
 	if (signum == SIGSEGV) {
 #ifdef __x86_64__
 		void *pc = (void *)((ucontext_t *)uc)->uc_mcontext.gregs[REG_RIP];
@@ -134,6 +144,7 @@ static void sig_handler(int signum, siginfo_t *si, void *uc)
 		}
 		FAIL("SIGSEGV somewhere unexpected");
 	}
+#endif
 #else
 #error Need to setup signal conditions for this arch
 #endif
