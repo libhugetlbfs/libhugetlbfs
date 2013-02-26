@@ -665,6 +665,7 @@ static void find_mounts(void)
 				continue;
 
 			strncpy(path, match, end - match);
+			path[end - match] = '\0';
 			if ((hugetlbfs_test_path(path) == 1) &&
 			    !(access(path, R_OK | W_OK | X_OK)))
 				add_hugetlbfs_mount(path, 0);
