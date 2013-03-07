@@ -82,6 +82,10 @@ static unsigned long find_task_size(void)
 		}
 		munmap(p, getpagesize());
 		addr += getpagesize();
+#if defined(__s390x__)
+		if (addr > (1UL << 42) && addr < (1UL << 53))
+			addr = 1UL << 53;
+#endif
 	}
 	/* addr wrapped around */
 	return 0;
