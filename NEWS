@@ -1,3 +1,16 @@
+libhugetlbfs 2.16 "Joe E. Parker"
+======================================================================
+New Features
+* ARM Support
+* s390x Dynamic TASK_SIZE support
+
+Bug Fixes
+* find_mounts() now properly NULL terminates mount point names
+
+Test Suite
+* ARM Support
+* mremap-fixed-huge-near-normal no longer calls munmap with 0 length
+
 libhugetlbfs 2.15 "Minature Panda"
 ======================================================================
 New Features
