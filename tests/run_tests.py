@@ -537,6 +537,7 @@ def functional_tests():
     do_test("task-size-overrun")
     do_test_with_rlimit(resource.RLIMIT_STACK, -1, "stack_grow_into_huge")
     do_test("corrupt-by-cow-opt")
+    do_test("noresv-preserve-resv-page")
 
     if dangerous == 1:
         do_test("readahead_reserve")

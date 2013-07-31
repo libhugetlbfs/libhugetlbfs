@@ -13,7 +13,7 @@ LIB_TESTS = gethugepagesize test_root find_path unlinked_fd misalign \
 	shm-perms \
 	mremap-expand-slice-collision \
 	mremap-fixed-normal-near-huge mremap-fixed-huge-near-normal \
-	corrupt-by-cow-opt
+	corrupt-by-cow-opt noresv-preserve-resv-page
 LIB_TESTS_64 =
 LIB_TESTS_64_STATIC = straddle_4GB huge_at_4GB_normal_below \
 	huge_below_4GB_normal_above
