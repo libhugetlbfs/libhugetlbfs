@@ -572,7 +572,7 @@ def functional_tests():
     do_test("heapshrink", LD_PRELOAD="libhugetlbfs.so libheapshrink.so",
             HUGETLB_MORECORE="yes")
     do_test("heapshrink", LD_PRELOAD="libheapshrink.so", HUGETLB_MORECORE="yes",
-            HUGETLB_MORECORE_SHRINK="es")
+            HUGETLB_MORECORE_SHRINK="yes")
     do_test("heapshrink", LD_PRELOAD="libhugetlbfs.so libheapshrink.so",
             HUGETLB_MORECORE="yes", HUGETLB_MORECORE_SHRINK="yes")
     do_test("heap-overflow", HUGETLB_VERBOSE="1", HUGETLB_MORECORE="yes")
