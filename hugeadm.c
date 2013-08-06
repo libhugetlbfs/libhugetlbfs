@@ -516,6 +516,9 @@ int mount_dir(char *path, char *options, mode_t mode, uid_t uid, gid_t gid)
 	struct group *grp;
 	struct mntent entry;
 	FILE *mounts;
+        char dummy;
+        int useMtab;
+
 	struct mount_list *list, *previous;
 
 	list = collect_active_mounts(NULL);
@@ -551,6 +554,14 @@ int mount_dir(char *path, char *options, mode_t mode, uid_t uid, gid_t gid)
 				path, strerror(errno));
 			return 1;
 		}
+
+          /* Check if mtab is a symlink */
+          useMtab = (readlink(MOUNTED, &dummy, 1) < 0);
+          if (!useMtab) {
+           /* No need updating mtab */
+              return 0;
+           }
+
 
 		mounts = setmntent(MOUNTED, "a+");
 		if (mounts) {
