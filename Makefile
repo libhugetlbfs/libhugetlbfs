@@ -33,58 +33,59 @@ CFLAGS += -Wall -fPIC
 CPPFLAGS += -D__LIBHUGETLBFS__ -DPPC_NO_SEGMENTS
 
 ARCH = $(shell uname -m | sed -e s/i.86/i386/)
+CC = gcc
 
 CUSTOM_LDSCRIPTS = yes
 
 ifeq ($(ARCH),ppc64)
-CC64 = gcc -m64
+CC64 = $(CC) -m64
 ELF64 = elf64ppc
 TMPLIB64 = lib64
 TMPLIB32 = lib
 ifneq ($(BUILDTYPE),NATIVEONLY)
-CC32 = gcc -m32
+CC32 = $(CC) -m32
 ELF32 = elf32ppclinux
 endif
 else
 ifeq ($(ARCH),ppc)
-CC32 = gcc -m32
+CC32 = $(CC) -m32
 ELF32 = elf32ppclinux
 TMPLIB32 = lib
 else
 ifeq ($(ARCH),armv7l)
-CC32 = gcc
+CC32 = $(CC)
 TMPLIB32 = lib
 ELF32 += armelf_linux_eabi
 CUSTOM_LDSCRIPTS = no
 else
 ifeq ($(ARCH),i386)
-CC32 = gcc
+CC32 = $(CC)
 ELF32 = elf_i386
 TMPLIB32 = lib
 else
 ifeq ($(ARCH),x86_64)
-CC64 = gcc -m64
+CC64 = $(CC) -m64
 ELF64 = elf_x86_64
 TMPLIB64 = lib64
 TMPLIB32 = lib
 ifneq ($(BUILDTYPE),NATIVEONLY)
-CC32 = gcc -m32
+CC32 = $(CC) -m32
 ELF32 = elf_i386
 endif
 else
 ifeq ($(ARCH),ia64)
-CC64 = gcc
+CC64 = $(CC)
 TMPLIB64 = lib64
 CFLAGS += -DNO_ELFLINK
 else
 ifeq ($(ARCH),sparc64)
-CC64 = gcc -m64
+CC64 = $(CC) -m64
 TMPLIB64 = lib64
 CFLAGS += -DNO_ELFLINK
 else
 ifeq ($(ARCH),s390x)
-CC64 = gcc -m64
-CC32 = gcc -m31
+CC64 = $(CC) -m64
+CC32 = $(CC) -m31
 ELF32 = elf_s390
 ELF64 = elf64_s390
 TMPLIB64 = lib64
