@@ -37,7 +37,7 @@ CC = gcc
 
 CUSTOM_LDSCRIPTS = yes
 
-ifeq ($(ARCH),ppc64)
+ifeq ($(ARCH),powerpc64)
 CC64 = $(CC) -m64
 ELF64 = elf64ppc
 TMPLIB64 = lib64
@@ -47,7 +47,7 @@ CC32 = $(CC) -m32
 ELF32 = elf32ppclinux
 endif
 else
-ifeq ($(ARCH),ppc)
+ifeq ($(ARCH),powerpc)
 CC32 = $(CC) -m32
 ELF32 = elf32ppclinux
 TMPLIB32 = lib
