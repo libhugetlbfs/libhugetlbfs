@@ -552,7 +552,8 @@ bail2:
 	seg->extrasz = end_orig - start;
 }
 
-#if defined(__powerpc64__) || defined (__powerpc__)
+#if defined(__powerpc64__) || \
+	(defined(__powerpc__) && !defined(PPC_NO_SEGMENTS))
 #define SLICE_LOW_TOP		(0x100000000UL)
 #define SLICE_LOW_SIZE		(1UL << SLICE_LOW_SHIFT)
 #define SLICE_HIGH_SIZE		(1UL << SLICE_HIGH_SHIFT)
@@ -574,7 +575,7 @@ static unsigned long hugetlb_slice_start(unsigned long addr)
 		return SLICE_LOW_TOP;
 	else
 		return ALIGN_DOWN(addr, SLICE_HIGH_SIZE);
-#elif defined(__powerpc__)
+#elif defined(__powerpc__) && !defined(PPC_NO_SEGMENTS)
 	return ALIGN_DOWN(addr, SLICE_LOW_SIZE);
 #else
 	return ALIGN_DOWN(addr, gethugepagesize());
@@ -588,7 +589,7 @@ static unsigned long hugetlb_slice_end(unsigned long addr)
 		return ALIGN_UP(addr, SLICE_LOW_SIZE) - 1;
 	else
 		return ALIGN_UP(addr, SLICE_HIGH_SIZE) - 1;
-#elif defined(__powerpc__)
+#elif defined(__powerpc__) && !defined(PPC_NO_SEGMENTS)
 	return ALIGN_UP(addr, SLICE_LOW_SIZE) - 1;
 #else
 	return ALIGN_UP(addr, gethugepagesize()) - 1;

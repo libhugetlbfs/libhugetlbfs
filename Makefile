@@ -30,7 +30,7 @@ INSTALL = install
 LDFLAGS += -Wl,-z,noexecstack -ldl
 CFLAGS ?= -O2 -g
 CFLAGS += -Wall -fPIC
-CPPFLAGS += -D__LIBHUGETLBFS__
+CPPFLAGS += -D__LIBHUGETLBFS__ -DPPC_NO_SEGMENTS
 
 ARCH = $(shell uname -m | sed -e s/i.86/i386/)
 

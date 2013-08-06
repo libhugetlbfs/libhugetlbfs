@@ -102,11 +102,13 @@ int main(int argc, char *argv[])
 	*qi = 0;
 
 	/* This part of the test makes the problem more obvious, but
-	 * is not essential.  It can't be done on powerpc, where
+	 * is not essential.  It can't be done on segmented powerpc, where
 	 * segment restrictions prohibit us from performing such a
 	 * mapping, so skip it there. Similarly, ia64's address space
 	 * restrictions prevent this. */
-#if !defined(__powerpc__) && !defined(__powerpc64__) && !defined(__ia64__)
+#if (defined(__powerpc__) && defined(PPC_NO_SEGMENTS)) \
+	|| !defined(__powerpc__) && !defined(__powerpc64__) \
+	&& !defined(__ia64__)
 	/* Replace middle hpage by tinypage mapping to trigger
 	 * nr_ptes BUG */
 	verbose_printf("Replacing map at %p-%p...", q + hpage_size,

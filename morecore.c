@@ -44,7 +44,7 @@ static long hugetlbfs_next_addr(long addr)
 {
 #if defined(__powerpc64__)
 	return ALIGN(addr, 1L << SLICE_HIGH_SHIFT);
-#elif defined(__powerpc__)
+#elif defined(__powerpc__) && !defined(PPC_NO_SEGMENTS)
 	return ALIGN(addr, 1L << SLICE_LOW_SHIFT);
 #elif defined(__ia64__)
 	if (addr < (1UL << SLICE_HIGH_SHIFT))

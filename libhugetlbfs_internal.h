@@ -49,7 +49,8 @@
 #define ALIGN_UP(x,a)	ALIGN(x,a)
 #define ALIGN_DOWN(x,a) ((x) & ~((a) - 1))
 
-#if defined(__powerpc64__) || defined (__powerpc__)
+#if defined(__powerpc64__) || \
+	(defined(__powerpc__) && !defined(PPC_NO_SEGMENTS))
 #define SLICE_LOW_SHIFT		28
 #define SLICE_HIGH_SHIFT	40
 #elif defined(__ia64__)
