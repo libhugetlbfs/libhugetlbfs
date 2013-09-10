@@ -213,5 +213,11 @@ int main(int argc, char *argv[])
 	test_mprotect(fd, "RW->R 1/2", 2*hpage_size, PROT_READ|PROT_WRITE,
 		      hpage_size, PROT_READ);
 
+	/* PROT_NONE tests */
+	test_mprotect(fd, "NONE->R", hpage_size, PROT_NONE,
+		      hpage_size, PROT_READ);
+	test_mprotect(fd, "NONE->RW", hpage_size, PROT_NONE,
+		      hpage_size, PROT_READ|PROT_WRITE);
+
 	PASS();
 }
