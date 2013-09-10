@@ -79,11 +79,6 @@ if [ -n "$HTLB_LINK" ]; then
     HTLB_ALIGN="" # --hugetlbfs-link overrides --hugetlbfs-align
     LDSCRIPT="$EMU.x$HTLB_LINK"
     HTLBOPTS="-T${HUGETLB_LDSCRIPT_PATH}/${LDSCRIPT}"
-
-    if [ "$EMU" == "armelf_linux_eabi" ]; then
-        echo "Please use --hugetlbfs-align when targeting ARM."
-	exit -1
-    fi
 fi
 
 MB=$((1024*1024))
