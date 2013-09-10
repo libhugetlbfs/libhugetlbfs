@@ -38,7 +38,7 @@ void init_slice_boundary(int fd)
 	unsigned long slice_size;
 	void *p1, *p2, *heap;
 	int slices_ok, i, rc;
-#ifdef __LP64__
+#if defined(__LP64__) && !defined(__aarch64__)
 	/* powerpc: 1TB slices starting at 1 TB */
 	slice_boundary = 0x10000000000;
 	slice_size = 0x10000000000;
