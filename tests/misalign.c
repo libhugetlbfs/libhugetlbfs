@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/mman.h>
+#include <sys/utsname.h>
 
 #include <hugetlbfs.h>
 
@@ -40,6 +41,11 @@
  * necessary checks for the hugepage paths.  This testcase ensures
  * that attempted hugepage mappings with parameters which are not
  * correctly hugepage aligned are rejected.
+ *
+ * However starting with 3.10-rc1, length passed in mmap() doesn't need
+ * to be aligned because commit af73e4d9506d3b797509f3c030e7dcd554f7d9c4
+ * added ALIGN() to kernel side, in mmap_pgoff(), when mapping huge page
+ * files.
  */
 int main(int argc, char *argv[])
 {
@@ -47,8 +53,12 @@ int main(int argc, char *argv[])
 	int fd;
 	void *p, *q;
 	int err;
+	struct utsname buf;
 
 	test_init(argc, argv);
+
+	if (uname(&buf) != 0)
+		FAIL("uname failed %s", strerror(errno));
 
 	page_size = getpagesize();
 	hpage_size = check_hugepagesize();
@@ -92,16 +102,30 @@ int main(int argc, char *argv[])
 
 	/* 3) Try a misaligned length */
 	q = mmap(NULL, page_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
-	if (q != MAP_FAILED)
-		FAIL("mmap() with misaligned length 0x%lx succeeded",
-		     page_size);
+
+	if (test_compare_kver(buf.release, "3.10.0") < 0) {
+		if (q != MAP_FAILED)
+			FAIL("mmap() with misaligned length 0x%lx succeeded",
+				page_size);
+	} else {
+		if (q == MAP_FAILED)
+			FAIL("mmap() with misaligned length 0x%lx failed",
+				page_size);
+	}
 
 	/* 4) Try a misaligned length with MAP_FIXED */
 	q = mmap(p, page_size, PROT_READ|PROT_WRITE,
 		 MAP_PRIVATE|MAP_FIXED, fd, 0);
-	if (q != MAP_FAILED)
-		FAIL("mmap() MAP_FIXED with misaligned length 0x%lx succeeded",
-		     page_size);
+
+	if (test_compare_kver(buf.release, "3.10.0") < 0) {
+		if (q != MAP_FAILED)
+			FAIL("mmap() MAP_FIXED with misaligned length 0x%lx "
+				"succeeded", page_size);
+	} else {
+		if (q == MAP_FAILED)
+			FAIL("mmap() MAP_FIXED with misaligned length 0x%lx "
+				"failed", page_size);
+	}
 
 	/* 5) Try a misaligned offset */
 	q = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE,
