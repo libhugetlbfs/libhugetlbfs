@@ -44,7 +44,7 @@ cpumhz() {
 	FNAME="cpu MHz"
 	FINDEX=4
 	case "`uname -m`" in
-		ppc64)
+		ppc64|ppc64le)
 			FNAME="clock"
 			FINDEX=3
 			;;
