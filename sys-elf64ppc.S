@@ -20,7 +20,7 @@
  */
 
 	.text
-
+#if _CALL_ELF != 2
 	.align	2
 	.globl	direct_syscall
 	.globl	.direct_syscall
@@ -32,6 +32,11 @@ direct_syscall:
 	.previous
 	.type	.direct_syscall,@function
 .direct_syscall:
+#else
+	.globl	direct_syscall
+	.type	direct_syscall,@function
+direct_syscall:
+#endif
 	mr	0,3
 	mr	3,4
 	mr	4,5
