@@ -51,6 +51,7 @@ ifeq ($(ARCH),ppc64le)
 CC64 = $(CC) -m64
 ELF64 = elf64lppc
 TMPLIB64 = lib64
+CUSTOM_LDSCRIPTS = no
 else
 ifeq ($(ARCH),ppc)
 CC32 = $(CC) -m32
