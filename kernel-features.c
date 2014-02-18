@@ -125,14 +125,18 @@ static int str_to_ver(const char *str, struct kernel_version *ver)
 			 *(start + 1) == 'r' &&
 			 *(start + 2) == 'e')
 			start += 3;
+		else {
+			/*
+			 * For now we ignore any extraversions besides
+			 * pre and rc versions and treat them as equal
+			 * to the base version.
+			 */
+			return 0;
+		}
 
 		ver->pre = strtol(start, &end, 10);
 	}
 
-	/*
-	 * For now we ignore any extraversions besides pre and post versions
-	 * and treat them as equal to the base version.
-	 */
 	return 0;
 }
 
