@@ -36,8 +36,8 @@ long hpage_size, page_size;
 void init_slice_boundary(int fd)
 {
 	unsigned long slice_size;
-	void *p1, *p2, *heap;
-	int slices_ok, i, rc;
+	void *p, *heap;
+	int i, rc;
 #if defined(__LP64__) && !defined(__aarch64__)
 	/* powerpc: 1TB slices starting at 1 TB */
 	slice_boundary = 0x10000000000;
@@ -52,37 +52,25 @@ void init_slice_boundary(int fd)
 	heap = malloc(1);
 	free(heap);
 
-	/* find 2 neighbour slices, which are both free,
+	/* Find 2 neighbour slices with couple huge pages free
+	 * around slice boundary.
 	 * 16 is the maximum number of slices (low/high) */
 	for (i = 0; i < 16-1; i++) {
-		slices_ok = 0;
-		p1 = mmap((void *)slice_boundary, hpage_size,
-			PROT_READ, MAP_SHARED | MAP_FIXED, fd, 0);
-		p2 = mmap((void *)(slice_boundary+slice_size), hpage_size,
-			PROT_READ, MAP_SHARED | MAP_FIXED, fd, 0);
-
-		if (p1 != MAP_FAILED) {
-			slices_ok++;
-			rc = munmap(p1, hpage_size);
-			if (rc != 0)
-				FAIL("munmap(p1): %s", strerror(errno));
-		}
-		if (p2 != MAP_FAILED) {
-			slices_ok++;
-			rc = munmap(p2, hpage_size);
-			if (rc != 0)
-				FAIL("munmap(p2): %s", strerror(errno));
-		}
-
 		slice_boundary += slice_size;
-		if (slices_ok == 2)
-			break;
-		else
+		p = mmap((void *)(slice_boundary-2*hpage_size), 4*hpage_size,
+			PROT_READ, MAP_SHARED | MAP_FIXED, fd, 0);
+		if (p == MAP_FAILED) {
 			verbose_printf("can't use slice_boundary: 0x%lx\n",
 				slice_boundary);
+		} else {
+			rc = munmap(p, 4*hpage_size);
+			if (rc != 0)
+				FAIL("munmap(p1): %s", strerror(errno));
+			break;
+		}
 	}
 
-	if (slices_ok != 2)
+	if (p == MAP_FAILED)
 		FAIL("couldn't find 2 free neighbour slices");
 	verbose_printf("using slice_boundary: 0x%lx\n", slice_boundary);
 }
