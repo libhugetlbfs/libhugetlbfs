@@ -19,6 +19,7 @@
         .text
 
         .globl  direct_syscall
+	.type	direct_syscall,%function
 direct_syscall:
 	mov     ip, sp
 	stmfd   sp!, {r4, r5, r6, r7}
