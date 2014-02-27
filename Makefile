@@ -30,7 +30,7 @@ INSTALL = install
 LDFLAGS += -Wl,-z,noexecstack -ldl
 CFLAGS ?= -O2 -g
 CFLAGS += -Wall -fPIC
-CPPFLAGS += -D__LIBHUGETLBFS__ -DPPC_NO_SEGMENTS
+CPPFLAGS += -D__LIBHUGETLBFS__
 
 ARCH = $(shell uname -m | sed -e s/i.86/i386/)
 CC = gcc
@@ -57,6 +57,7 @@ ifeq ($(ARCH),ppc)
 CC32 = $(CC) -m32
 ELF32 = elf32ppclinux
 TMPLIB32 = lib
+CPPFLAGS += -DPPC_NO_SEGMENTS
 else
 ifeq ($(ARCH),armv7l)
 CC32 = $(CC)
