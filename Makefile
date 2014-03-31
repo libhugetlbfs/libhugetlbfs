@@ -65,7 +65,7 @@ TMPLIB32 = lib
 ELF32 += armelf_linux_eabi
 CUSTOM_LDSCRIPTS = no
 else
-ifeq ($(ARCH),aarch64)
+ifneq (,$(findstring aarch64,$(ARCH)))
 CC64 = gcc
 ELF64 = aarch64elf
 TMPLIB64 = lib64
