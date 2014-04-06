@@ -1,3 +1,17 @@
+libhugetlbfs 2.18 "Infinite Corridor"
+======================================================================
+New Features
+* Add support for ppc64le
+* ARM 64 big endian support
+
+Bug Fixes
+* Reverted 3bdd9924 which broke building on PPC64
+* Fix parsing of kernel version string
+* ARM: mark direct_syscall as a FUNC
+
+Test Suite
+* mmap of huge page files with misaligned offset success treated as PASS
+
 libhugetlbfs 2.17 "Fowl and Fetus"
 ======================================================================
 New Features
