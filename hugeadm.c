@@ -557,27 +557,23 @@ int mount_dir(char *path, char *options, mode_t mode, uid_t uid, gid_t gid)
 
           /* Check if mtab is a symlink */
           useMtab = (readlink(MOUNTED, &dummy, 1) < 0);
-          if (!useMtab) {
-           /* No need updating mtab */
-              return 0;
-           }
-
-
-		mounts = setmntent(MOUNTED, "a+");
-		if (mounts) {
-			entry.mnt_fsname = FS_NAME;
-			entry.mnt_dir = path;
-			entry.mnt_type = FS_NAME;
-			entry.mnt_opts = options;
-			entry.mnt_freq = 0;
-			entry.mnt_passno = 0;
-			if (addmntent(mounts, &entry))
-				WARNING("Unable to add entry %s to %s, error: %s\n",
-					path, MOUNTED, strerror(errno));
-			endmntent(mounts);
-		} else {
-			WARNING("Unable to open %s, error: %s\n",
-				MOUNTED, strerror(errno));
+          if (useMtab) {
+			mounts = setmntent(MOUNTED, "a+");
+			if (mounts) {
+				entry.mnt_fsname = FS_NAME;
+				entry.mnt_dir = path;
+				entry.mnt_type = FS_NAME;
+				entry.mnt_opts = options;
+				entry.mnt_freq = 0;
+				entry.mnt_passno = 0;
+				if (addmntent(mounts, &entry))
+					WARNING("Unable to add entry %s to %s, error: %s\n",
+						path, MOUNTED, strerror(errno));
+				endmntent(mounts);
+			} else {
+				WARNING("Unable to open %s, error: %s\n",
+					MOUNTED, strerror(errno));
+			}
 		}
 
 		if (chown(path, uid, gid)) {
@@ -1687,7 +1683,7 @@ int main(int argc, char** argv)
 
 	if (opt_global_mounts) {
 		snprintf(base, PATH_MAX, "%s/global", MOUNT_DIR);
-		create_mounts(NULL, NULL, base, S_IRWXU | S_IRWXG | S_IRWXO);
+		create_mounts(NULL, NULL, base, S_IRWXU | S_IRWXG | S_IRWXO | S_ISVTX );
 	}
 
 	if (opt_pgsizes)
