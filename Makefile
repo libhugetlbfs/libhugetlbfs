@@ -181,9 +181,9 @@ BINDIR = $(PREFIX)/share/libhugetlbfs
 EXEDIR = $(PREFIX)/bin
 DOCDIR = $(PREFIX)/share/doc/libhugetlbfs
 ifdef CC32
-PMDIR = $(PREFIX)/lib/perl5/TLBC
+PMDIR = $(LIBDIR32)/perl5/TLBC
 else
-PMDIR = $(PREFIX)/lib64/perl5/TLBC
+PMDIR = $(LIBDIR64)/perl5/TLBC
 endif
 MANDIR1 = $(PREFIX)/share/man/man1
 MANDIR3 = $(PREFIX)/share/man/man3
