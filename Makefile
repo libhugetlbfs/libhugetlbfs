@@ -33,7 +33,7 @@ CFLAGS += -Wall -fPIC
 CPPFLAGS += -D__LIBHUGETLBFS__
 
 ARCH = $(shell uname -m | sed -e s/i.86/i386/)
-CC = gcc
+CC ?= gcc
 
 CUSTOM_LDSCRIPTS = yes
 
@@ -66,7 +66,7 @@ ELF32 += armelf_linux_eabi
 CUSTOM_LDSCRIPTS = no
 else
 ifneq (,$(findstring aarch64,$(ARCH)))
-CC64 = gcc
+CC64 = $(CC)
 ELF64 = aarch64elf
 TMPLIB64 = lib64
 CUSTOM_LDSCRIPTS = no
