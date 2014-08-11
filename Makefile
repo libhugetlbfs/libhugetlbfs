@@ -59,7 +59,7 @@ ELF32 = elf32ppclinux
 TMPLIB32 = lib
 CPPFLAGS += -DPPC_NO_SEGMENTS
 else
-ifeq ($(ARCH),armv7l)
+ifneq (,$(findstring arm,$(ARCH)))
 CC32 = $(CC)
 TMPLIB32 = lib
 ELF32 += armelf_linux_eabi
