@@ -521,9 +521,6 @@ def functional_tests():
     do_test("misalign")
 
     # Specific kernel bug tests
-    do_test("mremap-expand-slice-collision")
-    do_test("mremap-fixed-huge-near-normal")
-    do_test("mremap-fixed-normal-near-huge")
     do_test("ptrace-write-hugepage")
     do_test("icache-hygiene")
     do_test("slbpacaflush")
