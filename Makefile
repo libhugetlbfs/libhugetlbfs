@@ -98,14 +98,23 @@ CFLAGS += -DNO_ELFLINK
 else
 ifeq ($(ARCH),s390x)
 CC64 = $(CC) -m64
-CC32 = $(CC) -m31
-ELF32 = elf_s390
 ELF64 = elf64_s390
 TMPLIB64 = lib64
 TMPLIB32 = lib
 CUSTOM_LDSCRIPTS = no
+ifneq ($(BUILDTYPE),NATIVEONLY)
+CC32 = $(CC) -m31
+ELF32 = elf_s390
+endif
+else
+ifeq ($(ARCH),s390)
+CC32 = $(CC) -m31
+ELF32 = elf_s390
+TMPLIB32 = lib
+CUSTOM_LDSCRIPTS = no
 else
 $(error "Unrecognized architecture ($(ARCH))")
+endif
 endif
 endif
 endif
