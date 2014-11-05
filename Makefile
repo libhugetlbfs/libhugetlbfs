@@ -142,6 +142,9 @@ endif
 ifeq ($(ELF64),elf64ppc)
 LIBOBJS64 += obj64/$(ELF64).o
 endif
+ifeq ($(ELF64),elf64lppc)
+LIBOBJS64 += obj64/$(ELF64).o
+endif
 LIBOBJS32 += $(LIBOBJS:%=obj32/%)
 LIBOBJS64 += $(LIBOBJS:%=obj64/%)
 
