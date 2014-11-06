@@ -71,7 +71,7 @@ ELF64 = aarch64elf
 TMPLIB64 = lib64
 CUSTOM_LDSCRIPTS = no
 else
-ifeq ($(ARCH),i386)
+ifneq (,$(filter i386 i486 i586 i686,$(ARCH)))
 CC32 = $(CC)
 ELF32 = elf_i386
 TMPLIB32 = lib
