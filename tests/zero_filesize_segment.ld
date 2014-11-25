@@ -1,6 +1,6 @@
 SECTIONS
 {
-	.empty (0x20000000) : {
+	.empty (0x90000000) : {
 		__empty_segment = .;
 		. = . + 4;
 	}
