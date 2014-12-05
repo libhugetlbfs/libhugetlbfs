@@ -50,7 +50,11 @@
  * 856fc29505556cf263f3dcda2533cf3766c14ab6.
  */
 #define MAP_LENGTH	(4 * hpage_size)
-#define TRUNCATE_POINT	0x60000000UL
+#if defined(__s390__) && __WORDSIZE == 32
+#define TRUNCATE_POINT 0x20000000UL
+#else
+#define TRUNCATE_POINT 0x60000000UL
+#endif
 #define HIGH_ADDR	0xa0000000UL
 
 int main(int argc, char *argv[])
