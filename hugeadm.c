@@ -1144,6 +1144,10 @@ static long value_adjust(char *adjust_str, long base, long page_size)
 		exit(EXIT_FAILURE);
 	}
 
+	/* size_to_smaller_unit() only works with positive values */
+	if (adjust_str[0] == '-')
+		adjust = -adjust;
+
 	switch (*iter) {
 	case 'G':
 	case 'g':
@@ -1156,6 +1160,10 @@ static long value_adjust(char *adjust_str, long base, long page_size)
 		adjust = size_to_smaller_unit(adjust);
 		adjust = adjust / page_size;
 	}
+
+	/* if previously negative, make negative again */
+	if (adjust_str[0] == '-')
+		adjust = -adjust;
 
 	if (adjust_str[0] != '+' && adjust_str[0] != '-')
 		base = 0;
