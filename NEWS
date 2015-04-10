@@ -1,3 +1,14 @@
+libhugetlbfs 2.19 "Missing Longfellow Lanes"
+======================================================================
+Bug Fixes
+* Fixed hugeadm behavior when mtab is a symlink
+* fix plt_extrasz() on ppc64le
+* ARM: fix page size and text offset setup
+* Fix hugeadm handling of negative pool resize amounts
+
+Test Suite
+* remove duplicate mremap-* tests
+
 libhugetlbfs 2.18 "Infinite Corridor"
 ======================================================================
 New Features
