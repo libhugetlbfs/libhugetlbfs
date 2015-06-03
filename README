@@ -1,3 +1,23 @@
+03 June 2015  -- libhugetlbfs to find new home
+
+As part of the fall out from the recent hijacking various "unmaintained"
+projects, I no longer wish to host this (or any other) project at
+sourceforge.  Effective today, the new official home for libhugetlbfs
+code is
+
+https://github.com/libhugetlbfs/libhugetlbfs
+
+The doubling of the name is unfortunate, but I wanted the repo to belong
+to the org of the same name so there it is.
+
+Tarballs of specific releases can still be downloaded using the github
+Download ZIP button from the appropriate tag (or branch).  The mailing
+list will now hosted at librelists and can be found at
+
+libhugetlbfs@librelist.com
+
+For libhugetlbfs usage, see the HOWTO and for what has changed see NEWS
+
 10/03/2006 -- libhugetlbfs-1.0 Released
 
 After roughly one year in development, version 1.0 of libhugetlbfs is here.
