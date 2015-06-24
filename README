@@ -10,13 +10,17 @@ https://github.com/libhugetlbfs/libhugetlbfs
 The doubling of the name is unfortunate, but I wanted the repo to belong
 to the org of the same name so there it is.
 
+Please do not submit pull requests, they will be closed with a redirect
+to the mailing list (see below) at best, or ignored completely at worst.
+
 Tarballs of specific releases can still be downloaded using the github
 Download ZIP button from the appropriate tag (or branch).  The mailing
 list will now hosted at librelists and can be found at
 
 libhugetlbfs@librelist.com
 
-For libhugetlbfs usage, see the HOWTO and for what has changed see NEWS
+For libhugetlbfs usage, see the HOWTO, for what has changed see NEWS,
+and for how to work with the project see SubmittingCode
 
 10/03/2006 -- libhugetlbfs-1.0 Released
 
