@@ -481,7 +481,7 @@ static void get_extracopy(struct seg_info *seg, const Elf_Phdr *phdr, int phnum)
 	char *strtab = NULL;    /* string table for dynamic symbols */
 	int ret, numsyms, found_sym = 0;
 	void *start, *end, *end_orig;
-	void *sym_start, *sym_end;
+	void *sym_end;
 	void *plt_end;
 
 	end_orig = seg->vaddr + seg->memsz;
@@ -517,7 +517,6 @@ static void get_extracopy(struct seg_info *seg, const Elf_Phdr *phdr, int phnum)
 
 		/* These are the droids we are looking for */
 		found_sym = 1;
-		sym_start = (void *)sym->st_value;
 		sym_end = (void *)(sym->st_value + sym->st_size);
 		if (sym_end > end)
 			end = sym_end;

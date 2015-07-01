@@ -65,6 +65,11 @@ static int test_read(void *p)
 	x = *pl;
 	barrier();
 	sig_expected = MAP_FAILED;
+	/*
+	 * gcc 5 complains about x not ever being used, the following
+	 * statement is solely here to shut it up
+	 */
+	pl = (unsigned long *)x;
 
 	return 0;
 }
