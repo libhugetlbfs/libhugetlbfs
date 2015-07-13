@@ -301,14 +301,14 @@ void hugetlbfs_setup_env()
 
 	env = getenv("HUGETLB_RESTRICT_EXE");
 	if (env) {
-		char *p, *tok, *exe, buf[MAX_EXE+1], restrict[MAX_EXE];
+		char *p, *tok, *exe, buf[MAX_EXE+1], restrict_exe[MAX_EXE];
 		int found = 0;
 
 		exe = get_exe_name(buf, sizeof buf);
 		DEBUG("Found HUGETLB_RESTRICT_EXE, this exe is \"%s\"\n", exe);
-		strncpy(restrict, env, sizeof restrict);
-		restrict[sizeof(restrict)-1] = 0;
-		for (p = restrict; (tok = strtok(p, ":")) != NULL; p = NULL) {
+		strncpy(restrict_exe, env, sizeof restrict_exe);
+		restrict_exe[sizeof(restrict_exe)-1] = 0;
+		for (p = restrict_exe; (tok = strtok(p, ":")) != NULL; p = NULL) {
 			DEBUG("  ...check exe match for \"%s\"\n",  tok);
 			if (strcmp(tok, exe) == 0) {
 				found = 1;
