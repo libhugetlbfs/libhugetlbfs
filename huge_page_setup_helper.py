@@ -48,7 +48,7 @@ if memTotal == 0:
 # Pick the default huge page size and see how many pages are allocated
 poolList = os.popen("/usr/bin/hugeadm --pool-list").readlines()
 for line in poolList:
-    if line.split()[4] == '*':
+    if '*' in line:
         hugePageSize = int(line.split()[0])
         hugePages = int(line.split()[2])
         break
