@@ -31,7 +31,8 @@
 #include "hugetests.h"
 
 #define BLOCK_SIZE	16384
-#define CONST	0xdeadbeef
+#define CONST		0xdeadbeef
+#define RETURN_ADDRESS	0x0
 
 #define BIG_INIT	{ \
 	[0] = CONST, [17] = CONST, [BLOCK_SIZE-1] = CONST, \
@@ -45,13 +46,49 @@ static int big_bss[BLOCK_SIZE];
 const int small_const = CONST;
 const int big_const[BLOCK_SIZE] = BIG_INIT;
 
-static int static_func(int x)
+/*
+ * Turn function pointer into address from .text.
+ *
+ * On some ABIs function pointer may not refer to .text section. For example
+ * on powerPC 64-bit ABI, function pointer may refer to call stub from
+ * .opd section.
+ *
+ * This function expects that parameter data is a function pointer of type:
+ * long f(long), and when called with special parameter, it returns an address
+ * corresponding to actual code of the function. Current implementation relies
+ * on gcc's __builtin_return_address, see get_pc() below.
+ */
+static inline void *get_text_addr(void *data)
 {
+	long (*gettext)(long) = data;
+
+	return (void *)gettext(RETURN_ADDRESS);
+}
+
+static void __attribute__ ((noinline)) *get_pc(void)
+{
+#if defined(__s390__) && __WORDSIZE == 32
+	/* taken from sysdeps/unix/sysv/linux/s390/s390-32/profil-counter.h
+	 * 31-bit s390 pointers don't use the 32th bit, however integers do,
+	 * so wrap the value around at 31 bits */
+	return (void *)
+		((unsigned long) __builtin_return_address(0) & 0x7fffffffUL);
+#else
+	return __builtin_return_address(0);
+#endif
+}
+
+static long static_func(long x)
+{
+	if (x == RETURN_ADDRESS)
+		return (long)get_pc();
 	return x;
 }
 
-int global_func(int x)
+long global_func(long x)
 {
+	if (x == RETURN_ADDRESS)
+		return (long)get_pc();
 	return x;
 }
 
@@ -59,26 +96,27 @@ static struct test_entry {
 	const char *name;
 	void *data;
 	int size;
-	int writable, execable;
+	int writable;
+	int execable;
 	int is_huge;
 } testtab[] = {
-#define ENT(name, exec)	{ #name, (void *)&name, sizeof(name), 0, exec, }
+#define ENT(entry_name, exec) { \
+	.name = #entry_name, \
+	.data = (void *)&entry_name, \
+	.size = sizeof(entry_name), \
+	.writable = 0, \
+	.execable = exec }
+
 	ENT(small_data, 0),
 	ENT(big_data, 0),
 	ENT(small_bss, 0),
 	ENT(big_bss, 0),
 	ENT(small_const, 0),
 	ENT(big_const, 0),
-
-	/*
-	 * XXX: Due to the way functions are defined in the powerPC 64-bit ABI,
-	 * the following entries will point to a call stub in the data segment
-	 * instead of to the code as one might think.  Therefore, test coverage
-	 * is not quite as good as it could be for ppc64.
-	 */
 	ENT(static_func, 1),
 	ENT(global_func, 1),
 };
+
 
 #define NUM_TESTS	(sizeof(testtab) / sizeof(testtab[0]))
 
@@ -116,12 +154,18 @@ static void check_if_writable(struct test_entry *te)
 {
 	int pid, ret, status;
 
-
 	pid = fork();
 	if (pid < 0)
 		FAIL("fork: %s", strerror(errno));
 	else if (pid == 0) {
-		(*(char *) te->data) = 0;
+		void *data;
+
+		if (te->execable)
+			data = get_text_addr(te->data);
+		else
+			data = te->data;
+
+		(*(char *)data) = 0;
 		exit (0);
 	} else {
 		ret = waitpid(pid, &status, 0);
@@ -137,11 +181,15 @@ static void check_if_writable(struct test_entry *te)
 static void do_test(struct test_entry *te)
 {
 	int i;
-	volatile int *p = te->data;
+	void *data = te->data;
 
 	check_if_writable(te);
+	verbose_printf("entry: %s, data: %p, writable: %d\n",
+		te->name, data, te->writable);
 
 	if (te->writable) {
+		volatile int *p = data;
+
 		for (i = 0; i < (te->size / sizeof(*p)); i++)
 			p[i] = CONST ^ i;
 
@@ -151,17 +199,23 @@ static void do_test(struct test_entry *te)
 			if (p[i] != (CONST ^ i))
 				FAIL("mismatch on %s", te->name);
 	} else if (te->execable) {
-		int (*pf)(int) = te->data;
+		long (*pf)(long) = data;
+
+		data = get_text_addr(data);
 
 		if ((*pf)(CONST) != CONST)
 			FAIL("%s returns incorrect results", te->name);
 	} else {
 		/* Otherwise just read touch it */
+		volatile int *p = data;
+
 		for (i = 0; i < (te->size / sizeof(*p)); i++)
 			p[i];
 	}
 
-	te->is_huge = (test_addr_huge(te->data) == 1);
+	te->is_huge = (test_addr_huge(data) == 1);
+	verbose_printf("entry: %s, data: %p, is_huge: %d\n",
+		te->name, data, te->is_huge);
 }
 
 int main(int argc, char *argv[])
