@@ -13,7 +13,8 @@ LIB_TESTS = gethugepagesize test_root find_path unlinked_fd misalign \
 	shm-perms \
 	mremap-expand-slice-collision \
 	mremap-fixed-normal-near-huge mremap-fixed-huge-near-normal \
-	corrupt-by-cow-opt noresv-preserve-resv-page noresv-regarded-as-resv
+	corrupt-by-cow-opt noresv-preserve-resv-page noresv-regarded-as-resv \
+	fallocate_basic fallocate_align fallocate_stress
 LIB_TESTS_64 =
 LIB_TESTS_64_STATIC = straddle_4GB huge_at_4GB_normal_below \
 	huge_below_4GB_normal_above
@@ -26,7 +27,8 @@ STRESS_TESTS = mmap-gettest mmap-cow shm-gettest shm-getraw shm-fork
 # NOTE: all named tests in WRAPPERS must also be named in TESTS
 WRAPPERS = quota counters madvise_reserve fadvise_reserve \
 	readahead_reserve mremap-expand-slice-collision \
-	mremap-fixed-normal-near-huge mremap-fixed-huge-near-normal
+	mremap-fixed-normal-near-huge mremap-fixed-huge-near-normal \
+	fallocate_basic fallocate_align fallocate_stress
 HELPERS = get_hugetlbfs_path compare_kvers
 HELPER_LIBS = libheapshrink.so
 BADTOOLCHAIN = bad-toolchain.sh

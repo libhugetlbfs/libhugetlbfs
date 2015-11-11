@@ -519,6 +519,8 @@ def functional_tests():
     do_test("mprotect")
     do_test_with_rlimit(resource.RLIMIT_MEMLOCK, -1, "mlock")
     do_test("misalign")
+    do_test("fallocate_basic.sh")
+    do_test("fallocate_align.sh")
 
     # Specific kernel bug tests
     do_test("ptrace-write-hugepage")
@@ -649,6 +651,8 @@ def stress_tests():
     do_shm_test(("shm-fork", repr(threads), repr(nr_pages)), limit)
 
     do_shm_test(("shm-getraw", repr(nr_pages), "/dev/full"), limit)
+
+    do_test("fallocate_stress.sh")
 
 def main():
     global wordsizes, pagesizes, dangerous, paranoid_pool_check, system_default_hpage_size
