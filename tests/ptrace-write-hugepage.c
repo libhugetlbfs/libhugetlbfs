@@ -39,9 +39,8 @@ static volatile int ready_to_trace = 0;
 static void sigchld_handler(int signum, siginfo_t *si, void *uc)
 {
 	int status;
-	pid_t pid;
 
-	pid = wait(&status);
+	wait(&status);
 	if (WIFEXITED(status))
 		exit(WEXITSTATUS(status));
 	else if (WIFSIGNALED(status))
