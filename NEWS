@@ -1,3 +1,12 @@
+libhugetlbfs 2.20 "View Across the Charles"
+======================================================================
+Bug Fixes
+* Fix keyword collisions and warnings from GCC 5
+* hugeadm output is parsed for default size in huge_page_setup_helper
+
+Test Suite
+* fallocate tests
+
 libhugetlbfs 2.19 "Missing Longfellow Lanes"
 ======================================================================
 Bug Fixes
