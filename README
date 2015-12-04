@@ -1,3 +1,15 @@
+03 December 2015 -- Yet another mailing list move
+
+librelist seems to be dead or at least broken.  I have recieved several
+emails directly saying that patches were posted, but they never got
+responses and the archives always seem empty.  So we are moving the list
+again.  This from here on out we will be using
+
+libhugetlbfs@googlegroups.com
+
+as our mailing list.  Please send patches to this list rather than
+creating a pull request.
+
 03 June 2015  -- libhugetlbfs to find new home
 
 As part of the fall out from the recent hijacking various "unmaintained"
