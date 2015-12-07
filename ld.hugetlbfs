@@ -98,6 +98,7 @@ if [ "$HTLB_ALIGN" == "slice" ]; then
 	# otherwise it will be NULL.
 	case "$EMU" in
 	armelf*_linux_eabi)	HTLBOPTS="$HTLBOPTS -Ttext-segment=$SLICE_SIZE" ;;
+	elf_i386)		HTLBOPTS="$HTLBOPTS -Ttext-segment=0x08000000" ;;
 	esac
 fi
 
