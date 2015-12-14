@@ -20,3 +20,7 @@ direct_syscall:
 	lgr	%r5,%r6
 	svc	0
 	br	%r14
+
+#if defined(__linux__) && defined(__ELF__)
+	.section .note.GNU-stack,"",%progbits
+#endif

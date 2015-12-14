@@ -32,3 +32,7 @@ direct_syscall:
 	mov	0x8(%rsp),%r9
 	syscall
 	retq
+
+#if defined(__linux__) && defined(__ELF__)
+	.section .note.GNU-stack,"",%progbits
+#endif

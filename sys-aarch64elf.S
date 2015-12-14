@@ -32,3 +32,7 @@ direct_syscall:
 	mov	x6, x7
 	svc	0x0
 	ret
+
+#if defined(__linux__) && defined(__ELF__)
+	.section .note.GNU-stack,"",%progbits
+#endif
