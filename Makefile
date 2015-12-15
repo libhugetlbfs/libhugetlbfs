@@ -27,7 +27,7 @@ NODEPTARGETS=<version.h> <clean>
 
 INSTALL = install
 
-LDFLAGS += -Wl,-z,noexecstack -ldl
+LDFLAGS += -ldl
 CFLAGS ?= -O2 -g
 CFLAGS += -Wall -fPIC
 CPPFLAGS += -D__LIBHUGETLBFS__
