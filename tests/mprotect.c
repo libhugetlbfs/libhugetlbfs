@@ -63,6 +63,7 @@ static int test_read(void *p)
 	sig_expected = p;
 	barrier();
 	x = *pl;
+	verbose_printf("Read back %lu\n", x);
 	barrier();
 	sig_expected = MAP_FAILED;
 	/*

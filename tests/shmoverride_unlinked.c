@@ -122,7 +122,7 @@ long local_read_meminfo(const char *tag)
 	readerr = errno;
 	close(fd);
 	if (len < 0)
-		FAIL("Error reading /proc/meminfo: %s\n", strerror(errno));
+		FAIL("Error reading /proc/meminfo: %s\n", strerror(readerr));
 
 	if (len == sizeof(buf))
 		FAIL("/proc/meminfo is too large\n");

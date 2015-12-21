@@ -111,9 +111,8 @@ struct racer_info {
 static void *thread_racer(void *info)
 {
 	struct racer_info *ri = info;
-	int rc;
 
-	rc = one_racer(ri->p, ri->cpu, ri->mytrigger, ri->othertrigger);
+	one_racer(ri->p, ri->cpu, ri->mytrigger, ri->othertrigger);
 	return ri;
 }
 static void run_race(void *syncarea, int race_type)
