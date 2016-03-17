@@ -24,6 +24,7 @@
 #include <signal.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#include <linux/falloc.h>
 
 #include <hugetlbfs.h>
 

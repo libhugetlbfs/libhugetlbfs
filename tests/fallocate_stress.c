@@ -25,6 +25,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <linux/falloc.h>
 
 #include <hugetlbfs.h>
 
