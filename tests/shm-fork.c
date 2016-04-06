@@ -60,7 +60,8 @@ void cleanup(void)
 static void do_child(int thread, unsigned long size)
 {
 	volatile char *shmaddr;
-	int j, k;
+	int j;
+    unsigned long k;
 
 	verbose_printf(".");
 	for (j=0; j<5; j++) {
@@ -73,7 +74,7 @@ static void do_child(int thread, unsigned long size)
 			shmaddr[k] = (char) (k);
 		for (k=0;k<size;k++)
 			if (shmaddr[k] != (char)k)
-				CHILD_FAIL(thread, "Index %d mismatch", k);
+				CHILD_FAIL(thread, "Index %lu mismatch", k);
 
 		if (shmdt((const void *)shmaddr) != 0)
 			CHILD_FAIL(thread, "shmdt() failed: %s",
