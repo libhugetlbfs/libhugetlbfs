@@ -70,6 +70,11 @@ CC64 = $(CC)
 ELF64 = aarch64elf
 TMPLIB64 = lib64
 CUSTOM_LDSCRIPTS = no
+ifneq ($(BUILDTYPE),NATIVEONLY)
+CC32 = $(CC) -mabi=ilp32
+ELF32 = aarch64elf
+TMPLIB32 = libilp32
+endif
 else
 ifneq (,$(filter i386 i486 i586 i686,$(ARCH)))
 CC32 = $(CC)
