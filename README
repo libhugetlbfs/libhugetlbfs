@@ -73,6 +73,6 @@ If you experience problems:
 
 If the above steps do not help, send as much information about the problem
 (including all libhugetlbfs debug output) to
-libhugetlbfs-devel@lists.sourceforge.net and we'll help out as much as we
+libhugetlbfs@googlegroups.com and we'll help out as much as we
 can.  We will probably ask you to collect things like: straces,
 /proc/pid/maps and gdb back traces.
