@@ -6,6 +6,7 @@ import os
 import sys
 import getopt
 import resource
+import errno
 
 # The superset of wordsizes that should be tested (default 32, 64)
 wordsizes = set()
@@ -33,7 +34,7 @@ mounts = []
 #   The indexed value is the number of tests matching the above traits
 R = {}
 result_types = ("total", "pass", "config", "fail", "xfail", "xpass",
-                "signal", "strange", "skip")
+                "signal", "strange", "skip", "nofile")
 
 def bash(cmd):
     """
@@ -75,8 +76,8 @@ def run_test_prog(bits, pagesize, cmd, **env):
     except KeyboardInterrupt:
         # Abort and mark this a strange test result
         return (None, "")
-    except OSError:
-        return (None, "")
+    except OSError as e:
+        return (-e.errno, "")
     out = p.stdout.read().strip()
 
     if paranoid_pool_check:
@@ -167,6 +168,7 @@ def results_summary():
     print_per_size("Bad configuration", R["config"])
     print_per_size("Expected FAIL", R["xfail"])
     print_per_size("Unexpected PASS", R["xpass"])
+    print_per_size("Test not present", R["nofile"])
     print_per_size("Strange test result", R["strange"])
     print "**********"
 
@@ -327,7 +329,9 @@ def run_test(pagesize, bits, cmd, **env):
     elif rc == 2:  R["fail"][pagesize][bits] += 1
     elif rc == 3:  R["xfail"][pagesize][bits] += 1
     elif rc == 4:  R["xpass"][pagesize][bits] += 1
-    elif rc < 0: R["signal"][pagesize][bits] += 1
+    elif rc == -errno.ENOENT:
+                   R["nofile"][pagesize][bits] += 1
+    elif rc < 0:   R["signal"][pagesize][bits] += 1
     else:          R["strange"][pagesize][bits] += 1
 
 def skip_test(pagesize, bits, cmd, **env):
