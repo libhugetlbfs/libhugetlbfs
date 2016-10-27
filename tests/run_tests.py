@@ -654,6 +654,20 @@ def stress_tests():
 
     do_test("fallocate_stress.sh")
 
+def print_help():
+    print "Usage: %s [options]" % sys.argv[0]
+    print "Options:"
+    print "  -v	\t Verbose output."
+    print "  -V	\t Highly verbose output."
+    print "  -f	\t Force all tests."
+    print "  -t <set> 	 Run test set, allowed are func and stress."
+    print "  -b <wordsize>  Define wordsizes to be used. "
+    print "  -p <pagesize>  Define the page sizes to be used."
+    print "  -c	\t Do a paranoid pool check."
+    print "  -l	\t Use custom ld scripts."
+    print "  -h	\t This help."
+    sys.exit(0)
+
 def main():
     global wordsizes, pagesizes, dangerous, paranoid_pool_check, system_default_hpage_size
     global custom_ldscripts
@@ -666,7 +680,7 @@ def main():
     custom_ldscripts = False
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "vVfdt:b:p:c:l")
+        opts, args = getopt.getopt(sys.argv[1:], "vVfdt:b:p:c:lh")
     except getopt.GetoptError, err:
         print str(err)
         sys.exit(1)
@@ -688,6 +702,8 @@ def main():
            paranoid_pool_check = True
        elif opt == '-l':
            custom_ldscripts = True
+       elif opt == '-h':
+           print_help()
        else:
            assert False, "unhandled option"
     if len(testsets) == 0: testsets = set(["func", "stress"])
