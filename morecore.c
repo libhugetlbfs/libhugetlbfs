@@ -178,19 +178,36 @@ static void *hugetlbfs_morecore(ptrdiff_t increment)
 		if (ret) {
 			WARNING("Unmapping failed while shrinking heap: "
 				"%s\n", strerror(errno));
-		} else if (!__hugetlb_opts.map_hugetlb && !using_default_pagesize){
-
-			/*
-			 * Now shrink the hugetlbfs file.
-			 */
+		} else {
 			mapsize += delta;
-			ret = ftruncate(heap_fd, mapsize);
-			if (ret) {
-				WARNING("Could not truncate hugetlbfs file to "
-					"shrink heap: %s\n", strerror(errno));
+			/*
+			* the glibc assumes by default that newly allocated
+			* memory by morecore() will be zeroed.  It would be
+			* wasteful to do it for allocation so we only shrink
+			* the top by the size of a page.
+			*/
+			increment = heapbase - heaptop + mapsize;
+
+			if (!__hugetlb_opts.map_hugetlb && !using_default_pagesize){
+
+				/*
+				* Now shrink the hugetlbfs file.
+				*/
+				ret = ftruncate(heap_fd, mapsize);
+				if (ret) {
+					WARNING("Could not truncate hugetlbfs file to "
+						"shrink heap: %s\n", strerror(errno));
+				}
 			}
 		}
 
+	}
+	else if (increment < 0) {
+		/* Don't shrink by less than a page to avoid having to zero
+		 * the memory.  There is no point in lying to glibc since
+		 * we're not freeing any memory.
+		 */
+		increment = 0;
 	}
 
 	/* heap is continuous */
@@ -355,7 +372,7 @@ void hugetlbfs_setup_morecore(void)
 	/* Set some allocator options more appropriate for hugepages */
 
 	if (__hugetlb_opts.shrink_ok)
-		mallopt(M_TRIM_THRESHOLD, hpage_size / 2);
+		mallopt(M_TRIM_THRESHOLD, hpage_size + hpage_size / 2);
 	else
 		mallopt(M_TRIM_THRESHOLD, -1);
 	mallopt(M_TOP_PAD, hpage_size / 2);
