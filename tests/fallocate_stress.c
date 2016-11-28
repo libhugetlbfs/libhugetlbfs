@@ -19,6 +19,7 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
+#include <linux/falloc.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>

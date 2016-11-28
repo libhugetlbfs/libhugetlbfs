@@ -18,6 +18,7 @@
  */
 #define _GNU_SOURCE
 
+#include <linux/falloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
