@@ -409,7 +409,7 @@ def elflink_rw_test(cmd, **env):
     do_test(cmd, HUGETLB_ELFMAP="no", **env)
 
     # Test we don't blow up if HUGETLB_MINIMAL_COPY is disabled
-    do_test(cmd, HUGETLB_MINIMAL_COPY="no", HUGETLB_ELFMAP=R"", **env)
+    do_test(cmd, HUGETLB_MINIMAL_COPY="no", HUGETLB_ELFMAP="R", **env)
     do_test(cmd, HUGETLB_MINIMAL_COPY="no", HUGETLB_ELFMAP="W", **env)
     do_test(cmd, HUGETLB_MINIMAL_COPY="no", HUGETLB_ELFMAP="RW", **env)
 
