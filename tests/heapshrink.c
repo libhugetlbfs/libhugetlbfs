@@ -29,14 +29,14 @@
  * the mapping page size is larger than this.
  */
 #define MIN_PAGE_SIZE 65536
-
-#define	SIZE	(32 * 1024 * 1024)
+#define MAX(a, b) a > b ? a : b
 
 int main(int argc, char **argv)
 {
 	int is_huge, have_env, shrink_ok, have_helper;
 	unsigned long long mapping_size;
 	void *p;
+	long size = MAX(32*1024*1024, kernel_default_hugepage_size());
 
 	test_init(argc, argv);
 
@@ -45,15 +45,15 @@ int main(int argc, char **argv)
 	p = getenv("LD_PRELOAD");
 	have_helper = p != NULL && strstr(p, "heapshrink") != NULL;
 
-	p = malloc(SIZE);
+	p = malloc(size);
 	if (!p) {
 		if (shrink_ok && have_helper) {
 			/* Hitting unexpected behavior in malloc() */
 			PASS_INCONCLUSIVE();
 		} else
-			FAIL("malloc(%d) failed\n", SIZE);
+			FAIL("malloc(%ld) failed\n", size);
 	}
-	memset(p, 0, SIZE);
+	memset(p, 0, size);
 	mapping_size = get_mapping_page_size(p);
 	is_huge = (mapping_size > MIN_PAGE_SIZE);
 	if (have_env && !is_huge) {
@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 		FAIL("Heap unexpectedly on hugepages");
 
 	free(p);
-	mapping_size = get_mapping_page_size(p+SIZE-1);
+	mapping_size = get_mapping_page_size(p+size-1);
 	if (shrink_ok && mapping_size > MIN_PAGE_SIZE)
 		FAIL("Heap did not shrink");
 	PASS();
