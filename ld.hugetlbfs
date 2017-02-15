@@ -109,7 +109,10 @@ elf32ppclinux|elf64ppc)	HPAGE_SIZE=$((16*$MB)) SLICE_SIZE=$((256*$MB)) ;;
 elf64lppc)		HPAGE_SIZE=$((16*$MB)) SLICE_SIZE=$((256*$MB)) ;;
 elf_i386|elf_x86_64)	HPAGE_SIZE=$((4*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
 elf_s390|elf64_s390)	HPAGE_SIZE=$((1*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
-armelf*_linux_eabi|aarch64elf*|aarch64linux*)	HPAGE_SIZE=$((2*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
+armelf*_linux_eabi|aarch64elf*|aarch64linux*)
+	hpage_kb=$(cat /proc/meminfo  | grep Hugepagesize: | awk '{print $2}')
+	HPAGE_SIZE=$((hpage_kb * 1024))
+	SLICE_SIZE=$HPAGE_SIZE ;;
 esac
 
 if [ "$HTLB_ALIGN" == "slice" ]; then
@@ -119,7 +122,7 @@ if [ "$HTLB_ALIGN" == "slice" ]; then
 	# targeting the ARM platform one needs to explicitly set the text segment offset
 	# otherwise it will be NULL.
 	case "$EMU" in
-	armelf*_linux_eabi)	HTLBOPTS="$HTLBOPTS -Ttext-segment=$SLICE_SIZE" ;;
+	armelf*_linux_eabi|aarch64elf*|aarch64linux*)	HTLBOPTS="$HTLBOPTS -Ttext-segment=$SLICE_SIZE" ;;
 	elf_i386)		HTLBOPTS="$HTLBOPTS -Ttext-segment=0x08000000" ;;
 	esac
 fi
