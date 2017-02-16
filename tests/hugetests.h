@@ -38,11 +38,6 @@
 
 #define FOURGB (1UL << 32)
 
-#ifndef FALLOC_FL_PUNCH_HOLE
-#define FALLOC_FL_KEEP_SIZE  0x01
-#define FALLOC_FL_PUNCH_HOLE 0x02
-#endif
-
 extern int verbose_test;
 extern char *test_name;
 void check_free_huge_pages(int nr_pages_needed);
