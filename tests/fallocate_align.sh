@@ -7,8 +7,8 @@
 #
 compare_kvers `uname -r` "4.3.0"
 if [ $? -eq 1 ]; then
-	echo "FAIL no fallocate support in kernels before 4.3.0"
-	exit $RC_FAIL
+	echo "XFAIL no fallocate support in kernels before 4.3.0"
+	exit $RC_XFAIL
 else
 	EXP_RC=$RC_PASS
 	exec_and_check $EXP_RC fallocate_align "$@"
