@@ -30,7 +30,7 @@ CFLAGS ?= -O2 -g
 CFLAGS += -Wall -fPIC
 CPPFLAGS += -D__LIBHUGETLBFS__
 
-ARCH = $(shell uname -m | sed -e s/i.86/i386/)
+ARCH ?= $(shell uname -m | sed -e s/i.86/i386/)
 CC ?= gcc
 
 CUSTOM_LDSCRIPTS = yes
