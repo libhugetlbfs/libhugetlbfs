@@ -124,7 +124,11 @@ void check_remap_elf(void **elf, unsigned long *size, int wordsize)
 
 #define is_text(p) ((((p)->p_flags & (PF_R|PF_W|PF_X)) == (PF_R|PF_X)) && \
 			((p)->p_memsz == (p)->p_filesz))
+#if defined(__powerpc__) && !defined(__powerpc64__)
+#define is_data(p) (((p)->p_flags & (PF_R|PF_W|PF_X)) == (PF_R|PF_W|PF_X))
+#else
 #define is_data(p) (((p)->p_flags & (PF_R|PF_W|PF_X)) == (PF_R|PF_W))
+#endif
 
 #define update_phdrs(_BITS_) 						\
 void update_phdrs##_BITS_(Elf##_BITS_##_Ehdr *ehdr, int remap_opts)	\
