@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
 	if (q == MAP_FAILED)
 		FAIL("mmap() 2: %s", strerror(errno));
 
-	verbose_printf("Write %c to %p to steal reserved page\n", *q, q);
+	verbose_printf("Write to %p to steal reserved page\n", q);
 
 	test_write(q);
 	FAIL("Steal reserved page");
