@@ -111,7 +111,7 @@ elf_i386|elf_x86_64)	HPAGE_SIZE=$((4*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
 elf_s390|elf64_s390)	HPAGE_SIZE=$((1*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
 armelf*_linux_eabi|aarch64elf*|aarch64linux*)
 	hpage_kb=$(cat /proc/meminfo  | grep Hugepagesize: | awk '{print $2}')
-	HPAGE_SIZE=$((hpage_kb * 1024))
+	[ -z $hpage_kb ] && HPAGE_SIZE=$((2*$MB)) || HPAGE_SIZE=$((hpage_kb * 1024))
 	SLICE_SIZE=$HPAGE_SIZE ;;
 esac
 
