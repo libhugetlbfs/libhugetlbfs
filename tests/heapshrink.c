@@ -33,7 +33,7 @@
 
 int main(int argc, char **argv)
 {
-	int is_huge, have_env, shrink_ok, have_helper;
+	int is_huge, have_env, shrink_ok, have_helper, tcache_enabled;
 	unsigned long long mapping_size;
 	void *p;
 	long size = MAX(32*1024*1024, kernel_default_hugepage_size());
@@ -44,6 +44,23 @@ int main(int argc, char **argv)
 	shrink_ok = getenv("HUGETLB_MORECORE_SHRINK") != NULL;
 	p = getenv("LD_PRELOAD");
 	have_helper = p != NULL && strstr(p, "heapshrink") != NULL;
+
+	/*
+	 * After upstream commit: (glibc-2.25.90-688-gd5c3fafc43) glibc has a
+	 * new per-thread caching mechanism that will NOT allow this test to
+	 * successfully measure if heap has shrunk or not due to the fact that
+	 * heap won't have its sized reduced right away.
+	 *
+	 * In order to disable it you need to have the tunable GLIBC in place.
+	 * Unfortunately, it requires to be set before program is loaded, as an
+	 * environment variable, since we can't re-initialize malloc() from the
+	 * program context (not even with a constructor function), and the
+	 * tunable is only evaluated during malloc() initialization.
+	 *
+	 * GLIBC_TUNABLES=glibc.malloc.tcache_count=0
+	 */
+	p = getenv("GLIBC_TUNABLES");
+	tcache_enabled = p != NULL && strstr(p, "malloc.tcache_count=0");
 
 	p = malloc(size);
 	if (!p) {
@@ -68,7 +85,12 @@ int main(int argc, char **argv)
 
 	free(p);
 	mapping_size = get_mapping_page_size(p+size-1);
-	if (shrink_ok && mapping_size > MIN_PAGE_SIZE)
-		FAIL("Heap did not shrink");
+	if (shrink_ok && mapping_size > MIN_PAGE_SIZE) {
+		if (tcache_enabled)
+			FAIL("Heap did not shrink");
+		else
+			FAIL("Heap didn't shrink. Check malloc.tcache_count=0");
+	}
+
 	PASS();
 }

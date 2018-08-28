@@ -572,15 +572,42 @@ def functional_tests():
     do_test("malloc_manysmall")
     do_test("malloc_manysmall", LD_PRELOAD="libhugetlbfs.so",
             HUGETLB_MORECORE="yes")
-    do_test("heapshrink")
-    do_test("heapshrink", LD_PRELOAD="libheapshrink.so")
-    do_test("heapshrink", LD_PRELOAD="libhugetlbfs.so", HUGETLB_MORECORE="yes")
-    do_test("heapshrink", LD_PRELOAD="libhugetlbfs.so libheapshrink.so",
+
+    # After upstream commit: (glibc-2.25.90-688-gd5c3fafc43) glibc has a
+    # new per-thread caching mechanism that will NOT allow heapshrink test to
+    # successfully measure if heap has shrunk or not due to the fact that
+    # heap won't have its sized reduced right away.
+    #
+    # In order to disable it, you need to have the tunable GLIBC in place.
+    # Unfortunately, it requires to be set before program is loaded, as an
+    # environment variable, since we can't re-initialize malloc() from the
+    # program context (not even with a constructor function), and the tunable
+    # is only evaluated during malloc() initialization.
+
+    do_test("heapshrink",
+            GLIBC_TUNABLES="glibc.malloc.tcache_count=0")
+    do_test("heapshrink",
+            GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
+            LD_PRELOAD="libheapshrink.so")
+    do_test("heapshrink",
+            GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
+            LD_PRELOAD="libhugetlbfs.so",
             HUGETLB_MORECORE="yes")
-    do_test("heapshrink", LD_PRELOAD="libheapshrink.so", HUGETLB_MORECORE="yes",
+    do_test("heapshrink",
+            GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
+            LD_PRELOAD="libhugetlbfs.so libheapshrink.so",
+            HUGETLB_MORECORE="yes")
+    do_test("heapshrink",
+            GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
+            LD_PRELOAD="libheapshrink.so",
+            HUGETLB_MORECORE="yes",
             HUGETLB_MORECORE_SHRINK="yes")
-    do_test("heapshrink", LD_PRELOAD="libhugetlbfs.so libheapshrink.so",
-            HUGETLB_MORECORE="yes", HUGETLB_MORECORE_SHRINK="yes")
+    do_test("heapshrink",
+            GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
+            LD_PRELOAD="libhugetlbfs.so libheapshrink.so",
+            HUGETLB_MORECORE="yes",
+            HUGETLB_MORECORE_SHRINK="yes")
+
     do_test("heap-overflow", HUGETLB_VERBOSE="1", HUGETLB_MORECORE="yes")
 
     # Run the remapping tests' up-front checks
