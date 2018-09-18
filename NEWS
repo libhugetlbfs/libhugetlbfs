@@ -1,3 +1,16 @@
+libhugetlbfs 2.21 "The Bloor Annex"
+======================================================================
+New Features
+* Suport for 512M huge pages on aarch64
+
+Bug Fixes
+* The noexec stack markers are set directly
+* We no longer lie to glibc about shrinking the heap by less than HPAGE_SIZE
+
+Test Suite
+* No existent tests are no longer marked Killed By Signal
+* Disable malloc per-thread cache for heap shrinking tests
+
 libhugetlbfs 2.20 "View Across the Charles"
 ======================================================================
 Bug Fixes
