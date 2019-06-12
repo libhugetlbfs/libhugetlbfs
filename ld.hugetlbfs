@@ -105,8 +105,16 @@ fi
 
 MB=$((1024*1024))
 case "$EMU" in
-elf32ppclinux|elf64ppc)	HPAGE_SIZE=$((16*$MB)) SLICE_SIZE=$((256*$MB)) ;;
-elf64lppc)		HPAGE_SIZE=$((16*$MB)) SLICE_SIZE=$((256*$MB)) ;;
+elf32ppclinux)		HPAGE_SIZE=$((16*$MB)) SLICE_SIZE=$((256*$MB)) ;;
+elf64ppc|elf64lppc)
+	hpage_kb=$(cat /proc/meminfo  | grep Hugepagesize: | awk '{print $2}')
+	MMU_TYPE=$(cat /proc/cpuinfo  | grep MMU | awk '{ print $3}')
+	HPAGE_SIZE=$((hpage_kb * 1024))
+	if [ "$MMU_TYPE" == "Hash" ] ; then
+		SLICE_SIZE=$((256*$MB))
+	else
+		SLICE_SIZE=$HPAGE_SIZE
+	fi ;;
 elf_i386|elf_x86_64)	HPAGE_SIZE=$((4*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
 elf_s390|elf64_s390)	HPAGE_SIZE=$((1*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
 armelf*_linux_eabi|aarch64elf*|aarch64linux*)
@@ -124,6 +132,11 @@ if [ "$HTLB_ALIGN" == "slice" ]; then
 	case "$EMU" in
 	armelf*_linux_eabi|aarch64elf*|aarch64linux*)	HTLBOPTS="$HTLBOPTS -Ttext-segment=$SLICE_SIZE" ;;
 	elf_i386)		HTLBOPTS="$HTLBOPTS -Ttext-segment=0x08000000" ;;
+	elf64ppc|elf64lppc)
+		if [ "$MMU_TYPE" == "Hash" ] ; then
+			printf -v TEXTADDR "%x" "$SLICE_SIZE"
+			HTLBOPTS="$HTLBOPTS -Ttext-segment=$TEXTADDR"
+		fi ;;
 	esac
 fi
 
