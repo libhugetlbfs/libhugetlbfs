@@ -569,6 +569,10 @@ bail2:
  */
 static unsigned long hugetlb_slice_start(unsigned long addr)
 {
+	if (!arch_has_slice_support()) {
+		return ALIGN_DOWN(addr, gethugepagesize());
+	}
+
 #if defined(__powerpc64__)
 	if (addr < SLICE_LOW_TOP)
 		return ALIGN_DOWN(addr, SLICE_LOW_SIZE);
@@ -578,13 +582,15 @@ static unsigned long hugetlb_slice_start(unsigned long addr)
 		return ALIGN_DOWN(addr, SLICE_HIGH_SIZE);
 #elif defined(__powerpc__) && !defined(PPC_NO_SEGMENTS)
 	return ALIGN_DOWN(addr, SLICE_LOW_SIZE);
-#else
-	return ALIGN_DOWN(addr, gethugepagesize());
 #endif
 }
 
 static unsigned long hugetlb_slice_end(unsigned long addr)
 {
+	if (!arch_has_slice_support()) {
+		return ALIGN_UP(addr, gethugepagesize()) - 1;
+	}
+
 #if defined(__powerpc64__)
 	if (addr < SLICE_LOW_TOP)
 		return ALIGN_UP(addr, SLICE_LOW_SIZE) - 1;
@@ -592,8 +598,6 @@ static unsigned long hugetlb_slice_end(unsigned long addr)
 		return ALIGN_UP(addr, SLICE_HIGH_SIZE) - 1;
 #elif defined(__powerpc__) && !defined(PPC_NO_SEGMENTS)
 	return ALIGN_UP(addr, SLICE_LOW_SIZE) - 1;
-#else
-	return ALIGN_UP(addr, gethugepagesize()) - 1;
 #endif
 }
 
