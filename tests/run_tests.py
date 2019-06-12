@@ -376,10 +376,11 @@ def do_elflink_test(cmd, **env):
     """
     Run an elflink test case, skipping known-bad configurations.
     """
-    for p in pagesizes:
-        for b in wordsizes_by_pagesize[p]:
-            if b in linkhuge_wordsizes: run_test(p, b, cmd, **env)
-            else: skip_test(p, b, cmd, **env)
+    for b in wordsizes_by_pagesize[system_default_hpage_size]:
+        if b in linkhuge_wordsizes:
+            run_test(system_default_hpage_size, b, cmd, **env)
+        else:
+            skip_test(system_default_hpage_size, b, cmd, **env)
 
 def elflink_test(cmd, **env):
     """
@@ -388,9 +389,10 @@ def elflink_test(cmd, **env):
     Test various combinations of: preloading libhugetlbfs, B vs. BDT link
     modes, minimal copying on or off, and disabling segment remapping.
     """
-    do_test(cmd, **env)
+    do_test_with_pagesize(system_default_hpage_size, cmd, **env)
     # Test we don't blow up if not linked for hugepage
-    do_test(cmd, LD_PRELOAD="libhugetlbfs.so", **env)
+    do_test_with_pagesize(system_default_hpage_size, cmd,
+                          LD_PRELOAD="libhugetlbfs.so", **env)
 
     # Only run custom ldscript tests when -l option is set
     if not custom_ldscripts:
@@ -412,16 +414,23 @@ def elflink_rw_test(cmd, **env):
     Test various combinations of: remapping modes and minimal copy on or off.
     """
     # Basic tests: None, Read-only, Write-only, Read-Write, exlicit disable
-    do_test(cmd, **env)
-    do_test(cmd, HUGETLB_ELFMAP="R", **env)
-    do_test(cmd, HUGETLB_ELFMAP="W", **env)
-    do_test(cmd, HUGETLB_ELFMAP="RW", **env)
-    do_test(cmd, HUGETLB_ELFMAP="no", **env)
+    do_test_with_pagesize(system_default_hpage_size, cmd, **env)
+    do_test_with_pagesize(system_default_hpage_size, cmd,
+                          HUGETLB_ELFMAP="R", **env)
+    do_test_with_pagesize(system_default_hpage_size, cmd,
+                          HUGETLB_ELFMAP="W", **env)
+    do_test_with_pagesize(system_default_hpage_size, cmd,
+                          HUGETLB_ELFMAP="RW", **env)
+    do_test_with_pagesize(system_default_hpage_size, cmd,
+                          HUGETLB_ELFMAP="no", **env)
 
     # Test we don't blow up if HUGETLB_MINIMAL_COPY is disabled
-    do_test(cmd, HUGETLB_MINIMAL_COPY="no", HUGETLB_ELFMAP="R", **env)
-    do_test(cmd, HUGETLB_MINIMAL_COPY="no", HUGETLB_ELFMAP="W", **env)
-    do_test(cmd, HUGETLB_MINIMAL_COPY="no", HUGETLB_ELFMAP="RW", **env)
+    do_test_with_pagesize(system_default_hpage_size, cmd,
+                          HUGETLB_MINIMAL_COPY="no", HUGETLB_ELFMAP="R", **env)
+    do_test_with_pagesize(system_default_hpage_size, cmd,
+                          HUGETLB_MINIMAL_COPY="no", HUGETLB_ELFMAP="W", **env)
+    do_test_with_pagesize(system_default_hpage_size, cmd,
+                          HUGETLB_MINIMAL_COPY="no", HUGETLB_ELFMAP="RW", **env)
 
 def elfshare_test(cmd, **env):
     """
@@ -458,7 +467,9 @@ def elflink_rw_and_share_test(cmd, **env):
     clear_hpages()
     for mode in ("R", "W", "RW"):
         for i in range(2):
-            do_test(cmd, HUGETLB_ELFMAP=mode, HUGETLB_SHARE=repr(i), **env)
+            do_test_with_pagesize(system_default_hpage_size, cmd,
+                                  HUGETLB_ELFMAP=mode, HUGETLB_SHARE=repr(i),
+                                  **env)
         clear_hpages()
 
 def setup_shm_sysctl(limit):
