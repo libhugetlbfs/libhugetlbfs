@@ -374,7 +374,8 @@ static int get_shared_file_name(struct seg_info *htlb_seg_info, char *file_path)
 }
 
 /* Find the .dynamic program header */
-static int find_dynamic(Elf_Dyn **dyntab, const Elf_Phdr *phdr, int phnum)
+static int find_dynamic(Elf_Dyn **dyntab, const ElfW(Addr) addr,
+			const Elf_Phdr *phdr, int phnum)
 {
 	int i = 1;
 
@@ -382,7 +383,7 @@ static int find_dynamic(Elf_Dyn **dyntab, const Elf_Phdr *phdr, int phnum)
 		++i;
 	}
 	if (phdr[i].p_type == PT_DYNAMIC) {
-		*dyntab = (Elf_Dyn *)phdr[i].p_vaddr;
+		*dyntab = (Elf_Dyn *)(addr + phdr[i].p_vaddr);
 		return 0;
 	} else {
 		DEBUG("No dynamic segment found\n");
@@ -473,7 +474,8 @@ ElfW(Word) __attribute__ ((weak)) plt_extrasz(ElfW(Dyn) *dyntab)
  * include these initialized variables in our copy.
  */
 
-static void get_extracopy(struct seg_info *seg, const Elf_Phdr *phdr, int phnum)
+static void get_extracopy(struct seg_info *seg, const ElfW(Addr) addr,
+			  const Elf_Phdr *phdr, int phnum)
 {
 	Elf_Dyn *dyntab;        /* dynamic segment table */
 	Elf_Sym *symtab = NULL; /* dynamic symbol table */
@@ -492,7 +494,7 @@ static void get_extracopy(struct seg_info *seg, const Elf_Phdr *phdr, int phnum)
 		goto bail2;
 
 	/* Find dynamic program header */
-	ret = find_dynamic(&dyntab, phdr, phnum);
+	ret = find_dynamic(&dyntab, addr, phdr, phnum);
 	if (ret < 0)
 		goto bail;
 
@@ -608,7 +610,8 @@ static unsigned long hugetlb_prev_slice_end(unsigned long addr)
 /*
  * Store a copy of the given program header
  */
-static int save_phdr(int table_idx, int phnum, const ElfW(Phdr) *phdr)
+static int save_phdr(int table_idx, int phnum, const ElfW(Addr) addr,
+		     const ElfW(Phdr) *phdr)
 {
 	int prot = 0;
 
@@ -626,7 +629,7 @@ static int save_phdr(int table_idx, int phnum, const ElfW(Phdr) *phdr)
 	if (phdr->p_flags & PF_X)
 		prot |= PROT_EXEC;
 
-	htlb_seg_table[table_idx].vaddr = (void *) phdr->p_vaddr;
+	htlb_seg_table[table_idx].vaddr = (void *)(addr + phdr->p_vaddr);
 	htlb_seg_table[table_idx].filesz = phdr->p_filesz;
 	htlb_seg_table[table_idx].memsz = phdr->p_memsz;
 	htlb_seg_table[table_idx].prot = prot;
@@ -634,8 +637,8 @@ static int save_phdr(int table_idx, int phnum, const ElfW(Phdr) *phdr)
 
 	INFO("Segment %d (phdr %d): %#0lx-%#0lx  (filesz=%#0lx) "
 		"(prot = %#0x)\n", table_idx, phnum,
-		(unsigned long)  phdr->p_vaddr,
-		(unsigned long) phdr->p_vaddr + phdr->p_memsz,
+		(unsigned long) addr + phdr->p_vaddr,
+		(unsigned long) addr + phdr->p_vaddr + phdr->p_memsz,
 		(unsigned long) phdr->p_filesz, (unsigned int) prot);
 
 	return 0;
@@ -718,16 +721,19 @@ int parse_elf_normal(struct dl_phdr_info *info, size_t size, void *data)
 
 		seg_psize = segment_requested_page_size(&info->dlpi_phdr[i]);
 		if (seg_psize != page_size) {
-			if (save_phdr(htlb_num_segs, i, &info->dlpi_phdr[i]))
+			if (save_phdr(htlb_num_segs, i, info->dlpi_addr,
+				      &info->dlpi_phdr[i]))
 				return 1;
 			get_extracopy(&htlb_seg_table[htlb_num_segs],
-					&info->dlpi_phdr[0], info->dlpi_phnum);
+				      info->dlpi_addr, info->dlpi_phdr,
+				      info->dlpi_phnum);
 			htlb_seg_table[htlb_num_segs].page_size = seg_psize;
 			htlb_num_segs++;
 		}
-		start = ALIGN_DOWN(info->dlpi_phdr[i].p_vaddr, seg_psize);
-		end = ALIGN(info->dlpi_phdr[i].p_vaddr +
-				info->dlpi_phdr[i].p_memsz, seg_psize);
+		start = ALIGN_DOWN(info->dlpi_addr +
+				   info->dlpi_phdr[i].p_vaddr, seg_psize);
+		end = ALIGN(info->dlpi_addr + info->dlpi_phdr[i].p_vaddr +
+			    info->dlpi_phdr[i].p_memsz, seg_psize);
 
 		segments[num_segs].page_size = seg_psize;
 		segments[num_segs].start = start;
@@ -771,8 +777,9 @@ int parse_elf_partial(struct dl_phdr_info *info, size_t size, void *data)
 		 * in this forced way won't violate any contiguity
 		 * constraints.
 		 */
-		vaddr = hugetlb_next_slice_start(info->dlpi_phdr[i].p_vaddr);
-		gap = vaddr - info->dlpi_phdr[i].p_vaddr;
+		vaddr = hugetlb_next_slice_start(info->dlpi_addr +
+						 info->dlpi_phdr[i].p_vaddr);
+		gap = vaddr - (info->dlpi_addr + info->dlpi_phdr[i].p_vaddr);
 		slice_end = hugetlb_slice_end(vaddr);
 		/*
 		 * we should stop remapping just before the slice
@@ -795,7 +802,8 @@ int parse_elf_partial(struct dl_phdr_info *info, size_t size, void *data)
 		}
 		memsz = hugetlb_prev_slice_end(vaddr + memsz) - vaddr;
 
-		if (save_phdr(htlb_num_segs, i, &info->dlpi_phdr[i]))
+		if (save_phdr(htlb_num_segs, i, info->dlpi_addr,
+			      &info->dlpi_phdr[i]))
 			return 1;
 
 		/*
