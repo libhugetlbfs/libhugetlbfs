@@ -303,7 +303,7 @@ def check_linkhuge_tests():
 def print_cmd(pagesize, bits, cmd, env):
     if env:
         print(' '.join(['%s=%s' % (k, v) for k, v in env.items()]), end=" ")
-    if type(cmd) != types.StringType:
+    if not isinstance(cmd, str):
         cmd = ' '.join(cmd)
     print("%s (%s: %i):\t" % (cmd, pretty_page_size(pagesize), bits), end="")
     sys.stdout.flush()
