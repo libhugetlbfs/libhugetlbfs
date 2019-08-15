@@ -43,6 +43,7 @@ extern char *test_name;
 void check_free_huge_pages(int nr_pages_needed);
 void check_must_be_root(void);
 void check_hugetlb_shm_group(void);
+void check_online_cpus(int[], int);
 void test_init(int argc, char *argv[]);
 int test_addr_huge(void *p);
 unsigned long long get_mapping_page_size(void *p);

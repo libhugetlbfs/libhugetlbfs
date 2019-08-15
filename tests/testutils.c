@@ -33,6 +33,8 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
+#include <sys/sysinfo.h>
+#include <sys/types.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 
@@ -78,6 +80,52 @@ void check_hugetlb_shm_group(void)
 	close(fd);
 	if (hugetlb_shm_group != gid)
 		CONFIG("Do not have permission to use SHM_HUGETLB");
+}
+
+#define SYSFS_CPU_ONLINE_FMT	"/sys/devices/system/cpu/cpu%d/online"
+
+void check_online_cpus(int online_cpus[], int nr_cpus_needed)
+{
+	char cpu_state, path_buf[64];
+	int total_cpus, cpu_idx, fd, ret, i;
+
+	total_cpus = get_nprocs_conf();
+	cpu_idx = 0;
+
+	if (get_nprocs() < nr_cpus_needed)
+		CONFIG("Atleast online %d cpus are required", nr_cpus_needed);
+
+	for (i = 0; i < total_cpus && cpu_idx < nr_cpus_needed; i++) {
+		errno = 0;
+		sprintf(path_buf, SYSFS_CPU_ONLINE_FMT, i);
+		fd = open(path_buf, O_RDONLY);
+		if (fd < 0) {
+			/* If 'online' is absent, the cpu cannot be offlined */
+			if (errno == ENOENT) {
+				online_cpus[cpu_idx] = i;
+				cpu_idx++;
+				continue;
+			} else {
+				FAIL("Unable to open %s: %s", path_buf,
+				     strerror(errno));
+			}
+		}
+
+		ret = read(fd, &cpu_state, 1);
+		if (ret < 1)
+			FAIL("Unable to read %s: %s", path_buf,
+			     strerror(errno));
+
+		if (cpu_state == '1') {
+			online_cpus[cpu_idx] = i;
+			cpu_idx++;
+		}
+
+		close(fd);
+	}
+
+	if (cpu_idx < nr_cpus_needed)
+		CONFIG("Atleast %d online cpus were not found", nr_cpus_needed);
 }
 
 void  __attribute__((weak)) cleanup(void)
