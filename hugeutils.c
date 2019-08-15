@@ -800,6 +800,27 @@ int hpool_sizes(struct hpage_pool *pools, int pcnt)
 	return (which < pcnt) ? which : -1;
 }
 
+int arch_has_slice_support(void)
+{
+#ifdef __powerpc64__
+	char mmu_type[16];
+	FILE *fp;
+
+	fp = popen("cat /proc/cpuinfo | grep MMU | awk '{ print $3}'", "r");
+	if (!fp || fscanf(fp, "%s", mmu_type) < 0) {
+		ERROR("Failed to determine MMU type\n");
+		abort();
+	}
+
+	pclose(fp);
+	return strcmp(mmu_type, "Hash") == 0;
+#elif defined(__powerpc__) && !defined(PPC_NO_SEGMENTS)
+	return 1;
+#else
+	return 0;
+#endif
+}
+
 /*
  * If we have a default page size then we support hugepages.
  */

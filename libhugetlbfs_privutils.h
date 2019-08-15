@@ -53,6 +53,9 @@ int set_nr_hugepages(long pagesize, unsigned long val);
 #define set_nr_overcommit_hugepages __pu_set_nr_overcommit_hugepages
 int set_nr_overcommit_hugepages(long pagesize, unsigned long val);
 
+#define arch_has_slice_support __pu_arch_has_slice_support
+int arch_has_slice_support(void);
+
 #define kernel_has_hugepages __pu_kernel_has_hugepages
 int kernel_has_hugepages(void);
 
