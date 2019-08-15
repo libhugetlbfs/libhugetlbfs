@@ -362,6 +362,16 @@ def do_test_with_rlimit(rtype, limit, cmd, bits=None, **env):
     do_test(cmd, bits, **env)
     resource.setrlimit(rtype, oldlimit)
 
+def do_test_with_pagesize(pagesize, cmd, bits=None, **env):
+    """
+    Run a test case, testing with a specified huge page size and
+    each indicated word size.
+    """
+    if bits == None:
+        bits = wordsizes
+    for b in (set(bits) & wordsizes_by_pagesize[pagesize]):
+        run_test(pagesize, b, cmd, **env)
+
 def do_elflink_test(cmd, **env):
     """
     Run an elflink test case, skipping known-bad configurations.
@@ -563,15 +573,22 @@ def functional_tests():
     do_test("private")
     do_test("fork-cow")
     do_test("direct")
-    do_test("malloc")
-    do_test("malloc", LD_PRELOAD="libhugetlbfs.so", HUGETLB_MORECORE="yes")
-    do_test("malloc", LD_PRELOAD="libhugetlbfs.so", HUGETLB_MORECORE="yes",
-            HUGETLB_RESTRICT_EXE="unknown:none")
-    do_test("malloc", LD_PRELOAD="libhugetlbfs.so", HUGETLB_MORECORE="yes",
-            HUGETLB_RESTRICT_EXE="unknown:malloc")
-    do_test("malloc_manysmall")
-    do_test("malloc_manysmall", LD_PRELOAD="libhugetlbfs.so",
-            HUGETLB_MORECORE="yes")
+    do_test_with_pagesize(system_default_hpage_size, "malloc")
+    do_test_with_pagesize(system_default_hpage_size, "malloc",
+                          LD_PRELOAD="libhugetlbfs.so",
+                          HUGETLB_MORECORE="yes")
+    do_test_with_pagesize(system_default_hpage_size, "malloc",
+                          LD_PRELOAD="libhugetlbfs.so",
+                          HUGETLB_MORECORE="yes",
+                          HUGETLB_RESTRICT_EXE="unknown:none")
+    do_test_with_pagesize(system_default_hpage_size, "malloc",
+                          LD_PRELOAD="libhugetlbfs.so",
+                          HUGETLB_MORECORE="yes",
+                          HUGETLB_RESTRICT_EXE="unknown:malloc")
+    do_test_with_pagesize(system_default_hpage_size, "malloc_manysmall")
+    do_test_with_pagesize(system_default_hpage_size, "malloc_manysmall",
+                          LD_PRELOAD="libhugetlbfs.so",
+                          HUGETLB_MORECORE="yes")
 
     # After upstream commit: (glibc-2.25.90-688-gd5c3fafc43) glibc has a
     # new per-thread caching mechanism that will NOT allow heapshrink test to
@@ -584,29 +601,29 @@ def functional_tests():
     # program context (not even with a constructor function), and the tunable
     # is only evaluated during malloc() initialization.
 
-    do_test("heapshrink",
-            GLIBC_TUNABLES="glibc.malloc.tcache_count=0")
-    do_test("heapshrink",
-            GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
-            LD_PRELOAD="libheapshrink.so")
-    do_test("heapshrink",
-            GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
-            LD_PRELOAD="libhugetlbfs.so",
-            HUGETLB_MORECORE="yes")
-    do_test("heapshrink",
-            GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
-            LD_PRELOAD="libhugetlbfs.so libheapshrink.so",
-            HUGETLB_MORECORE="yes")
-    do_test("heapshrink",
-            GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
-            LD_PRELOAD="libheapshrink.so",
-            HUGETLB_MORECORE="yes",
-            HUGETLB_MORECORE_SHRINK="yes")
-    do_test("heapshrink",
-            GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
-            LD_PRELOAD="libhugetlbfs.so libheapshrink.so",
-            HUGETLB_MORECORE="yes",
-            HUGETLB_MORECORE_SHRINK="yes")
+    do_test_with_pagesize(system_default_hpage_size, "heapshrink",
+                          GLIBC_TUNABLES="glibc.malloc.tcache_count=0")
+    do_test_with_pagesize(system_default_hpage_size, "heapshrink",
+                          GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
+                          LD_PRELOAD="libheapshrink.so")
+    do_test_with_pagesize(system_default_hpage_size, "heapshrink",
+                          GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
+                          LD_PRELOAD="libhugetlbfs.so",
+                          HUGETLB_MORECORE="yes")
+    do_test_with_pagesize(system_default_hpage_size, "heapshrink",
+                          GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
+                          LD_PRELOAD="libhugetlbfs.so libheapshrink.so",
+                          HUGETLB_MORECORE="yes")
+    do_test_with_pagesize(system_default_hpage_size, "heapshrink",
+                          GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
+                          LD_PRELOAD="libheapshrink.so",
+                          HUGETLB_MORECORE="yes",
+                          HUGETLB_MORECORE_SHRINK="yes")
+    do_test_with_pagesize(system_default_hpage_size, "heapshrink",
+                          GLIBC_TUNABLES="glibc.malloc.tcache_count=0",
+                          LD_PRELOAD="libhugetlbfs.so libheapshrink.so",
+                          HUGETLB_MORECORE="yes",
+                          HUGETLB_MORECORE_SHRINK="yes")
 
     do_test("heap-overflow", HUGETLB_VERBOSE="1", HUGETLB_MORECORE="yes")
 
