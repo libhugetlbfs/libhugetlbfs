@@ -22,6 +22,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "libhugetlbfs_privutils.h"
 #include "libhugetlbfs_testprobes.h"
@@ -134,6 +135,24 @@ static inline long check_hugepagesize()
 			CONFIG("Hugepage size (%s)", strerror(errno));
 	}
 	return __hpage_size;
+}
+
+static inline void check_if_gigantic_page(void)
+{
+	long page_size, hpage_size, max_order;
+	FILE *fp;
+
+	page_size = sysconf(_SC_PAGESIZE);
+	hpage_size = gethugepagesize();
+	fp = popen("cat /proc/pagetypeinfo | "
+		   "awk '/Free pages count per migrate type at order/ "
+		   "{print $NF}'", "r");
+	if (!fp || fscanf(fp, "%lu", &max_order) < 0)
+		FAIL("Couldn't determine max page allocation order");
+
+	pclose(fp);
+	if (hpage_size > ((1 << max_order) * page_size))
+		CONFIG("Gigantic pages are not supported");
 }
 
 int using_system_hpage_size(const char *mount);
