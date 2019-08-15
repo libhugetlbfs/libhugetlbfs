@@ -79,6 +79,13 @@ int main(int argc, char *argv[])
 
 	page_size = getpagesize();
 	hpage_size = check_hugepagesize();
+	truncate_point = FOURGIG;
+
+	if (hpage_size > truncate_point)
+		CONFIG("Huge page size is too large");
+
+	if (truncate_point % hpage_size > 0)
+		CONFIG("Truncation point is not aligned to huge page size");
 
 	check_free_huge_pages(3);
 
@@ -86,7 +93,6 @@ int main(int argc, char *argv[])
 	if (fd < 0)
 		FAIL("hugetlbfs_unlinked_fd()");
 
-	truncate_point = FOURGIG;
 	buggy_offset = truncate_point / (hpage_size / page_size);
 	buggy_offset = ALIGN(buggy_offset, hpage_size);
 
