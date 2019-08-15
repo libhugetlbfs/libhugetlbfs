@@ -83,8 +83,18 @@ static unsigned long find_task_size(void)
 		munmap(p, getpagesize());
 		addr += getpagesize();
 #if defined(__powerpc64__)
-		if (addr > (1UL << 46) && addr < (1UL << 49))
-			addr = 1UL << 49;
+		if (addr > (1UL << 46) && addr < (1UL << 47))
+			addr = 1UL << 47;	/* 64TB */
+		else if (addr > (1UL << 47) && addr < (1UL << 48))
+			addr = 1UL << 48;	/* 128TB */
+		else if (addr > (1UL << 48) && addr < (1UL << 49))
+			addr = 1UL << 49;	/* 512TB */
+		else if (addr > (1UL << 49) && addr < (1UL << 50))
+			addr = 1UL << 50;	/* 1PB */
+		else if (addr > (1UL << 50) && addr < (1UL << 51))
+			addr = 1UL << 51;	/* 2PB */
+		else if (addr > (1UL << 51) && addr < (1UL << 52))
+			addr = 1UL << 52;	/* 4PB */
 #endif
 #if defined(__s390x__)
 		if (addr > (1UL << 42) && addr < (1UL << 53))
