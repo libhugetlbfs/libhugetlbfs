@@ -56,6 +56,7 @@
 #define TRUNCATE_POINT 0x60000000UL
 #endif
 #define HIGH_ADDR	0xa0000000UL
+#define FOURGIG		((off64_t)0x100000000ULL)
 
 int main(int argc, char *argv[])
 {
@@ -68,6 +69,12 @@ int main(int argc, char *argv[])
 	test_init(argc, argv);
 
 	hpage_size = check_hugepagesize();
+
+	if (hpage_size > TRUNCATE_POINT)
+		CONFIG("Huge page size is too large");
+
+	if (TRUNCATE_POINT % hpage_size)
+		CONFIG("Truncation point is not aligned to huge page size");
 
 	check_free_huge_pages(4);
 
