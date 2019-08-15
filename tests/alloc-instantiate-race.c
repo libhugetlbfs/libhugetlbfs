@@ -121,7 +121,9 @@ static void run_race(void *syncarea, int race_type)
 	int fd;
 	void *p;
 	int status1, status2;
-	int ret;
+	int online_cpus[2], ret;
+
+	check_online_cpus(online_cpus, 2);
 
 	memset(syncarea, 0, sizeof(*trigger1) + sizeof(*trigger2));
 	trigger1 = syncarea;
@@ -143,13 +145,13 @@ static void run_race(void *syncarea, int race_type)
 		if (child1 < 0)
 			FAIL("fork(): %s", strerror(errno));
 		if (child1 == 0)
-			proc_racer(p, 0, trigger1, trigger2);
+			proc_racer(p, online_cpus[0], trigger1, trigger2);
 
 		child2 = fork();
 		if (child2 < 0)
 			FAIL("fork(): %s", strerror(errno));
 		if (child2 == 0)
-			proc_racer(p, 1, trigger2, trigger1);
+			proc_racer(p, online_cpus[1], trigger2, trigger1);
 
 		/* wait() calls */
 		ret = waitpid(child1, &status1, 0);
@@ -175,13 +177,13 @@ static void run_race(void *syncarea, int race_type)
 	} else {
 		struct racer_info ri1 = {
 			.p = p,
-			.cpu = 0,
+			.cpu = online_cpus[0],
 			.mytrigger = trigger1,
 			.othertrigger = trigger2,
 		};
 		struct racer_info ri2 = {
 			.p = p,
-			.cpu = 1,
+			.cpu = online_cpus[1],
 			.mytrigger = trigger2,
 			.othertrigger = trigger1,
 		};
