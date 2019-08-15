@@ -57,29 +57,32 @@ int main(int argc, char *argv[])
 	int fd;
 	void *p;
 	volatile unsigned long *q;
-	int err;
+	int online_cpus[2], err;
 	cpu_set_t cpu0, cpu1;
 
 	test_init(argc, argv);
 
 	hpage_size = check_hugepagesize();
+	check_online_cpus(online_cpus, 2);
 
 	fd = hugetlbfs_unlinked_fd();
 	if (fd < 0)
 		FAIL("hugetlbfs_unlinked_fd()");
 
 	CPU_ZERO(&cpu0);
-	CPU_SET(0, &cpu0);
+	CPU_SET(online_cpus[0], &cpu0);
 	CPU_ZERO(&cpu1);
-	CPU_SET(1, &cpu1);
+	CPU_SET(online_cpus[1], &cpu1);
 
 	err = sched_setaffinity(getpid(), CPU_SETSIZE/8, &cpu0);
 	if (err != 0)
-		CONFIG("sched_setaffinity(cpu0): %s", strerror(errno));
+		CONFIG("sched_setaffinity(cpu%d): %s", online_cpus[0],
+				strerror(errno));
 
 	err = sched_setaffinity(getpid(), CPU_SETSIZE/8, &cpu1);
 	if (err != 0)
-		CONFIG("sched_setaffinity(): %s", strerror(errno));
+		CONFIG("sched_setaffinity(cpu%d): %s", online_cpus[1],
+				strerror(errno));
 
 	p = mmap(NULL, hpage_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 	if (p == MAP_FAILED)
@@ -87,7 +90,8 @@ int main(int argc, char *argv[])
 
 	err = sched_setaffinity(getpid(), CPU_SETSIZE/8, &cpu0);
 	if (err != 0)
-		CONFIG("sched_setaffinity(cpu0): %s", strerror(errno));
+		CONFIG("sched_setaffinity(cpu%d): %s", online_cpus[0],
+				strerror(errno));
 
 	q = (volatile unsigned long *)(p + getpagesize());
 	*q = 0xdeadbeef;
