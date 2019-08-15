@@ -219,17 +219,18 @@ long file_read_ulong(char *file, const char *tag)
 
 int file_write_ulong(char *file, unsigned long val)
 {
-	FILE *f;
-	int ret;
+	int fd, ret, buflen;
+	char buf[20];
 
-	f = fopen(file, "w");
-	if (!f) {
+	fd = open(file, O_WRONLY);
+	if (fd < 0) {
 		ERROR("Couldn't open %s: %s\n", file, strerror(errno));
 		return -1;
 	}
 
-	ret = fprintf(f, "%lu", val);
-	fclose(f);
+	buflen = sprintf(buf, "%lu", val);
+	ret = write(fd, buf, buflen);
+	close(fd);
 	return ret > 0 ? 0 : -1;
 }
 
