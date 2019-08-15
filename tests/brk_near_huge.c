@@ -40,6 +40,9 @@
 #ifdef __powerpc64__
 void *next_chunk(void *addr)
 {
+	if (!arch_has_slice_support())
+		return PALIGN(addr, gethugepagesize());
+
 	if ((unsigned long)addr < 0x100000000UL)
 		/* 256M segments below 4G */
 		return PALIGN(addr, 0x10000000UL);
