@@ -83,7 +83,17 @@ void verify_dynamic_pool_support(void)
 	saved_oc_hugepages = get_huge_page_counter(hpage_size, HUGEPAGES_OC);
 	if (saved_oc_hugepages < 0)
 		FAIL("Kernel appears to lack dynamic hugetlb pool support");
-	set_nr_overcommit_hugepages(hpage_size, 10);
+	if (set_nr_overcommit_hugepages(hpage_size, 10) < 0) {
+		/*
+		 * In case writing to nr_overcommit_hugepages failed with the
+		 * reason that it was an attempt to write an invalid argument,
+		 * it might be because the page size corresponds to gigantic
+		 * pages which do not support this feature.
+		 */
+		if (errno == EINVAL)
+			check_if_gigantic_page();
+		FAIL("Couldn't set overcommit limit");
+	}
 }
 
 void bad_value(int line, const char *name, long expect, long actual)
