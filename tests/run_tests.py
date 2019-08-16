@@ -172,26 +172,32 @@ def results_summary():
     print_per_size("Strange test result", R["strange"])
     print "**********"
 
-def free_hpages():
+def free_hpages(size=None):
     """
-    Return the number of free huge pages.
+    Return the number of free huge pages for a given size. If size is not
+    passed, use the default huge page size.
 
-    Parse /proc/meminfo to obtain the number of free huge pages for
-    the default page size.
-    XXX: This function is not multi-size aware yet.
+    Parse /sys/kernel/mm/hugepages/hugepages-<size-in-kB>/free_hugepages to
+    obtain the number of free huge pages for the given page size.
     """
-    (rc, out) = bash("grep 'HugePages_Free:' /proc/meminfo | cut -f2 -d:")
+    if size == None: size = system_default_hpage_size
+    size_kb = size / 1024
+    cmd = "cat /sys/kernel/mm/hugepages/hugepages-%dkB/free_hugepages" % size_kb
+    (rc, out) = bash(cmd)
     return (rc, int(out))
 
-def total_hpages():
+def total_hpages(size=None):
     """
-    Return the total number of huge pages in the pool.
+    Return the total number of huge pages in the pool for a given size. If
+    size is not passed, use the default huge page size.
 
-    Parse /proc/meminfo to obtain the number of huge pages for the default
-    page size.
-    XXX: This function is not multi-size aware yet.
+    Parse /sys/kernel/mm/hugepages/hugepages-<size-in-kB>/nr_hugepages to
+    obtain the number of huge pages for the given page size.
     """
-    (rc, out) = bash("grep 'HugePages_Total:' /proc/meminfo | cut -f2 -d:")
+    if size == None: size = system_default_hpage_size
+    size_kb = size / 1024
+    cmd = "cat /sys/kernel/mm/hugepages/hugepages-%dkB/nr_hugepages" % size_kb
+    (rc, out) = bash(cmd)
     return (rc, int(out))
 
 def hpage_size():
