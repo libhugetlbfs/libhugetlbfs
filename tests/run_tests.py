@@ -697,14 +697,19 @@ def stress_tests():
     # Don't update NRPAGES every time like above because we want to catch the
     # failures that happen when the kernel doesn't release all of the huge pages
     # after a stress test terminates
-    (rc, nr_pages) = free_hpages()
+    nr_pages = {p: free_hpages(p)[1] for p in pagesizes}
 
-    do_test(("mmap-gettest", repr(iterations), repr(nr_pages)))
+    for p in pagesizes:
+        cmd = ("mmap-gettest", repr(iterations), repr(nr_pages[p]))
+        do_test_with_pagesize(p, cmd)
 
-    # mmap-cow needs a hugepages for each thread plus one extra
-    do_test(("mmap-cow", repr(nr_pages-1), repr(nr_pages)))
+    for p in pagesizes:
+        # mmap-cow needs a hugepage for each thread plus one extra
+        cmd = ("mmap-cow", repr(nr_pages[p]-1), repr(nr_pages[p]))
+        do_test_with_pagesize(p, cmd)
 
     (rc, tot_pages) = total_hpages()
+    nr_pages = nr_pages[system_default_hpage_size]
     limit = system_default_hpage_size * tot_pages
     threads = 10	# Number of threads for shm-fork
 
