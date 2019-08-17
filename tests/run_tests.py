@@ -226,7 +226,7 @@ def clear_hpages():
     cleaned up automatically and must be removed to free up the huge pages.
     """
     for mount in mounts:
-        dir = mount + "/elflink-uid-" + `os.getuid()`
+        dir = mount + "/elflink-uid-" + repr(os.getuid())
         for root, dirs, files in os.walk(dir, topdown=False):
             for name in files:
                 os.remove(os.path.join(root, name))
@@ -497,7 +497,7 @@ def setup_shm_sysctl(limit):
         sysctls[f] = fh.read()
         fh.close()
         fh = open(f, "w")
-        fh.write(`limit`)
+        fh.write(repr(limit))
         fh.close()
     print("set shmmax limit to %s" % limit)
     return sysctls
