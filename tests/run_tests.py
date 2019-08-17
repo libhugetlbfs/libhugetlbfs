@@ -1,6 +1,7 @@
 #! /usr/bin/python2
 
 from __future__ import print_function
+from __future__ import division
 
 import subprocess
 import types
@@ -723,7 +724,7 @@ def stress_tests():
     # This is to catch off-by-ones or races in the kernel allocated that
     # can make allocating all hugepages a problem
     if nr_pages > 1:
-        do_shm_test(("shm-fork", repr(threads), repr(nr_pages / 2)), limit)
+        do_shm_test(("shm-fork", repr(threads), repr(nr_pages // 2)), limit)
     do_shm_test(("shm-fork", repr(threads), repr(nr_pages)), limit)
 
     do_shm_test(("shm-getraw", repr(nr_pages), "/dev/full"), limit)
