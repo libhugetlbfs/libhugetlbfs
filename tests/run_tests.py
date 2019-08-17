@@ -48,7 +48,7 @@ def bash(cmd):
     except KeyboardInterrupt:
         # Abort and mark this a strange test result
         return (127, "")
-    out = p.stdout.read().strip()
+    out = p.stdout.read().decode().strip()
     return (rc, out)
 
 def snapshot_pool_state():
@@ -80,7 +80,7 @@ def run_test_prog(bits, pagesize, cmd, **env):
         return (None, "")
     except OSError as e:
         return (-e.errno, "")
-    out = p.stdout.read().strip()
+    out = p.stdout.read().decode().strip()
 
     if paranoid_pool_check:
         afterpool = snapshot_pool_state()
@@ -247,9 +247,11 @@ def get_pagesizes():
     sizes = set()
     out = ""
     (rc, out) = bash("../obj/hugeadm --page-sizes")
-    if rc != 0 or out == "": return sizes
+    if rc != 0 or out == "":
+        return sizes
 
-    for size in out.split("\n"): sizes.add(int(size))
+    for size in out.split("\n"):
+        sizes.add(int(size))
     return sizes
 
 def get_wordsizes():
