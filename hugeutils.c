@@ -1180,6 +1180,7 @@ long dump_proc_pid_maps()
 	FILE *f;
 	char line[MAPS_BUF_SZ];
 	size_t ret;
+	long result = -1;
 
 	f = fopen("/proc/self/maps", "r");
 	if (!f) {
@@ -1189,21 +1190,36 @@ long dump_proc_pid_maps()
 
 	while (1) {
 		ret = fread(line, sizeof(char), MAPS_BUF_SZ, f);
-		if (ret < 0) {
-			ERROR("Failed to read /proc/self/maps\n");
-			return -1;
-		}
-		if (ret == 0)
+		if (ret < MAPS_BUF_SZ) {
+			if (ferror(f)) {
+				ERROR("Failed to read /proc/self/maps\n");
+				goto out;
+			}
+
+			// else
 			break;
+		}
+
 		ret = fwrite(line, sizeof(char), ret, stderr);
-		if (ret < 0) {
-			ERROR("Failed to write /proc/self/maps to stderr\n");
-			return -1;
+		if (ret == 0) {
+			if (ferror(stderr)) {
+				ERROR("Failed to write /proc/self/maps to stderr\n");
+				goto out;
+			}
+			/*
+			 * feof should never happen to stderr, if it does there is nothing more we
+			 * can do so simply clean up and return
+			 */
+			ERROR("Cannot write /proc/self/maps because stderr reached EOF, "
+				"was it closed?\n");
+			goto out;
 		}
 	}
 
+	result = 0;
+out:
 	fclose(f);
-	return 0;
+	return result;
 }
 
 long read_meminfo(const char *tag)
