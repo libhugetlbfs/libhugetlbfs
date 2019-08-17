@@ -112,7 +112,7 @@ void print_usage()
 	CONT("should scan on each pass");
 	OPTION("--thp-khugepaged-scan-sleep <milliseconds>", "Time in ms to sleep between");
 	CONT("khugepaged passes");
-	OPTION("--thp-khugepages-alloc-sleep <milliseconds>", "Time in ms for khugepaged");
+	OPTION("--thp-khugepaged-alloc-sleep <milliseconds>", "Time in ms for khugepaged");
 	CONT("to wait if there was a huge page allocation failure");
 	OPTION("--pool-pages-max <size|DEFAULT>:[+|-]<pagecount|memsize<G|M|K>>", "");
 	CONT("Adjust pool 'size' upper bound");
