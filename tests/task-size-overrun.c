@@ -64,45 +64,44 @@ static unsigned long find_last_mapped(void)
 	return end;
 }
 
+#define ALIGN_DOWN(x,a) ((x) & ~((a) - 1))
+
 static unsigned long find_task_size(void)
 {
-	unsigned long addr;
+	unsigned long low, high; /* PFNs */
 	void *p;
 
-	addr = find_last_mapped();
-	if (!addr || ((addr % getpagesize()) != 0))
-		FAIL("Bogus stack end address, 0x%lx!?", addr);
+	low = find_last_mapped();
+	if (!low || ((low % getpagesize()) != 0))
+		FAIL("Bogus stack end address, 0x%lx!?", low);
+	low = low / getpagesize();
 
-	while (addr) {
+	/* This sum should get us (2^(wordsize) - 2 pages) */
+	high = (unsigned long)(-2 * getpagesize()) / getpagesize();
+
+	verbose_printf("Binary searching for task size PFNs 0x%lx..0x%lx\n",
+		       low, high);
+
+	while (high > low + 1) {
+		unsigned long pfn = (low + high) / 2;
+		unsigned long addr = pfn * getpagesize();
+
+		assert((pfn >= low) && (pfn <= high));
+
 		p = mmap64((void *)addr, getpagesize(), PROT_READ,
 			   MAP_PRIVATE|MAP_ANONYMOUS|MAP_FIXED, -1, 0);
 		if (p == MAP_FAILED) {
-			verbose_printf("Searching map failed: %s\n", strerror(errno));
-			return addr;
+			verbose_printf("Map failed at 0x%lx (%s)\n",
+				       addr, strerror(errno));
+			high = pfn;
+		} else {
+			verbose_printf("Map succeeded at 0x%lx\n", addr);
+			munmap(p, getpagesize());
+			low = pfn;
 		}
-		munmap(p, getpagesize());
-		addr += getpagesize();
-#if defined(__powerpc64__)
-		if (addr > (1UL << 46) && addr < (1UL << 47))
-			addr = 1UL << 47;	/* 64TB */
-		else if (addr > (1UL << 47) && addr < (1UL << 48))
-			addr = 1UL << 48;	/* 128TB */
-		else if (addr > (1UL << 48) && addr < (1UL << 49))
-			addr = 1UL << 49;	/* 512TB */
-		else if (addr > (1UL << 49) && addr < (1UL << 50))
-			addr = 1UL << 50;	/* 1PB */
-		else if (addr > (1UL << 50) && addr < (1UL << 51))
-			addr = 1UL << 51;	/* 2PB */
-		else if (addr > (1UL << 51) && addr < (1UL << 52))
-			addr = 1UL << 52;	/* 4PB */
-#endif
-#if defined(__s390x__)
-		if (addr > (1UL << 42) && addr < (1UL << 53))
-			addr = 1UL << 53;
-#endif
 	}
-	/* addr wrapped around */
-	return 0;
+
+	return low * getpagesize();
 }
 
 int main(int argc, char *argv[])
