@@ -155,11 +155,13 @@ static void test_once(int fd)
 {
 	void *p, *q;
 
-	ftruncate(fd, 0);
+	if (ftruncate(fd, 0) < 0)
+		FAIL("ftruncate failed: %s", strerror(errno));
 
 	if (sigsetjmp(sig_escape, 1)) {
 		sig_expected = NULL;
-		ftruncate(fd, 0);
+		if (ftruncate(fd, 0) < 0)
+			FAIL("ftruncate failed: %s", strerror(errno));
 		return;
 	}
 
@@ -168,13 +170,15 @@ static void test_once(int fd)
 	if (p == MAP_FAILED)
 		FAIL("mmap() 1: %s", strerror(errno));
 
-	ftruncate(fd, hpage_size);
+	if (ftruncate(fd, hpage_size) < 0)
+		FAIL("ftruncate failed: %s", strerror(errno));
 
 	q = p + hpage_size - COPY_SIZE;
 
 	jumpfunc(1, q);
 
-	ftruncate(fd, 0);
+	if (ftruncate(fd, 0) < 0)
+		FAIL("ftruncate failed: %s", strerror(errno));
 	p = mmap(p, hpage_size, PROT_READ|PROT_WRITE|PROT_EXEC,
 		 MAP_SHARED|MAP_FIXED, fd, 0);
 	if (p == MAP_FAILED)
