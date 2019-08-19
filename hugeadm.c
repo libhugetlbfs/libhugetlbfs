@@ -636,8 +636,10 @@ void create_mounts(char *user, char *group, char *base, mode_t mode)
 	}
 
 	if (ensure_dir(base,
-		S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH, 0, 0))
+		S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH, 0, 0)) {
+		ERROR("Unable to ensure path %s\n", base);
 		exit(EXIT_FAILURE);
+	}
 
 	cnt = hpool_sizes(pools, MAX_POOLS);
 	if (cnt < 0) {
@@ -648,30 +650,55 @@ void create_mounts(char *user, char *group, char *base, mode_t mode)
 	for (pos=0; cnt--; pos++) {
 		scaled[0] = 0;
 		scale_size(scaled, pools[pos].pagesize);
-		if (user)
-			snprintf(path, PATH_MAX, "%s/%s/pagesize-%s",
-				base, user, scaled);
-		else if (group)
-			snprintf(path, PATH_MAX, "%s/%s/pagesize-%s",
-				base, group, scaled);
-		else
-			snprintf(path, PATH_MAX, "%s/pagesize-%s",
-				base, scaled);
+		if (user) {
+			if (snprintf(path, PATH_MAX, "%s/%s/pagesize-%s",
+				base, user, scaled) >= PATH_MAX) {
+				ERROR("Truncated mount creation with user\n");
+				exit(EXIT_FAILURE);
+			}
+		} else if (group) {
+			if (snprintf(path, PATH_MAX, "%s/%s/pagesize-%s",
+				base, group, scaled) >= PATH_MAX) {
+				ERROR("Truncated mount creation with group\n");
+				exit(EXIT_FAILURE);
+			}
+		} else {
+			if (snprintf(path, PATH_MAX, "%s/pagesize-%s",
+				base, scaled) >= PATH_MAX) {
+				ERROR("Truncated base mount creation\n");
+				exit(EXIT_FAILURE);
+			}
+		}
 
-		snprintf(options, OPT_MAX, "pagesize=%ld",
-				pools[pos].pagesize);
+		if (snprintf(options, OPT_MAX, "pagesize=%ld",
+				pools[pos].pagesize) >= OPT_MAX) {
+			ERROR("Truncated mount options creation\n");
+			exit(EXIT_FAILURE);
+		}
 
 		/* Yes, this could be cleverer */
-		if (opt_limit_mount_size && opt_limit_mount_inodes)
-			snprintf(limits, OPT_MAX, ",size=%lu,nr_inodes=%d",
-				opt_limit_mount_size, opt_limit_mount_inodes);
-		else {
-			if (opt_limit_mount_size)
-				snprintf(limits, OPT_MAX, ",size=%lu",
-					opt_limit_mount_size);
-			if (opt_limit_mount_inodes)
-				snprintf(limits, OPT_MAX, ",nr_inodes=%d",
-					opt_limit_mount_inodes);
+		if (opt_limit_mount_size && opt_limit_mount_inodes) {
+			if (snprintf(limits, OPT_MAX, ",size=%lu,nr_inodes=%d",
+				opt_limit_mount_size, opt_limit_mount_inodes) >=
+				OPT_MAX) {
+				ERROR("Truncated limit option creation\n");
+				exit(EXIT_FAILURE);
+			}
+		} else {
+			if (opt_limit_mount_size) {
+				if (snprintf(limits, OPT_MAX, ",size=%lu",
+					opt_limit_mount_size) >= OPT_MAX) {
+					ERROR("Truncated mount size limit\n");
+					exit(EXIT_FAILURE);
+				}
+			}
+			if (opt_limit_mount_inodes) {
+				if (snprintf(limits, OPT_MAX, ",nr_inodes=%d",
+					opt_limit_mount_inodes) >= OPT_MAX) {
+					ERROR("Truncated mount inode limit\n");
+					exit(EXIT_FAILURE);
+				}
+			}
 		}
 
 		/* Append limits if specified */
@@ -683,11 +710,15 @@ void create_mounts(char *user, char *group, char *base, mode_t mode)
 				WARNING("String limitations met, cannot append limitations onto mount options string. Increase OPT_MAX");
 		}
 
-		if (ensure_dir(path, mode, uid, gid))
+		if (ensure_dir(path, mode, uid, gid)) {
+			ERROR("Failed to create path %s\n", path);
 			exit(EXIT_FAILURE);
+		}
 
-		if (mount_dir(path, options, mode, uid, gid))
+		if (mount_dir(path, options, mode, uid, gid)) {
+			ERROR("Failued to mount path %s\n", path);
 			exit(EXIT_FAILURE);
+		}
 	}
 }
 
@@ -945,8 +976,15 @@ void add_temp_swap(long page_size)
 	}
 
 	pid = getpid();
-	snprintf(path, PATH_MAX, "%s/swap/temp", MOUNT_DIR);
-	snprintf(file, PATH_MAX, "%s/swapfile-%ld", path, pid);
+	if (snprintf(path, PATH_MAX, "%s/swap/temp", MOUNT_DIR) >= PATH_MAX) {
+		ERROR("Truncated swap path creation\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (snprintf(file, PATH_MAX, "%s/swapfile-%ld", path, pid) >= PATH_MAX) {
+		ERROR("Truncated swap file path\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* swapsize is 5 hugepages */
 	if (opt_temp_swap == -1)
@@ -955,8 +993,10 @@ void add_temp_swap(long page_size)
 		num_pages = opt_temp_swap;
 	swap_size = num_pages * page_size;
 
-	if (ensure_dir(path, S_IRWXU | S_IRGRP | S_IXGRP, 0, 0))
+	if (ensure_dir(path, S_IRWXU | S_IRGRP | S_IXGRP, 0, 0)) {
+		ERROR("Failed to create path %s\n", path);
 		exit(EXIT_FAILURE);
+	}
 
 	if (opt_dry_run) {
 		printf("dd bs=1024 count=%ld if=/dev/zero of=%s\n",
@@ -978,7 +1018,11 @@ void add_temp_swap(long page_size)
 	free(buf);
 	fclose(f);
 
-	snprintf(mkswap_cmd, PATH_MAX, "mkswap %s", file);
+	if (snprintf(mkswap_cmd, PATH_MAX, "mkswap %s", file) >= PATH_MAX) {
+		ERROR("Truncated mkswap command buffer\n");
+		exit(EXIT_FAILURE);
+	}
+
 	ret = system(mkswap_cmd);
 	if (WIFSIGNALED(ret)) {
 		WARNING("Call to mkswap failed\n");
@@ -1005,7 +1049,11 @@ void rem_temp_swap() {
 	long pid;
 
 	pid = getpid();
-	snprintf(file, PATH_MAX, "%s/swap/temp/swapfile-%ld", MOUNT_DIR, pid);
+	if (snprintf(file, PATH_MAX, "%s/swap/temp/swapfile-%ld", MOUNT_DIR, pid) >=
+			PATH_MAX) {
+		ERROR("Truncated removal swap path creation\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (opt_dry_run) {
 		printf("swapoff %s\nrm -f %s\n", file, file);
@@ -1043,7 +1091,11 @@ void add_ramdisk_swap(long page_size) {
 	}
 
 	while (count > 0) {
-		snprintf(ramdisk, PATH_MAX, "/dev/ram%i", disk_num);
+		if (snprintf(ramdisk, PATH_MAX, "/dev/ram%i", disk_num) >= PATH_MAX) {
+			ERROR("Truncated ram disk path\n");
+			exit(EXIT_FAILURE);
+		}
+
 		if (access(ramdisk, F_OK) != 0){
 			break;
 		}
@@ -1052,7 +1104,11 @@ void add_ramdisk_swap(long page_size) {
 		if (opt_dry_run) {
 			printf("mkswap %s\nswapon %s\n", ramdisk, ramdisk);
 		} else {
-			snprintf(mkswap_cmd, PATH_MAX, "mkswap %s", ramdisk);
+			if (snprintf(mkswap_cmd, PATH_MAX, "mkswap %s", ramdisk) >=
+					PATH_MAX) {
+				ERROR("Truncated ram disk mkswap command\n");
+				exit(EXIT_FAILURE);
+			}
 			ret = system(mkswap_cmd);
 			if (WIFSIGNALED(ret)) {
 				WARNING("Call to mkswap failed\n");
