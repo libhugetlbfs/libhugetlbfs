@@ -569,36 +569,36 @@ bail2:
  */
 static unsigned long hugetlb_slice_start(unsigned long addr)
 {
-	if (!arch_has_slice_support()) {
-		return ALIGN_DOWN(addr, gethugepagesize());
+	if (arch_has_slice_support()) {
+#if defined(__powerpc64__)
+		if (addr < SLICE_LOW_TOP)
+			return ALIGN_DOWN(addr, SLICE_LOW_SIZE);
+		else if (addr < SLICE_HIGH_SIZE)
+			return SLICE_LOW_TOP;
+		else
+			return ALIGN_DOWN(addr, SLICE_HIGH_SIZE);
+#elif defined(__powerpc__) && !defined(PPC_NO_SEGMENTS)
+		return ALIGN_DOWN(addr, SLICE_LOW_SIZE);
+#endif
 	}
 
-#if defined(__powerpc64__)
-	if (addr < SLICE_LOW_TOP)
-		return ALIGN_DOWN(addr, SLICE_LOW_SIZE);
-	else if (addr < SLICE_HIGH_SIZE)
-		return SLICE_LOW_TOP;
-	else
-		return ALIGN_DOWN(addr, SLICE_HIGH_SIZE);
-#elif defined(__powerpc__) && !defined(PPC_NO_SEGMENTS)
-	return ALIGN_DOWN(addr, SLICE_LOW_SIZE);
-#endif
+	return ALIGN_DOWN(addr, gethugepagesize());
 }
 
 static unsigned long hugetlb_slice_end(unsigned long addr)
 {
-	if (!arch_has_slice_support()) {
-		return ALIGN_UP(addr, gethugepagesize()) - 1;
+	if (arch_has_slice_support()) {
+#if defined(__powerpc64__)
+		if (addr < SLICE_LOW_TOP)
+			return ALIGN_UP(addr, SLICE_LOW_SIZE) - 1;
+		else
+			return ALIGN_UP(addr, SLICE_HIGH_SIZE) - 1;
+#elif defined(__powerpc__) && !defined(PPC_NO_SEGMENTS)
+		return ALIGN_UP(addr, SLICE_LOW_SIZE) - 1;
+#endif
 	}
 
-#if defined(__powerpc64__)
-	if (addr < SLICE_LOW_TOP)
-		return ALIGN_UP(addr, SLICE_LOW_SIZE) - 1;
-	else
-		return ALIGN_UP(addr, SLICE_HIGH_SIZE) - 1;
-#elif defined(__powerpc__) && !defined(PPC_NO_SEGMENTS)
-	return ALIGN_UP(addr, SLICE_LOW_SIZE) - 1;
-#endif
+	return ALIGN_UP(addr, gethugepagesize()) - 1;
 }
 
 static unsigned long hugetlb_next_slice_start(unsigned long addr)
