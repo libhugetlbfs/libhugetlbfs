@@ -14,7 +14,7 @@ INSTALL_MAN3 = get_huge_pages.3 get_hugepage_region.3 gethugepagesize.3 \
 		gethugepagesizes.3 getpagesizes.3 hugetlbfs_find_path.3 \
 		hugetlbfs_test_path.3 hugetlbfs_unlinked_fd.3
 INSTALL_MAN7 = libhugetlbfs.7
-INSTALL_MAN8 = hugectl.8 hugeedit.8 hugeadm.8 cpupcstat.8
+INSTALL_MAN8 = hugectl.8 hugeedit.8 hugeadm.8
 LDSCRIPT_TYPES = B BDT
 LDSCRIPT_DIST_ELF = elf32ppclinux elf64ppc elf_i386 elf_x86_64
 INSTALL_OBJSCRIPT = ld.hugetlbfs
