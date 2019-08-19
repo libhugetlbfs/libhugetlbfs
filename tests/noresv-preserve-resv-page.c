@@ -66,6 +66,7 @@ int main(int argc, char *argv[])
 {
 	long hpage_size;
 	int nr_hugepages;
+	int surp_hugepages;
 	int fd1, fd2, err;
 	char *p, *q;
 	struct sigaction sa = {
@@ -104,6 +105,13 @@ int main(int argc, char *argv[])
 
 	verbose_printf("Write to %p to steal reserved page\n", q);
 
+	surp_hugepages = get_huge_page_counter(hpage_size, HUGEPAGES_SURP);
 	test_write(q);
+
+	/* Provisioning succeeded because of overcommit */
+	if (get_huge_page_counter(hpage_size, HUGEPAGES_SURP) ==
+	    surp_hugepages + 1)
+		PASS();
+
 	FAIL("Steal reserved page");
 }
