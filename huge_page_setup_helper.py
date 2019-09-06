@@ -14,13 +14,13 @@ debug = False
 
 # must be executed under the root to operate
 if os.geteuid() != 0:
-    print "You must be root to setup hugepages!"
+    print("You must be root to setup hugepages!")
     os._exit(1)
 
 # config files we need access to
 sysctlConf = "/etc/sysctl.conf"
 if not os.access(sysctlConf, os.W_OK):
-    print "Cannot access %s" % sysctlConf
+    print("Cannot access %s" % sysctlConf)
     if debug == False:
         os._exit(1)
 
@@ -41,7 +41,7 @@ for line in hugeadmexplain:
         break
 
 if memTotal == 0:
-    print "Your version of libhugetlbfs' hugeadm utility is too old!"
+    print("Your version of libhugetlbfs' hugeadm utility is too old!")
     os._exit(1)
 
 
@@ -54,7 +54,7 @@ for line in poolList:
         break
 
 if hugePageSize == 0:
-    print "Aborting, cannot determine system huge page size!"
+    print("Aborting, cannot determine system huge page size!")
     os._exit(1)
 
 # Get initial sysctl settings
@@ -83,22 +83,22 @@ for line in groupNames:
 
 
 # dump system config as we see it before we start tweaking it
-print "Current configuration:"
-print " * Total System Memory......: %6d MB" % memTotal
-print " * Shared Mem Max Mapping...: %6d MB" % (shmmax / (1024 * 1024))
-print " * System Huge Page Size....: %6d MB" % (hugePageSize / (1024 * 1024))
-print " * Number of Huge Pages.....: %6d"    % hugePages
-print " * Total size of Huge Pages.: %6d MB" % (hugePages * hugePageSize / (1024 * 1024))
-print " * Remaining System Memory..: %6d MB" % (memTotal - (hugePages * hugePageSize / (1024 * 1024)))
-print " * Huge Page User Group.....:  %s (%d)" % (hugeGIDName, hugeGID)
-print
+print("Current configuration:")
+print(" * Total System Memory......: %6d MB" % memTotal)
+print(" * Shared Mem Max Mapping...: %6d MB" % (shmmax / (1024 * 1024)))
+print(" * System Huge Page Size....: %6d MB" % (hugePageSize / (1024 * 1024)))
+print(" * Number of Huge Pages.....: %6d"    % hugePages)
+print(" * Total size of Huge Pages.: %6d MB" % (hugePages * hugePageSize / (1024 * 1024)))
+print(" * Remaining System Memory..: %6d MB" % (memTotal - (hugePages * hugePageSize / (1024 * 1024))))
+print(" * Huge Page User Group.....:  %s (%d)" % (hugeGIDName, hugeGID))
+print()
 
 
 # ask how memory they want to allocate for huge pages
 userIn = None
 while not userIn:
     try:
-        userIn = raw_input("How much memory would you like to allocate for huge pages? "
+        userIn = input("How much memory would you like to allocate for huge pages? "
                            "(input in MB, unless postfixed with GB): ")
         if userIn[-2:] == "GB":
             userHugePageReqMB = int(userIn[0:-2]) * 1024
@@ -113,19 +113,19 @@ while not userIn:
         # As a sanity safeguard, require at least 128M not be allocated to huge pages
         if userHugePageReqMB > (memTotal - 128):
             userIn = None
-            print "Refusing to allocate %d, you must leave at least 128MB for the system" % userHugePageReqMB
+            print("Refusing to allocate %d, you must leave at least 128MB for the system" % userHugePageReqMB)
         elif userHugePageReqMB < (hugePageSize / (1024 * 1024)):
             userIn = None
-            print "Sorry, allocation must be at least a page's worth!"
+            print("Sorry, allocation must be at least a page's worth!")
         else:
             break
     except ValueError:
         userIn = None
-        print "Input must be an integer, please try again!"
+        print("Input must be an integer, please try again!")
 userHugePageReqKB = userHugePageReqMB * 1024
 userHugePagesReq = userHugePageReqKB / (hugePageSize / 1024)
-print "Okay, we'll try to allocate %d MB for huge pages..." % userHugePageReqMB
-print
+print("Okay, we'll try to allocate %d MB for huge pages..." % userHugePageReqMB)
+print()
 
 
 # some basic user input validation
@@ -134,24 +134,24 @@ inputIsValid = False
 # ask for the name of the group allowed access to huge pages
 while inputIsValid == False:
     foundbad = False
-    userGroupReq = raw_input("What group should have access to the huge pages?"
+    userGroupReq = input("What group should have access to the huge pages?"
                              "(The group will be created, if need be) [hugepages]: ")
     if userGroupReq is '':
         userGroupReq = 'hugepages'
     if userGroupReq[0].isdigit() or userGroupReq[0] == "-":
         foundbad = True
-        print "Group names cannot start with a number or dash, please try again!"
+        print("Group names cannot start with a number or dash, please try again!")
     for char in badchars:
         if char in userGroupReq:
             foundbad = True
-            print "Illegal characters in group name, please try again!"
+            print("Illegal characters in group name, please try again!")
             break
     if len(userGroupReq) > 16:
         foundbad = True
-        print "Group names can't be more than 16 characaters, please try again!"
+        print("Group names can't be more than 16 characaters, please try again!")
     if foundbad == False:
         inputIsValid = True
-print "Okay, we'll give group %s access to the huge pages" % userGroupReq
+print("Okay, we'll give group %s access to the huge pages" % userGroupReq)
 
 
 # see if group already exists, use it if it does, if not, create it
@@ -163,20 +163,20 @@ for line in groupNames:
         break
 
 if userGIDReq > -1:
-    print "Group %s (gid %d) already exists, we'll use it" % (userGroupReq, userGIDReq)
+    print("Group %s (gid %d) already exists, we'll use it" % (userGroupReq, userGIDReq))
 else:
     if debug == False:
         os.popen("/usr/sbin/groupadd %s" % userGroupReq)
     else:
-        print "/usr/sbin/groupadd %s" % userGroupReq
+        print("/usr/sbin/groupadd %s" % userGroupReq)
     groupNames = os.popen("/usr/bin/getent group %s" % userGroupReq).readlines()
     for line in groupNames:
         curGroupName = line.split(":")[0]
         if curGroupName == userGroupReq:
             userGIDReq = int(line.split(":")[2])
             break
-    print "Created group %s (gid %d) for huge page use" % (userGroupReq, userGIDReq)
-print
+    print("Created group %s (gid %d) for huge page use" % (userGroupReq, userGIDReq))
+print()
 
 
 # basic user input validation, take 2
@@ -186,20 +186,20 @@ inputIsValid = False
 # ask for user(s) that should be in the huge page access group
 while inputIsValid == False:
     foundbad = False
-    userUsersReq = raw_input("What user(s) should have access to the huge pages (space-delimited list, users created as needed)? ")
+    userUsersReq = input("What user(s) should have access to the huge pages (space-delimited list, users created as needed)? ")
     for char in badchars:
         if char in userUsersReq:
             foundbad = True
-            print "Illegal characters in user name(s) or invalid list format, please try again!"
+            print("Illegal characters in user name(s) or invalid list format, please try again!")
             break
     for n in userUsersReq.split():
         if len(n) > 32:
             foundbad = True
-            print "User names can't be more than 32 characaters, please try again!"
+            print("User names can't be more than 32 characaters, please try again!")
             break
         if n[0] == "-":
             foundbad = True
-            print "User names cannot start with a dash, please try again!"
+            print("User names cannot start with a dash, please try again!")
             break
     if foundbad == False:
         inputIsValid = True
@@ -211,24 +211,24 @@ for hugeUser in hugePageUserList:
     for line in curUserList:
         curUser = line.split(":")[0]
         if curUser == hugeUser:
-            print "Adding user %s to huge page group" % hugeUser
+            print("Adding user %s to huge page group" % hugeUser)
             userExists = True
             if debug == False:
                 os.popen("/usr/sbin/usermod -a -G %s %s" % (userGroupReq, hugeUser))
             else:
-                print "/usr/sbin/usermod -a -G %s %s" % (userGroupReq, hugeUser)
+                print("/usr/sbin/usermod -a -G %s %s" % (userGroupReq, hugeUser))
         if userExists == True:
             break
     if userExists == False:
-        print "Creating user %s with membership in huge page group" % hugeUser
+        print("Creating user %s with membership in huge page group" % hugeUser)
         if debug == False:
             if hugeUser == userGroupReq:
                 os.popen("/usr/sbin/useradd %s -g %s" % (hugeUser, userGroupReq))
             else:
                 os.popen("/usr/sbin/useradd %s -G %s" % (hugeUser, userGroupReq))
         else:
-            print "/usr/sbin/useradd %s -G %s" % (hugeUser, userGroupReq)
-print
+            print("/usr/sbin/useradd %s -G %s" % (hugeUser, userGroupReq))
+print()
 
 
 # set values for the current running environment
@@ -238,11 +238,11 @@ if debug == False:
     os.popen("/usr/bin/hugeadm --set-shm-group %d" % userGIDReq)
     os.popen("/usr/bin/hugeadm --set-recommended-shmmax")
 else:
-    print "/usr/bin/hugeadm --pool-pages-min DEFAULT:%sM" % userHugePageReqMB
-    print "/usr/bin/hugeadm --pool-pages-max DEFAULT:%sM" % userHugePageReqMB
-    print "/usr/bin/hugeadm --set-shm-group %d" % userGIDReq
-    print "/usr/bin/hugeadm --set-recommended-shmmax"
-    print
+    print("/usr/bin/hugeadm --pool-pages-min DEFAULT:%sM" % userHugePageReqMB)
+    print("/usr/bin/hugeadm --pool-pages-max DEFAULT:%sM" % userHugePageReqMB)
+    print("/usr/bin/hugeadm --set-shm-group %d" % userGIDReq)
+    print("/usr/bin/hugeadm --set-recommended-shmmax")
+    print()
 
 # figure out what that shmmax value we just set was
 hugeadmexplain = os.popen("/usr/bin/hugeadm --explain 2>/dev/null").readlines()
@@ -258,7 +258,7 @@ if debug == False:
         try:
             sysctlConfLines = open(sysctlConf).readlines()
             os.rename(sysctlConf, sysctlConf + ".backup")
-            print("Saved original %s as %s.backup" % (sysctlConf, sysctlConf))
+            print(("Saved original %s as %s.backup" % (sysctlConf, sysctlConf)))
         except:
             pass
 
@@ -279,11 +279,11 @@ if debug == False:
     fd.close()
 
 else:
-    print "Add to %s:" % sysctlConf
-    print "kernel.shmmax = %d" % shmmax
-    print "vm.nr_hugepages = %d" % userHugePagesReq
-    print "vm.hugetlb_shm_group = %d" % userGIDReq
-    print
+    print("Add to %s:" % sysctlConf)
+    print("kernel.shmmax = %d" % shmmax)
+    print("vm.nr_hugepages = %d" % userHugePagesReq)
+    print("vm.hugetlb_shm_group = %d" % userGIDReq)
+    print()
 
 
 # write out limits.conf changes to persist across reboot
@@ -293,7 +293,7 @@ if debug == False:
         try:
             limitsConfLines = open(limitsConf).readlines()
             os.rename(limitsConf, limitsConf + ".backup")
-            print("Saved original %s as %s.backup" % (limitsConf, limitsConf))
+            print(("Saved original %s as %s.backup" % (limitsConf, limitsConf)))
         except:
             pass
 
@@ -319,25 +319,25 @@ if debug == False:
     fd.close()
 
 else:
-    print "Add to %s:" % limitsConf
+    print("Add to %s:" % limitsConf)
     for hugeUser in hugePageUserList:
-        print "%s		soft	memlock		%d" % (hugeUser, userHugePageReqKB)
-        print "%s		hard	memlock		%d" % (hugeUser, userHugePageReqKB)
+        print("%s		soft	memlock		%d" % (hugeUser, userHugePageReqKB))
+        print("%s		hard	memlock		%d" % (hugeUser, userHugePageReqKB))
 
 
 # dump the final configuration of things now that we're done tweaking
-print
-print "Final configuration:"
-print " * Total System Memory......: %6d MB" % memTotal
+print()
+print("Final configuration:")
+print(" * Total System Memory......: %6d MB" % memTotal)
 if debug == False:
-    print " * Shared Mem Max Mapping...: %6d MB" % (shmmax / (1024 * 1024))
+    print(" * Shared Mem Max Mapping...: %6d MB" % (shmmax / (1024 * 1024)))
 else:
     # This should be what we *would* have set it to, had we actually run hugeadm --set-recommended-shmmax
-    print " * Shared Mem Max Mapping...: %6d MB" % (userHugePagesReq * hugePageSize / (1024 * 1024))
-print " * System Huge Page Size....: %6d MB" % (hugePageSize / (1024 * 1024))
-print " * Available Huge Pages.....: %6d"    % userHugePagesReq
-print " * Total size of Huge Pages.: %6d MB" % (userHugePagesReq * hugePageSize / (1024 * 1024))
-print " * Remaining System Memory..: %6d MB" % (memTotal - userHugePageReqMB)
-print " * Huge Page User Group.....:  %s (%d)" % (userGroupReq, userGIDReq)
-print
+    print(" * Shared Mem Max Mapping...: %6d MB" % (userHugePagesReq * hugePageSize / (1024 * 1024)))
+print(" * System Huge Page Size....: %6d MB" % (hugePageSize / (1024 * 1024)))
+print(" * Available Huge Pages.....: %6d"    % userHugePagesReq)
+print(" * Total size of Huge Pages.: %6d MB" % (userHugePagesReq * hugePageSize / (1024 * 1024)))
+print(" * Remaining System Memory..: %6d MB" % (memTotal - userHugePageReqMB))
+print(" * Huge Page User Group.....:  %s (%d)" % (userGroupReq, userGIDReq))
+print()
 
