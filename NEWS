@@ -1,3 +1,21 @@
+libhugetlbfs 2.22 "The Corner of College and St George"
+======================================================================
+New Features
+* Library now verifies if slices are supported on PPC
+
+Bug Fixes
+* ld.hugetlbfs now supports multiple page sizes on PPC64
+* Various GCC warning cleanups
+* setup script converted to Python 3
+
+Test Suite
+* Tests are only run on online CPUs and only if a sufficient number are
+available
+* task-size-overrun now searches empty address space more efficiently
+* Tests that do not link the library are run for default page sizes only
+* Test runner now uses Python 3
+
+
 libhugetlbfs 2.21 "The Bloor Annex"
 ======================================================================
 New Features
