@@ -130,7 +130,9 @@ if [ "$HTLB_ALIGN" == "slice" ]; then
 	# targeting the ARM platform one needs to explicitly set the text segment offset
 	# otherwise it will be NULL.
 	case "$EMU" in
-	armelf*_linux_eabi|aarch64elf*|aarch64linux*)	HTLBOPTS="$HTLBOPTS -Ttext-segment=$SLICE_SIZE" ;;
+	armelf*_linux_eabi|aarch64elf*|aarch64linux*)
+		printf -v TEXTADDR "%x" "$SLICE_SIZE"
+		HTLBOPTS="$HTLBOPTS -Ttext-segment=$TEXTADDR" ;;
 	elf_i386)		HTLBOPTS="$HTLBOPTS -Ttext-segment=0x08000000" ;;
 	elf64ppc|elf64lppc)
 		if [ "$MMU_TYPE" == "Hash" ] ; then
