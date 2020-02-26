@@ -223,7 +223,7 @@ void setup_fake_data(long sizes[], int n_elem)
 		FAIL("mkdtemp: %s", strerror(errno));
 
 	sprintf(fname, "%s/meminfo-none", fake_meminfo);
-	fd = open(fname, O_WRONLY|O_CREAT);
+	fd = open(fname, O_WRONLY|O_CREAT, 0600);
 	if (fd < 0)
 		FAIL("open: %s", strerror(errno));
 	if (write(fd, meminfo_base,
@@ -233,7 +233,7 @@ void setup_fake_data(long sizes[], int n_elem)
 		FAIL("close: %s", strerror(errno));
 
 	sprintf(fname, "%s/meminfo-hugepages", fake_meminfo);
-	fd = open(fname, O_WRONLY|O_CREAT);
+	fd = open(fname, O_WRONLY|O_CREAT, 0600);
 	if (fd < 0)
 		FAIL("open: %s", strerror(errno));
 	if (write(fd, meminfo_base,
