@@ -1207,7 +1207,7 @@ static int set_hpage_sizes(const char *env)
 						strerror(errno));
 			size = 0;
 		} else if (!hugetlbfs_find_path_for_size(size)) {
-			WARNING("Hugepage size %li unavailable", size);
+			WARNING("Hugepage size %li unavailable\n", size);
 			size = 0;
 		}
 

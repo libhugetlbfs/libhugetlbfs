@@ -332,7 +332,7 @@ void hugetlbfs_setup_morecore(void)
 		heap_fd = -1;
 	} else {
 		if (!hugetlbfs_find_path_for_size(hpage_size)) {
-			WARNING("Hugepage size %li unavailable", hpage_size);
+			WARNING("Hugepage size %li unavailable\n", hpage_size);
 			return;
 		}
 
