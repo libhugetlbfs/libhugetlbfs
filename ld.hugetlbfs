@@ -92,17 +92,6 @@ if [ -z "$EMU" ]; then
 	fi
 fi
 
-# if -m is not present on command line
-if [ -z "$EMU" ]; then
-	if [ -n "$LDEMULATION" ]; then
-		# try env. variable
-		EMU="$LDEMULATION"
-	else
-		# pick first supported
-		EMU="$(ld -V | sed -n '/Supported emulations/{n;p}' | tr -d ' ')"
-	fi
-fi
-
 MB=$((1024*1024))
 case "$EMU" in
 elf32ppclinux)		HPAGE_SIZE=$((16*$MB)) SLICE_SIZE=$((256*$MB)) ;;
@@ -115,6 +104,8 @@ elf64ppc|elf64lppc)
 	else
 		SLICE_SIZE=$HPAGE_SIZE
 	fi ;;
+
+elf64lriscv*)           HPAGE_SIZE=$((2*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
 elf_i386|elf_x86_64)	HPAGE_SIZE=$((4*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
 elf_s390|elf64_s390)	HPAGE_SIZE=$((1*$MB)) SLICE_SIZE=$HPAGE_SIZE ;;
 armelf*_linux_eabi|aarch64elf*|aarch64linux*)
@@ -134,6 +125,7 @@ if [ "$HTLB_ALIGN" == "slice" ]; then
 		printf -v TEXTADDR "%x" "$SLICE_SIZE"
 		HTLBOPTS="$HTLBOPTS -Ttext-segment=$TEXTADDR" ;;
 	elf_i386)		HTLBOPTS="$HTLBOPTS -Ttext-segment=0x08000000" ;;
+	elf64lriscv*)   HTLBOPTS="-Ttext-segment=0x200000 $HTLBOPTS" ;;
 	elf64ppc|elf64lppc)
 		if [ "$MMU_TYPE" == "Hash" ] ; then
 			printf -v TEXTADDR "%x" "$SLICE_SIZE"
