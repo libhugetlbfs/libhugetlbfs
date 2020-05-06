@@ -169,6 +169,10 @@ else:
         os.popen("/usr/sbin/groupadd %s" % userGroupReq)
     else:
         print("/usr/sbin/groupadd %s" % userGroupReq)
+
+    # wait for the groupadd finish
+    os.wait()
+
     groupNames = os.popen("/usr/bin/getent group %s" % userGroupReq).readlines()
     for line in groupNames:
         curGroupName = line.split(":")[0]
@@ -243,6 +247,9 @@ else:
     print("/usr/bin/hugeadm --set-shm-group %d" % userGIDReq)
     print("/usr/bin/hugeadm --set-recommended-shmmax")
     print()
+
+# wait for the hugepage setups finish
+os.wait()
 
 # figure out what that shmmax value we just set was
 hugeadmexplain = os.popen("/usr/bin/hugeadm --explain 2>/dev/null").readlines()
