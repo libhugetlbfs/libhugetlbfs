@@ -176,9 +176,10 @@ ifeq ($(CUSTOM_LDSCRIPTS),yes)
 TEST_LDSCRIPTS = -l
 endif
 
-# If TMPLIB64 is set, then sure we are not resolving LIB32 and LIB64 to the
-# same place
+# If building for both 32- and 64-bit, then make sure we are not resolving
+# LIB32 and LIB64 to the same place
 ifdef TMPLIB64
+ifneq ($(BUILDTYPE),NATIVEONLY)
 
 REALLIB32 = $(realpath $(PREFIX)/$(LIB32))
 REALLIB64 = $(realpath $(PREFIX)/$(LIB64))
@@ -188,6 +189,7 @@ $(error LIB32 ($(PREFIX)/$(LIB32) to $(REALLIB32)) and LIB64 ($(PREFIX)/$(LIB64)
 endif
 endif
 
+endif
 endif
 
 HEADERDIR = $(PREFIX)/include
