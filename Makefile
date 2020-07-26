@@ -199,10 +199,11 @@ LDSCRIPTDIR = $(PREFIX)/share/libhugetlbfs/ldscripts
 BINDIR = $(PREFIX)/share/libhugetlbfs
 EXEDIR = $(PREFIX)/bin
 DOCDIR = $(PREFIX)/share/doc/libhugetlbfs
-MANDIR1 = $(PREFIX)/share/man/man1
-MANDIR3 = $(PREFIX)/share/man/man3
-MANDIR7 = $(PREFIX)/share/man/man7
-MANDIR8 = $(PREFIX)/share/man/man8
+MANDIR = $(PREFIX)/share/man
+MANDIR1 = $(MANDIR)/man1
+MANDIR3 = $(MANDIR)/man3
+MANDIR7 = $(MANDIR)/man7
+MANDIR8 = $(MANDIR)/man8
 
 ifdef LIB32
 LIBPATHS += -DLIB32='"$(LIB32)"' -DLIBDIR32='"$(LIBDIR32)"'
