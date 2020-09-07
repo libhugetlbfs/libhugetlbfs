@@ -1,3 +1,14 @@
+libhugetlbfs 2.23 "The Cedarvale Ravine"
+======================================================================
+New Features
+* Basic riscv64 support
+
+Bug Fixes
+* Python now waits on child processes with os.wait()
+* open() call with O_CREAT now passes permissions
+* -Ttext-segment argument on aarch64 passes page size in hex
+* Build system improvements
+
 libhugetlbfs 2.22 "The Corner of College and St George"
 ======================================================================
 New Features
