@@ -28,6 +28,10 @@
 
 #define HUGETLBFS_MAGIC	0x958458f6
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+  
 long gethugepagesize(void);
 int gethugepagesizes(long pagesizes[], int n_elem);
 int getpagesizes(long pagesizes[], int n_elem);
@@ -76,4 +80,8 @@ typedef unsigned long ghr_t;
 void *get_hugepage_region(size_t len, ghr_t flags);
 void free_hugepage_region(void *ptr);
 
+#ifdef __cplusplus
+}
+#endif
+  
 #endif /* _HUGETLBFS_H */
