@@ -33,8 +33,8 @@ HELPERS = get_hugetlbfs_path compare_kvers
 HELPER_LIBS = libheapshrink.so
 BADTOOLCHAIN = bad-toolchain.sh
 
-CFLAGS = -O2 -Wall -g
-CPPFLAGS = -I..
+CFLAGS += -O2 -Wall -g
+CPPFLAGS += -I..
 STATIC_LIBHUGE = -Wl,--whole-archive -lhugetlbfs -Wl,--no-whole-archive
 STATIC_LDLIBS = -Wl,--no-as-needed -lpthread
 LDLIBS = $(STATIC_LDLIBS) -ldl -lhugetlbfs_privutils
