@@ -192,6 +192,12 @@ endif
 endif
 endif
 
+# glibc 2.34 removed __morecore, so it may not be available with recent versions
+HAS_MORECORE := $(shell /bin/echo -e '\#include <malloc.h>\nvoid * morecore_exists() { return &__morecore; }' | $(CC) -c -xc -o /dev/null - &> /dev/null && /bin/echo yes || /bin/echo no)
+ifeq ($(HAS_MORECORE),yes)
+CFLAGS += -DHAS_MORECORE
+endif
+
 HEADERDIR = $(PREFIX)/include
 LIBDIR32 = $(PREFIX)/$(LIB32)
 LIBDIR64 = $(PREFIX)/$(LIB64)

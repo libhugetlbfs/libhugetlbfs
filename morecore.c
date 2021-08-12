@@ -33,6 +33,13 @@
 
 #include "libhugetlbfs_internal.h"
 
+#ifndef HAS_MORECORE
+void hugetlbfs_setup_morecore(void)
+{
+	INFO("Not setting up morecore because it's not available (see issue #52).\n");
+}
+#else
+
 static int heap_fd;
 
 static void *heapbase;
@@ -381,3 +388,4 @@ void hugetlbfs_setup_morecore(void)
 	 * to mmap() if we run out of hugepages. */
 	mallopt(M_MMAP_MAX, 0);
 }
+#endif /* HAS_MORECORE */
