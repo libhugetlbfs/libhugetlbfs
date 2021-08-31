@@ -304,9 +304,13 @@ void *get_hugepage_region(size_t len, ghr_t flags)
 	/* Align the len parameter to a hugepage boundary and allocate */
 	aligned_len = ALIGN(len, gethugepagesize());
 	buf = get_huge_pages(aligned_len, GHP_DEFAULT);
-	if (buf == NULL && (flags & GHR_FALLBACK)) {
-		aligned_len = ALIGN(len, getpagesize());
-		buf = fallback_base_pages(len, flags);
+	if (buf == NULL) {
+		if (flags & GHR_FALLBACK) {
+			aligned_len = ALIGN(len, getpagesize());
+			buf = fallback_base_pages(len, flags);
+		} else {
+			return buf;
+		}
 	}
 
 	/* Calculate wastage for coloring */
