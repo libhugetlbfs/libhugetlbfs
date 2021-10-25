@@ -34,7 +34,7 @@
 #define P0 "ffffffff"
 #define IOSZ 4096
 char buf[IOSZ] __attribute__ ((aligned (IOSZ)));
-#define TMPFILE "/tmp/direct"
+#define TMPFILE "/home/direct"
 
 int main(int argc, char *argv[])
 {
