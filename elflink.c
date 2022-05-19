@@ -979,8 +979,8 @@ static int fork_and_prepare_segment(struct seg_info *htlb_seg_info)
  * fails with EEXIST, just used the O_RDONLY fd. (Somebody else has
  * prepared the file already, but we raced with their rename()).
  * 	- If only the O_EXCL open suceeds, and the O_RDONLY fails with
- * ENOENT, prepare the the O_EXCL open, then rename() filename.tmp to
- * filename. (We're the first in, we have to prepare the file).
+ * ENOENT, prepare the file in the O_EXCL fd, then rename() filename.tmp 
+ * to filename. (We're the first in, we have to prepare the file).
  * 	- If both opens fail, with EEXIST and ENOENT, respectively,
  * wait for a little while, then try again from the beginning
  * (Somebody else is preparing the file, but hasn't finished yet)
