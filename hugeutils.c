@@ -933,8 +933,10 @@ int gethugepagesizes(long pagesizes[], int n_elem)
 
 		if (size < 0 || size == default_size)
 			continue;
-		if (pagesizes && (nr_sizes == n_elem))
+		if (pagesizes && (nr_sizes == n_elem)) {
+			closedir(sysfs);
 			return nr_sizes;
+		}
 		if (pagesizes)
 			pagesizes[nr_sizes] = size;
 		nr_sizes++;
