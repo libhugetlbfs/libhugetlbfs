@@ -84,6 +84,7 @@ def run_test_prog(bits, pagesize, cmd, **env):
     out = p.stdout.read().decode().strip()
 
     if paranoid_pool_check:
+        clear_hpages()
         afterpool = snapshot_pool_state()
         if afterpool != beforepool:
             print("Hugepage pool state not preserved!", file=sys.stderr)
