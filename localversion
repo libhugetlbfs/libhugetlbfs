@@ -32,7 +32,7 @@ modified=0
 
 # GIT: check for a git tree.
 mod=`git diff-index HEAD 2>/dev/null`
-if [ "$?" -eq 0 ]; then
+if [ "$?" -eq 0 ] && [ -e .git ]; then
 	# This is a GIT repo, see if it was modified.
 	if [ "$mod" != "" ]; then
 		modified=1
