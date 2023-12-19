@@ -117,7 +117,14 @@ ELF64 = elf_riscv64
 TMPLIB64 = lib64
 CUSTOM_LDSCRIPTS = no
 else
+ifeq ($(ARCH),loongarch64)
+CC64 = $(CC) 
+ELF64 = elf_loong64
+TMPLIB64 = lib64
+CUSTOM_LDSCRIPTS = no
+else
 $(error "Unrecognized architecture ($(ARCH))")
+endif
 endif
 endif
 endif
