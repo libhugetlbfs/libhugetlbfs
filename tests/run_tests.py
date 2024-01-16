@@ -55,8 +55,11 @@ def bash(cmd):
 def snapshot_pool_state():
     l = []
     for d in os.listdir("/sys/kernel/mm/hugepages"):
-        substate = [(f, int(open("/sys/kernel/mm/hugepages/%s/%s" % (d, f)).read()))
-                    for f in os.listdir("/sys/kernel/mm/hugepages/%s" % d)]
+        entries = os.listdir("/sys/kernel/mm/hugepages/%s" % d)
+        if "demote" in entries:
+            entries.remove("demote")
+        substate = [(f, int(open("/sys/kernel/mm/hugepages/%s/%s" % (d, f)).read().replace("kB","")))
+                    for f in entries]
         l.append((d, tuple(substate)))
     return tuple(l)
 
