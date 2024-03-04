@@ -732,8 +732,11 @@ def functional_tests():
     # Test overriding of shmget()
     do_shm_test("shmoverride_linked")
     do_shm_test("shmoverride_linked", HUGETLB_SHM="yes")
-    do_shm_test("shmoverride_linked_static")
-    do_shm_test("shmoverride_linked_static", HUGETLB_SHM="yes")
+
+    #Since we use dlsym to hijack shmget, we can't use -static when using shm huge,
+    #as it will cause an error: 'ERROR: RTLD_NEXT used in code not dynamically loaded.
+    #do_shm_test("shmoverride_linked_static")
+    #do_shm_test("shmoverride_linked_static", HUGETLB_SHM="yes")
     do_shm_test("shmoverride_unlinked", LD_PRELOAD="libhugetlbfs.so")
     do_shm_test("shmoverride_unlinked", LD_PRELOAD="libhugetlbfs.so", HUGETLB_SHM="yes")
 
