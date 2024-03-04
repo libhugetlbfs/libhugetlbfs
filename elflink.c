@@ -158,7 +158,7 @@ static void unmapped_abort(const char *fmt, ...)
 /* The directory to use for sharing readonly segments */
 static char share_readonly_path[PATH_MAX+1];
 
-#define MAX_HTLB_SEGS	3
+#define MAX_HTLB_SEGS	4
 #define MAX_SEGS	10
 
 struct seg_info {
