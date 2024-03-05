@@ -1,0 +1,63 @@
+name: Make-and-check CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+   contents: read
+
+jobs:
+  build-on-ubuntu-2004:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: configue
+      run: ./autogen.sh && ./configure
+    - name: Run make
+      run: make BUILDTYPE=NATIVEONLY V=1
+    - name: Configure Huge Pages
+      run:  |
+            sudo mkdir -p /mnt/huge
+            sudo mount -t hugetlbfs -o pagesize=2MB none /mnt/huge
+            echo "vm.nr_hugepages = 1024" | sudo tee -a /etc/sysctl.conf
+            sudo sysctl -p
+    - name: Run checks
+      run:  |
+            sudo make BUILDTYPE=NATIVEONLY check | grep "FAIL:" > check_result
+            cat check_result
+            total_fail_count=0
+            while read line; do
+              fail_count=$(echo "$line" | awk '{print $NF}')
+              total_fail_count=$((total_fail_count + fail_count))
+            done < check_result
+            rm -rf check_result
+            test $total_fail_count == 0 || exit 1
+
+  build-on-ubuntu-latest:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: configue
+      run: ./autogen.sh && ./configure
+    - name: Run make
+      run: make BUILDTYPE=NATIVEONLY V=1
+    - name: Configure Huge Pages
+      run:  |
+            sudo mkdir -p /mnt/huge
+            sudo mount -t hugetlbfs -o pagesize=2MB none /mnt/huge
+            echo "vm.nr_hugepages = 1024" | sudo tee -a /etc/sysctl.conf
+            sudo sysctl -p
+    - name: Run checks
+      run:  |
+            sudo make BUILDTYPE=NATIVEONLY check | grep "FAIL:" > check_result
+            cat check_result
+            total_fail_count=0
+            while read line; do
+              fail_count=$(echo "$line" | awk '{print $NF}')
+              total_fail_count=$((total_fail_count + fail_count))
+            done < check_result
+            rm -rf check_result
+            test $total_fail_count == 0 || exit 1

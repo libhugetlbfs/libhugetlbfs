@@ -1,0 +1,47 @@
+name: Code Style
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+           fetch-depth: 0
+    - name: make patch
+      run: |
+           git format-patch -1 --stdout > current-commit.patch
+    - name: Run checkpatch
+      run: |
+           CHECKPATCH_SCRIPT="checkpatch.pl"
+           SPELLING_TXT="spelling.txt"
+           CONST_STRUCTS_TXT="const_structs.checkpatch"
+
+           KERNEL_RAW_URL="https://raw.githubusercontent.com/torvalds/linux/master"
+           CHECKPATCH_URL="${KERNEL_RAW_URL}/scripts/${CHECKPATCH_SCRIPT}"
+           SPELLING_URL="${KERNEL_RAW_URL}/scripts/${SPELLING_TXT}"
+           CONST_STRUCTS_URL="${KERNEL_RAW_URL}/scripts/${CONST_STRUCTS_TXT}"
+
+           for download in "${CHECKPATCH_URL}:${CHECKPATCH_SCRIPT}" "${SPELLING_URL}:${SPELLING_TXT}" "${CONST_STRUCTS_URL}:${CONST_STRUCTS_TXT}"; do
+                  echo "Downloading '${download##*:}'..."
+                  curl -f "${download%:*}" -s -S -O || \
+                          exit 1
+           done
+
+           chmod 755 "${CHECKPATCH_SCRIPT}"
+           set +e
+           ./${CHECKPATCH_SCRIPT} --no-tree current-commit.patch >& codestyle.log
+           set -e
+           rm -rf current-commit.patch
+           echo "-------- Check Result ---------"
+           cat codestyle.log
+           error=$(cat codestyle.log | grep -i "total: .* errors, .* warnings," | awk '{print $2}')
+           rm -rf codestyle.log
+           test $error == 0 || exit 1
