@@ -1,3 +1,21 @@
+libhugetlbfs 2.24
+======================================================================
+New Features
+* Basic loong64 support
+
+Bug Fixes
+* Disable hugepage-backed malloc if glibc __morecore is not available
+* Fix handle leak in gethugepagesizes()
+* Fix possible wild pointer returned in get_hugepage_region
+* Fix max hugetlb segment to adapt x86
+
+Test Suite
+* Update /sys/kernel/mm/hugepages/ directory parse
+* Disable partial usecases of shmoverride_linked_static
+
+Build
+* switch to automake
+
 libhugetlbfs 2.23 "The Cedarvale Ravine"
 ======================================================================
 New Features

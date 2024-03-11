@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([libhugetlbfs], [2.23])
+AC_INIT([libhugetlbfs], [2.24])
 
 # Checks for programs.
 AC_PROG_CC
