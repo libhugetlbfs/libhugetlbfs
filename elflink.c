@@ -436,7 +436,7 @@ static int find_numsyms(Elf_Sym *symtab, char *strtab)
  * symbols based on information in the dynamic section. The following
  * characteristics apply to symbols which may require copying:
  * - Within the BSS
- * - Global or Weak binding
+ * - Global, Weak, or GNU Unique binding
  * - Object type (variable)
  * - Non-zero size (zero size means the symbol is just a marker with no data)
  */
@@ -447,7 +447,8 @@ static inline int keep_symbol(char *strtab, Elf_Sym *s, void *start, void *end)
 	if ((void *)s->st_value > end)
 		return 0;
 	if ((ELF_ST_BIND(s->st_info) != STB_GLOBAL) &&
-	    (ELF_ST_BIND(s->st_info) != STB_WEAK))
+		(ELF_ST_BIND(s->st_info) != STB_WEAK) &&
+		(ELF_ST_BIND(s->st_info) != STB_GNU_UNIQUE))
 		return 0;
 	if (ELF_ST_TYPE(s->st_info) != STT_OBJECT)
 		return 0;
