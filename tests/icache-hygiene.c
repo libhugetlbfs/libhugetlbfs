@@ -94,9 +94,15 @@ static void sig_handler(int signum, siginfo_t *si, void *uc)
 	 * instruction, so, if the icache is cleared properly, we SIGILL
 	 * as soon as we jump into the cleared page */
 	if (signum == SIGILL) {
-		verbose_printf("SIGILL at %p (sig_expected=%p)\n", si->si_addr,
-			       sig_expected);
-		if (si->si_addr == sig_expected) {
+		void *pc;
+#if defined(__loongarch64)
+		ucontext_t *uc = (ucontext_t *)ucontext;
+		pc = (void *)uc->uc_mcontext.__pc;
+#else
+		pc = si->si_addr;
+#endif
+		verbose_printf("SIGILL at %p (sig_expected=%p)\n", pc, sig_expected);
+		if (pc == sig_expected) {
 			siglongjmp(sig_escape, 1);
 		}
 		FAIL("SIGILL somewhere unexpected");
