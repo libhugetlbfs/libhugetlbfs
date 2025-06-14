@@ -785,7 +785,7 @@ int parse_elf_partial(struct dl_phdr_info *info, size_t size, void *data)
 		vaddr = hugetlb_next_slice_start(info->dlpi_addr +
 						 info->dlpi_phdr[i].p_vaddr);
 		gap = vaddr - (info->dlpi_addr + info->dlpi_phdr[i].p_vaddr);
-		slice_end = hugetlb_slice_end(vaddr);
+		slice_end = hugetlb_slice_end(vaddr + 1);
 		/*
 		 * we should stop remapping just before the slice
 		 * containing the end of the memsz portion (taking away
@@ -805,7 +805,7 @@ int parse_elf_partial(struct dl_phdr_info *info, size_t size, void *data)
 					i, memsz, slice_end - vaddr);
 			continue;
 		}
-		memsz = hugetlb_prev_slice_end(vaddr + memsz) - vaddr;
+		memsz = hugetlb_prev_slice_end(vaddr + memsz) - vaddr + 1;
 
 		if (save_phdr(htlb_num_segs, i, info->dlpi_addr,
 			      &info->dlpi_phdr[i]))
@@ -822,6 +822,7 @@ int parse_elf_partial(struct dl_phdr_info *info, size_t size, void *data)
 		htlb_seg_table[htlb_num_segs].vaddr = (void *)vaddr;
 		htlb_seg_table[htlb_num_segs].filesz = memsz;
 		htlb_seg_table[htlb_num_segs].memsz = memsz;
+		htlb_seg_table[htlb_num_segs].page_size = segment_requested_page_size(&info->dlpi_phdr[i]);
 
 		htlb_num_segs++;
 	}
