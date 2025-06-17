@@ -178,7 +178,11 @@ the mountpoint need to be set appropriately.
 Installation
 ============
 
-1. Type "make" to build the library
+1. Use autotools to build the library:
+
+       ./autogen.sh
+       ./configure
+       make
 
 This will create "obj32" and/or "obj64" under the top level
 libhugetlbfs directory, and build, respectively, 32-bit and 64-bit
@@ -187,7 +191,8 @@ directory.  This will also build (but not run) the testsuite.
 
 On i386 systems, only the 32-bit library will be built.  On PowerPC
 and AMD64 systems, both 32-bit and 64-bit versions will be built (the
-32-bit AMD64 version is identical to the i386 version).
+32-bit AMD64 version is identical to the i386 version) unless the
+BUILDTYPE=NATIVEONLY variable is set when running "make".
 
 2. Run the testsuite with "make check"
 
