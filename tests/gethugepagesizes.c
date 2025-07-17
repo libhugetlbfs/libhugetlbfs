@@ -39,7 +39,11 @@ char fake_meminfo[] = "/tmp/meminfo-XXXXXX";
 #define REAL_SYSFS_DIR	"/sys/kernel/mm/hugepages/"
 DIR *(*real_opendir)(const char *name);
 
+#ifdef __e2k__
+int (*real_open)(const char *name, int flags, ...);
+#else
 int (*real_open)(const char *name, int flags, int mode);
+#endif
 
 enum {
 	OVERRIDE_OFF,		/* Pass-through to real function */
