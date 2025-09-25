@@ -707,7 +707,7 @@ void create_mounts(char *user, char *group, char *base, mode_t mode)
 			if (maxlen > strlen(limits))
 				strcat(options, limits);
 			else
-				WARNING("String limitations met, cannot append limitations onto mount options string. Increase OPT_MAX");
+				WARNING("String limitations met, cannot append limitations onto mount options string. Increase OPT_MAX\n");
 		}
 
 		if (ensure_dir(path, mode, uid, gid)) {
@@ -774,7 +774,7 @@ long recommended_minfreekbytes(void)
 	/* Detect the number of zones in the system */
 	f = fopen(PROCZONEINFO, "r");
 	if (f == NULL) {
-		WARNING("Unable to open " PROCZONEINFO);
+		WARNING("Unable to open " PROCZONEINFO "\n");
 		return 0;
 	}
 	while (fgets(buf, ZONEINFO_LINEBUF, f) != NULL) {
