@@ -933,7 +933,7 @@ static int fork_and_prepare_segment(struct seg_info *htlb_seg_info)
 	int pid, ret, status;
 
 	if ((pid = fork()) < 0) {
-		WARNING("fork failed");
+		WARNING("fork failed\n");
 		return -1;
 	}
 	if (pid == 0) {
@@ -947,7 +947,7 @@ static int fork_and_prepare_segment(struct seg_info *htlb_seg_info)
 	}
 	ret = waitpid(pid, &status, 0);
 	if (ret == -1) {
-		WARNING("waitpid failed");
+		WARNING("waitpid failed\n");
 		return -1;
 	}
 
@@ -1209,7 +1209,7 @@ static int set_hpage_sizes(const char *env)
 						strerror(errno));
 			size = 0;
 		} else if (!hugetlbfs_find_path_for_size(size)) {
-			WARNING("Hugepage size %li unavailable", size);
+			WARNING("Hugepage size %li unavailable\n", size);
 			size = 0;
 		}
 
@@ -1232,7 +1232,7 @@ static int check_env(void)
 		return -1;
 	}
 	if (__hugetlb_opts.elfmap && set_hpage_sizes(__hugetlb_opts.elfmap)) {
-		WARNING("Cannot set elfmap page sizes: %s", strerror(errno));
+		WARNING("Cannot set elfmap page sizes: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -1322,7 +1322,7 @@ void hugetlbfs_setup_elflink(void)
 
 		ret = find_or_create_share_path(page_size);
 		if (ret != 0) {
-			WARNING("Segment remapping is disabled");
+			WARNING("Segment remapping is disabled\n");
 			return;
 		}
 	}
