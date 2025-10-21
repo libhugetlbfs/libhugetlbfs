@@ -244,7 +244,28 @@ void free_huge_pages(void *ptr)
 {
 	__free_huge_pages(ptr, 1);
 }
+static size_t get_l2_cacheline_size(void) 
+{
+    FILE *fp;
+    char path[128] = "\0";
+    char buf[32] = "\0";
+    size_t line_size = 0;
 
+    snprintf(path, sizeof(path), 
+             "/sys/devices/system/cpu/cpu0/cache/index2/coherency_line_size");
+
+    fp = fopen(path, "r");
+    if (!fp) {
+        return 0;
+    }
+
+    if (fgets(buf, sizeof(buf), fp)) {
+        line_size = (size_t)atoi(buf);
+    }
+
+    fclose(fp);
+    return line_size;
+}
 /*
  * Offset the buffer using bytes wasted due to alignment to avoid using the
  * same cache lines for the start of every buffer returned by
@@ -262,6 +283,11 @@ void *cachecolor(void *buf, size_t len, size_t color_bytes)
 	/* Lookup our cacheline size once */
 	if (cacheline_size == 0) {
 		cacheline_size = sysconf(_SC_LEVEL2_CACHE_LINESIZE);
+		if (cacheline_size == 0) {
+            cacheline_size = get_l2_cacheline_size();
+            if (cacheline_size == 0)
+                cacheline_size = 64;	
+        }
 		linemod = time(NULL);
 	}
 
