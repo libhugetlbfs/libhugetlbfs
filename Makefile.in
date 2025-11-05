@@ -447,11 +447,11 @@ install-man:
 	$(INSTALL) -d $(DESTDIR)$(MANDIR8)
 	for x in $(INSTALL_MAN1); do \
 		$(INSTALL) -m 444 man/$$x $(DESTDIR)$(MANDIR1); \
-		gzip -f $(DESTDIR)$(MANDIR1)/$$x; \
+		gzip -fn $(DESTDIR)$(MANDIR1)/$$x; \
 	done
 	for x in $(INSTALL_MAN3); do \
 		$(INSTALL) -m 444 man/$$x $(DESTDIR)$(MANDIR3); \
-		gzip -f $(DESTDIR)$(MANDIR3)/$$x; \
+		gzip -fn $(DESTDIR)$(MANDIR3)/$$x; \
 	done
 	rm -f $(DESTDIR)$(MANDIR3)/free_huge_pages.3.gz
 	rm -f $(DESTDIR)$(MANDIR3)/free_hugepage_region.3.gz
@@ -463,11 +463,11 @@ install-man:
 	ln -s hugetlbfs_find_path.3.gz $(DESTDIR)$(MANDIR3)/hugetlbfs_find_path_for_size.3.gz
 	for x in $(INSTALL_MAN7); do \
 		$(INSTALL) -m 444 man/$$x $(DESTDIR)$(MANDIR7); \
-		gzip -f $(DESTDIR)$(MANDIR7)/$$x; \
+		gzip -fn $(DESTDIR)$(MANDIR7)/$$x; \
 	done
 	for x in $(INSTALL_MAN8); do \
 		$(INSTALL) -m 444 man/$$x $(DESTDIR)$(MANDIR8); \
-		gzip -f $(DESTDIR)$(MANDIR8)/$$x; \
+		gzip -fn $(DESTDIR)$(MANDIR8)/$$x; \
 	done
 
 install-bin:
