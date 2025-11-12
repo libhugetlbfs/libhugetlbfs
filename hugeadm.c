@@ -1013,6 +1013,11 @@ void add_temp_swap(long page_size)
 	}
 
 	buf = malloc(swap_size);
+	if (!buf) {
+		ERROR("out of memory");
+		exit(EXIT_FAILURE);
+	}
+
 	memset(buf, 0, swap_size);
 	fwrite(buf, sizeof(char), swap_size, f);
 	free(buf);
