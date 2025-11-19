@@ -44,6 +44,7 @@
 #include <linux/types.h>
 #include <linux/unistd.h>
 #include <dirent.h>
+#include <mntent.h>
 
 #include "libhugetlbfs_internal.h"
 #include "hugetlbfs.h"
@@ -617,62 +618,30 @@ void debug_show_page_sizes(void)
 			hpage_sizes[i].mount);
 }
 
-#define LINE_MAXLEN	2048
 static void find_mounts(void)
 {
-	int fd;
-	char path[PATH_MAX+1];
-	char line[LINE_MAXLEN + 1];
-	char *eol;
-	char *match;
-	char *end;
-	int bytes;
-	off_t offset;
+	FILE *f;
+	struct mntent *mnt;
+	char *fstype = "hugetlbfs";
 
-	fd = open("/proc/mounts", O_RDONLY);
-	if (fd < 0) {
-		fd = open("/etc/mtab", O_RDONLY);
-		if (fd < 0) {
+	f = fopen("/proc/mounts", "r");
+	if (!f) {
+		f = fopen("/etc/mtab", "r");
+		if (!f) {
 			ERROR("Couldn't open /proc/mounts or /etc/mtab (%s)\n",
 				strerror(errno));
 			return;
 		}
 	}
 
-	while ((bytes = read(fd, line, LINE_MAXLEN)) > 0) {
-		line[LINE_MAXLEN] = '\0';
-		eol = strchr(line, '\n');
-		if (!eol) {
-			ERROR("Line too long when parsing mounts\n");
-			break;
-		}
-
-		/*
-		 * Truncate the string to just one line and reset the file
-		 * to begin reading at the start of the next line.
-		 */
-		*eol = '\0';
-		offset = bytes - (eol + 1 - line);
-		lseek(fd, -offset, SEEK_CUR);
-
-		/* Match only hugetlbfs filesystems. */
-		match = strstr(line, " hugetlbfs ");
-		if (match) {
-			match = strchr(line, '/');
-			if (!match)
-				continue;
-			end = strchr(match, ' ');
-			if (!end)
-				continue;
-
-			strncpy(path, match, end - match);
-			path[end - match] = '\0';
-			if ((hugetlbfs_test_path(path) == 1) &&
-			    !(access(path, R_OK | W_OK | X_OK)))
-				add_hugetlbfs_mount(path, 0);
+	while ((mnt = getmntent(f))) {
+		if (!strncmp(mnt->mnt_type, fstype, strlen(fstype))) {
+			if ((hugetlbfs_test_path(mnt->mnt_dir) == 1) &&
+			    !(access(mnt->mnt_dir, R_OK | W_OK | X_OK)))
+				add_hugetlbfs_mount(mnt->mnt_dir, 0);
 		}
 	}
-	close(fd);
+	fclose(f);
 }
 
 void setup_mounts(void)
