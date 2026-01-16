@@ -31,18 +31,58 @@ if [ -z "$LD" ]; then
     done
 fi
 
+# Handle @file first, if any
+for arg in "$@"; do
+	if [[ $arg == @* ]]; then
+		FILE="${arg:1}"
+		while read -r file_arg; do
+			arglist+=("$file_arg")		
+		done < "$FILE"
+		rm "$FILE"
+		while [ -n "${arglist[0]}" ]; do
+			case "${arglist[0]}" in 
+			-m*)
+				EMU="${arglist[0]#-m}"
+				if [ -z "$EMU" ]; then
+					HTLB_ARGS+=("${arglist[0]}")
+					arglist=("${arglist[@]:1}")
+					HTLB_ARGS+=("${arglist[0]}")
+				else
+					ORIG_ARGS+=("${arglist[0]}")
+				fi
+			;;
+			--hugetlbfs-link=*|--hugetlbfs-script-path=*|--hugetlbfs-align)
+				HTLB_ARGS+=("${arglist[0]}")
+			;;
+			--)
+				ORIG_ARGS=("${ORIG_ARGS[@]}" "${arglist[@]}")
+				break
+			;;
+			*)
+				ORIG_ARGS+=("${arglist[0]}")
+			;;
+			esac
+			arglist=("${arglist[@]:1}")
+		done
+		for ORIG_ARG in "${ORIG_ARGS[@]}"; do
+			echo "$ORIG_ARG" >> "$FILE"
+		done
+	fi
+done
+
+arglist=("$@" "${HTLB_ARGS[@]}")
 i=0
-while [ -n "$1" ]; do
-    arg="$1"
+while [ -n "${arglist[0]}" ]; do
+    arg="${arglist[0]}"
     case "$arg" in
 	-m*)
 	    EMU="${arg#-m}"
 	    args[$i]="$arg"
 	    i=$[i+1]
 	    if [ -z "$EMU" ]; then
-		shift
-		EMU="$1"
-		args[$i]="$1"
+		arglist=("${arglist[@]:1}")
+		EMU="${arglist[0]}"
+		args[$i]="${arglist[0]}"
 		i=$[i+1]
 	    fi
 	    ;;
@@ -68,7 +108,7 @@ while [ -n "$1" ]; do
 	    i=$[i+1]
 	    ;;
     esac
-    shift
+    arglist=("${arglist[@]:1}")
 done
 
 if [ -n "$HTLB_LINK" ]; then
