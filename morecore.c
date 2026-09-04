@@ -34,9 +34,53 @@
 #include "libhugetlbfs_internal.h"
 
 #ifndef HAS_MORECORE
+/*
+ * glibc 2.34 removed the __morecore hook, so the heap can no longer be backed
+ * by hugetlbfs the way hugetlbfs_morecore() did (issue #52).  glibc's own
+ * malloc places the heap on huge pages by itself: once
+ * GLIBC_TUNABLES=glibc.malloc.hugetlb=2 is set (glibc 2.35 and later) it
+ * fails MORECORE outright and grows the main arena with MAP_HUGETLB mmap().
+ * All that is left here is to report whether that tunable is in effect.
+ *
+ * This is not equivalent to what HUGETLB_MORECORE used to do.  The pages come
+ * from glibc rather than from a libhugetlbfs mount, so the kernel's default
+ * huge page size is used (HUGETLB_MORECORE=<size> and
+ * HUGETLB_MORECORE_HEAPBASE have no effect), the heap is never shrunk back,
+ * and HUGETLB_MORECORE=thp has no counterpart here - glibc.malloc.hugetlb=1
+ * is the tunable for THP.  A warning naming the tunable is still much better
+ * than silently running the heap on 4 kB pages, which is what applications
+ * get today.
+ */
+static int glibc_malloc_uses_hugepages(void)
+{
+	const char *tunables = getenv("GLIBC_TUNABLES");
+
+	return tunables && strstr(tunables, "glibc.malloc.hugetlb=2");
+}
+
 void hugetlbfs_setup_morecore(void)
 {
-	INFO("Not setting up morecore because it's not available (see issue #52).\n");
+	if (!__hugetlb_opts.morecore)
+		return;
+
+	if (__hugetlb_opts.thp_morecore) {
+		WARNING("HUGETLB_MORECORE=thp needs __morecore, which glibc no "
+			"longer provides (issue #52); set "
+			"GLIBC_TUNABLES=glibc.malloc.hugetlb=1 to let glibc "
+			"malloc use transparent huge pages\n");
+		return;
+	}
+
+	if (!glibc_malloc_uses_hugepages()) {
+		WARNING("HUGETLB_MORECORE=%s ignored, glibc no longer provides "
+			"__morecore (issue #52); set "
+			"GLIBC_TUNABLES=glibc.malloc.hugetlb=2 to let glibc "
+			"malloc use huge pages instead\n",
+			__hugetlb_opts.morecore);
+		return;
+	}
+
+	INFO("morecore: heap served by glibc malloc on huge pages\n");
 }
 #else
 

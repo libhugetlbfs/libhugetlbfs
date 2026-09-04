@@ -63,6 +63,8 @@ def snapshot_pool_state():
         l.append((d, tuple(substate)))
     return tuple(l)
 
+morecore_tunable = ""
+
 def run_test_prog(bits, pagesize, cmd, output='stdout', **env):
     if paranoid_pool_check:
         beforepool = snapshot_pool_state()
@@ -75,6 +77,16 @@ def run_test_prog(bits, pagesize, cmd, output='stdout', **env):
     local_env["LD_LIBRARY_PATH"] = "../obj%d:obj%d:%s" \
         % (bits, bits, local_env.get("LD_LIBRARY_PATH", ""))
     local_env["HUGETLB_DEFAULT_PAGE_SIZE"] = repr(pagesize)
+
+    # Without __morecore the heap is served by glibc malloc, which only uses
+    # huge pages when this tunable is set, so add it to every test that asks
+    # for morecore (keeping any tunable the test set itself).
+    if morecore_tunable and local_env.get("HUGETLB_MORECORE"):
+        tunables = [t for t in local_env.get("GLIBC_TUNABLES", "").split(":")
+                    if t]
+        if morecore_tunable not in tunables:
+            tunables.append(morecore_tunable)
+        local_env["GLIBC_TUNABLES"] = ":".join(tunables)
 
     popen_args = {'env' : local_env, output : subprocess.PIPE}
 
@@ -322,7 +334,7 @@ def check_morecore_disabled():
     relying on that functionality will not work as expected, and should be
     disabled.
     """
-    global morecore_disabled, wordsizes, pagesizes
+    global morecore_disabled, morecore_tunable, wordsizes, pagesizes
 
     # Quick and dirty way to get a word and page size. Which one doesn't really
     # matter in this case.
@@ -333,13 +345,19 @@ def check_morecore_disabled():
         p = psz
         break
 
-    # Run an arbitrary program and check stderr for the "morecore disabled"
-    # message
+    # Run an arbitrary program and check stderr for the messages libhugetlbfs
+    # prints when it cannot back the heap with huge pages: either the library
+    # was built without __morecore support (older behaviour, no fallback), or
+    # it needs the glibc tunable that makes glibc malloc use huge pages.
+    morecore_tunable = "glibc.malloc.hugetlb=2"
     (rc, out) = run_test_prog(b, p, "gethugepagesize", output='stderr',
                               HUGETLB_MORECORE="yes",
                               HUGETLB_VERBOSE="3")
 
-    morecore_disabled = "Not setting up morecore" in out
+    morecore_disabled = ("Not setting up morecore" in out or
+                         "no longer provides __morecore" in out)
+    if morecore_disabled:
+        morecore_tunable = ""
 
 def print_cmd(pagesize, bits, cmd, env):
     if env:
@@ -571,7 +589,7 @@ def functional_tests():
     """
     Run the set of functional tests.
     """
-    global linkhuge_wordsizes, morecore_disabled
+    global linkhuge_wordsizes, morecore_disabled, morecore_tunable
 
     # Kernel background tests not requiring hugepage support
     do_test("zero_filesize_segment")
@@ -641,8 +659,11 @@ def functional_tests():
                           skip=morecore_disabled,
                           LD_PRELOAD="libhugetlbfs.so",
                           HUGETLB_MORECORE="yes")
+    # When the heap is served by glibc malloc (no __morecore) the tunable
+    # makes glibc use huge pages on its own, so libhugetlbfs cannot honour a
+    # restriction that is meant to keep the heap on normal pages.
     do_test_with_pagesize(system_default_hpage_size, "malloc",
-                          skip=morecore_disabled,
+                          skip=morecore_disabled or bool(morecore_tunable),
                           LD_PRELOAD="libhugetlbfs.so",
                           HUGETLB_MORECORE="yes",
                           HUGETLB_RESTRICT_EXE="unknown:none")
@@ -799,7 +820,7 @@ def print_help():
 
 def main():
     global wordsizes, pagesizes, dangerous, paranoid_pool_check, system_default_hpage_size
-    global custom_ldscripts, morecore_disabled
+    global custom_ldscripts, morecore_disabled, morecore_tunable
     testsets = set()
     env_override = {"QUIET_TEST": "1", "HUGETLBFS_MOUNTS": "",
                     "HUGETLB_ELFMAP": None, "HUGETLB_MORECORE": None}
