@@ -1,3 +1,21 @@
+21 September 2026 -- Pull requests are welcome
+
+The libhugetlbfs@googlegroups.com mailing list is dead -- the last
+message on it is from June 2024.  Do not send patches or questions
+there.
+
+Development now happens on GitHub:
+
+https://github.com/libhugetlbfs/libhugetlbfs
+
+Please open a pull request there.  Bug reports and questions belong in
+the GitHub issue tracker.  This supersedes the older entries below,
+which said patches must go to a mailing list and that pull requests
+would be closed.
+
+The coding style and Signed-off-by requirements described in
+SubmittingCode still apply.
+
 03 December 2015 -- Yet another mailing list move
 
 librelist seems to be dead or at least broken.  I have recieved several

@@ -6,16 +6,14 @@ http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentatio
 
 For a very indepth look at coding style.
 
-Also like the Linux kernel, we transact in patches over a mailing list.
-The libhugetlbfs mailing is at:
+Patches are submitted as GitHub pull requests against:
 
-libhugetlbfs@googlegroups.com
+https://github.com/libhugetlbfs/libhugetlbfs
 
-You do not need to be subscribed to send mail to that list.
-
-I know that Github provides a nifty pull request tool, please do not use
-it.  At best your request will be closed with reference to this document
-or the mailing list, and at worst it will simply be ignored.
+The old libhugetlbfs@googlegroups.com mailing list is effectively dead
+-- the last message on it is from June 2024 -- so do not send patches
+or questions there.  Use pull requests and the GitHub issue tracker
+instead.
 
 Libhugetlbfs does not require Copyright assignment to any particular
 organization.  You (or the organization paying your wages) keep the
@@ -25,7 +23,7 @@ see:
 
 http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/SubmittingPatches?id=HEAD
 
-And finally, if you have any questions send them to the list.  It is low
-traffic and it might take you some time to get a response, but messages
-sent there will be read eventually.
+And finally, if you have any questions, open an issue.  Traffic is low
+and it might take some time to get a response, but issues will be read
+eventually.
 
