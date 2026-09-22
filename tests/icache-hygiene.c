@@ -54,7 +54,7 @@ static void cacheflush(void *p)
 {
 #if defined(__powerpc__)
 	asm volatile("dcbst 0,%0; sync; icbi 0,%0; isync" : : "r"(p));
-#elif defined(__arm__) || defined(__aarch64__)
+#elif defined(__arm__) || defined(__aarch64__) || defined(__mips__)
 	__clear_cache(p, p + COPY_SIZE);
 #endif
 }
@@ -107,7 +107,8 @@ static void sig_handler(int signum, siginfo_t *si, void *uc)
 		}
 		FAIL("SIGILL somewhere unexpected");
 	}
-#elif defined(__i386__) || defined(__x86_64__) || defined(__arm__)
+#elif defined(__i386__) || defined(__x86_64__) || defined(__arm__) || \
+      defined(__mips__)
 	/* On x86, zero bytes form a valid instruction:
 	 *	add %al,(%eax)		(i386)
 	 * or	add %al,(%rax)		(x86_64)
@@ -124,6 +125,9 @@ static void sig_handler(int signum, siginfo_t *si, void *uc)
 	 * On 32 bit ARM, zero bytes are interpreted as follows:
 	 * 	andeq	r0, r0, r0	(ARM state, 4 bytes)
 	 * 	movs	r0, r0		(Thumb state, 2 bytes)
+	 *
+	 * On MIPS, a zero word is the canonical nop:
+	 *	sll	zero, zero, 0
 	 *
 	 * So, we only expect to run off the end of the huge page and
 	 * generate a SIGBUS. */
