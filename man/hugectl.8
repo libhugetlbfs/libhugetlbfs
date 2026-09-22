@@ -50,6 +50,12 @@ Use the glibc morecore hook to back malloc() with hugepages, optionally
 with pages of the specified size.  Note that this does not affect brk()
 segments and applications that use custom allocators potentially do not
 use hugepages for their heap even with this option specified.
+.br
+glibc 2.34 and later no longer provide that hook, and glibc's own malloc
+backs the heap instead, so this option also adds \fBglibc.malloc.hugetlb\fP
+to \fBGLIBC_TUNABLES\fP: 2 for the default huge page size, or the requested
+size in bytes when one is given.  A \fBglibc.malloc.hugetlb\fP the caller
+already set is left alone.
 
 .TP
 .B --shm
@@ -65,8 +71,10 @@ HUGETLB_SHARE to 1.
 
 .TP
 .B --thp
-Align heap regions to huge page size for promotion by khugepaged.  For more
-information on transparent huge pages see linux-2.6/Documentation/transhuge.txt
+Align heap regions to huge page size for promotion by khugepaged, and add
+\fBglibc.malloc.hugetlb=1\fP to \fBGLIBC_TUNABLES\fP so that glibc's own
+malloc asks for transparent huge pages too.  For more information on
+transparent huge pages see linux-2.6/Documentation/transhuge.txt
 
 .PP
 The following options affect how \fBhugectl\fP behaves.

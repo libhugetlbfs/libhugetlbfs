@@ -45,6 +45,7 @@
 	} while (0);
 
 #include "libhugetlbfs_debug.h"
+#include "libhugetlbfs_internal.h"
 
 extern int errno;
 extern int optind;
@@ -146,6 +147,32 @@ void setup_environment(char *var, char *val)
 
 	if (opt_dry_run)
 		printf("%s='%s'\n", var, val);
+}
+
+/*
+ * glibc 2.34 removed the __morecore hook, so libhugetlbfs cannot back the
+ * heap any more - glibc malloc does it, and only when glibc.malloc.hugetlb
+ * asks for it.  Tunables are read once at startup, so the variable has to be
+ * in the environment before execvp(), which is what this program is for.
+ */
+void setup_malloc_hugetlb(const char *value)
+{
+	static const char key[] = "glibc.malloc.hugetlb";
+	const char *env = getenv("GLIBC_TUNABLES");
+	char val[PATH_MAX];
+
+	if (env && strstr(env, key)) {
+		INFO("GLIBC_TUNABLES already sets %s, leaving it alone\n", key);
+		return;
+	}
+
+	if (snprintf(val, sizeof(val), "%s%s%s=%s", env ? env : "",
+		     env ? ":" : "", key, value) >= (int)sizeof(val)) {
+		WARNING("GLIBC_TUNABLES is too long, not setting %s\n", key);
+		return;
+	}
+
+	setup_environment("GLIBC_TUNABLES", val);
 }
 
 void verbose_expose(void)
@@ -478,6 +505,29 @@ int main(int argc, char** argv)
 
 	if (opt_thp_heap)
 		setup_environment("HUGETLB_MORECORE", "thp");
+
+	/*
+	 * The same request, spelled for glibc malloc: 1 asks for transparent
+	 * huge pages, 2 for hugetlbfs pages of the default size, and any
+	 * larger value for that huge page size in bytes.
+	 */
+	if (opt_thp_heap) {
+		setup_malloc_hugetlb("1");
+	} else if (map_size[MAP_HEAP] == DEFAULT_SIZE) {
+		setup_malloc_hugetlb("2");
+	} else if (map_size[MAP_HEAP]) {
+		long size = parse_page_size(map_size[MAP_HEAP]);
+		char value[32];
+
+		if (size <= 0) {
+			/* Leave the complaint to the library, as before. */
+			WARNING("%s: bad size specification, not setting "
+				"glibc.malloc.hugetlb\n", map_size[MAP_HEAP]);
+		} else {
+			snprintf(value, sizeof(value), "%ld", size);
+			setup_malloc_hugetlb(value);
+		}
+	}
 
 	if (opt_dry_run)
 		exit(EXIT_SUCCESS);
