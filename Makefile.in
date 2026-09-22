@@ -394,7 +394,8 @@ $(BIN_OBJ_DIR)/%.o: %.c
 	@mkdir -p $(BIN_OBJ_DIR)
 	$(CCBIN) $(CPPFLAGS) $(CFLAGS) $(LIBPATHS) -o $@ -c $<
 
-$(BIN_OBJ_DIR)/hugectl: $(BIN_OBJ_DIR)/hugectl.o
+HUGECTL_OBJ=hugectl.o libhugetlbfs_privutils.a
+$(BIN_OBJ_DIR)/hugectl: $(foreach file,$(HUGECTL_OBJ),$(BIN_OBJ_DIR)/$(file))
 	@$(VECHO) LDHOST $@
 	mkdir -p $(BIN_OBJ_DIR)
 	$(CCBIN) $(CPPFLAGS) $(CFLAGS) -o $@ $^ $(LDFLAGS)
