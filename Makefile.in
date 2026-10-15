@@ -2,7 +2,7 @@ AUTORECONF=autoreconf
 
 CFLAGS=@CFLAGS@
 
-PREFIX ?= /usr/local
+PREFIX ?= @prefix@
 EXEDIR ?= /bin
 
 LIBOBJS = hugeutils.o version.o init.o morecore.o debug.o alloc.o shm.o kernel-features.o
