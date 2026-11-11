@@ -126,6 +126,12 @@ armelf*_linux_eabi|aarch64elf*|aarch64linux*)
 	SLICE_SIZE=$HPAGE_SIZE ;;
 esac
 
+# LLD does not implement -Ttext-segment, --image-base is its equivalent
+TEXTSEG="-Ttext-segment="
+if ${LD} --version 2>/dev/null | grep -q "^LLD"; then
+	TEXTSEG="--image-base="
+fi
+
 if [ "$HTLB_ALIGN" == "slice" ]; then
 	HTLBOPTS="-zcommon-page-size=$SLICE_SIZE -zmax-page-size=$SLICE_SIZE"
 	HTLBOPTS="$HTLBOPTS -lhugetlbfs"
@@ -134,13 +140,13 @@ if [ "$HTLB_ALIGN" == "slice" ]; then
 	# otherwise it will be NULL.
 	case "$EMU" in
 	armelf*_linux_eabi|aarch64elf*|aarch64linux*)
-		printf -v TEXTADDR "%x" "$SLICE_SIZE"
-		HTLBOPTS="$HTLBOPTS -Ttext-segment=$TEXTADDR" ;;
-	elf_i386)		HTLBOPTS="$HTLBOPTS -Ttext-segment=0x08000000" ;;
+		printf -v TEXTADDR "0x%x" "$SLICE_SIZE"
+		HTLBOPTS="$HTLBOPTS ${TEXTSEG}$TEXTADDR" ;;
+	elf_i386)		HTLBOPTS="$HTLBOPTS ${TEXTSEG}0x08000000" ;;
 	elf64ppc|elf64lppc)
 		if [ "$MMU_TYPE" == "Hash" ] ; then
-			printf -v TEXTADDR "%x" "$SLICE_SIZE"
-			HTLBOPTS="$HTLBOPTS -Ttext-segment=$TEXTADDR"
+			printf -v TEXTADDR "0x%x" "$SLICE_SIZE"
+			HTLBOPTS="$HTLBOPTS ${TEXTSEG}$TEXTADDR"
 		fi ;;
 	esac
 fi
